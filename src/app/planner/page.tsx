@@ -1,13 +1,13 @@
 import { getDesign } from "@/lib/design";
 import { makeMetadata } from "@/lib/seo";
-import VersionAHome from "@/components/designs/version-a/Home";
-import VersionBHome from "@/components/designs/version-b/Home";
-import VersionCHome from "@/components/designs/version-c/Home";
+import VersionAPlanner from "@/components/designs/version-a/Planner";
+import VersionBPlanner from "@/components/designs/version-b/Planner";
+import VersionCPlanner from "@/components/designs/version-c/Planner";
 import { DesignToggle } from "@/components/designs/DesignToggle";
 
-export const metadata = makeMetadata({ title: "Home", path: "/" });
+export const metadata = makeMetadata({ title: "Trip Planner", path: "/planner" });
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ design?: string }> }) {
+export default async function PlannerPage({ searchParams }: { searchParams: Promise<{ design?: string }> }) {
   const sp = await searchParams;
   const { key } = getDesign(sp);
 
@@ -19,25 +19,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             TravelPlanInfo
           </a>
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href={`/?design=${key}`} className="font-medium">Home</a>
+            <a href={`/?design=${key}`} className="text-muted-foreground hover:text-foreground">Home</a>
             <a href={`/destinations?design=${key}`} className="text-muted-foreground hover:text-foreground">Destinations</a>
-            <a href={`/planner?design=${key}`} className="text-muted-foreground hover:text-foreground">Planner</a>
+            <a href={`/planner?design=${key}`} className="font-medium">Planner</a>
             <a href={`/blog?design=${key}`} className="text-muted-foreground hover:text-foreground">Guides</a>
           </nav>
           <DesignToggle />
         </div>
       </div>
       <main className="container mx-auto px-4 py-8">
-        {key === "a" && <VersionAHome design={key} />}
-        {key === "b" && <VersionBHome design={key} />}
-        {key === "c" && <VersionCHome design={key} />}
+        {key === "a" && <VersionAPlanner design={key} />}
+        {key === "b" && <VersionBPlanner design={key} />}
+        {key === "c" && <VersionCPlanner design={key} />}
       </main>
-      <footer className="border-t mt-16">
-        <div className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-          <p>© 2026 TravelPlanInfo. All rights reserved.</p>
-          <p className="mt-2">Design version {key.toUpperCase()}</p>
-        </div>
-      </footer>
     </div>
   );
 }
