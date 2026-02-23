@@ -1,3 +1,5 @@
+import LatestGuides from "@/components/LatestGuides";
+
 const stats = [
   { emoji: "🗓️", value: "2", label: "Active Trips" },
   { emoji: "⭐", value: "8", label: "Saved Destinations" },
@@ -80,6 +82,8 @@ export default function DesignA() {
           ))}
         </div>
       </div>
+
+      <LatestGuides />
     </div>
   );
 }
