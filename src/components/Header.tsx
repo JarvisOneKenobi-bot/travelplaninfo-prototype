@@ -18,7 +18,7 @@ export default function Header({ design }: HeaderProps) {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
           <Link href="/" className="hover:text-gray-900 transition-colors">Home</Link>
           <Link href="#" className="hover:text-gray-900 transition-colors">Destinations</Link>
-          <Link href="#" className="text-orange-600 hover:text-orange-700 transition-colors font-semibold">🔥 Hot Deals</Link>
+          <Link href="/hot-deals" className="text-orange-600 hover:text-orange-700 transition-colors font-semibold">🔥 Hot Deals</Link>
           <Link href="#" className="hover:text-gray-900 transition-colors">Planner</Link>
           <Link href="#" className="hover:text-gray-900 transition-colors">Guides</Link>
         </nav>
