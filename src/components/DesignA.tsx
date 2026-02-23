@@ -1,4 +1,5 @@
 import LatestGuides from "@/components/LatestGuides";
+import CuratedItineraries from "@/components/CuratedItineraries";
 
 const stats = [
   { emoji: "🗓️", value: "2", label: "Active Trips" },
@@ -82,6 +83,8 @@ export default function DesignA() {
           ))}
         </div>
       </div>
+
+      <CuratedItineraries />
 
       <LatestGuides />
     </div>
