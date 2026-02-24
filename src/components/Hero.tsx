@@ -5,9 +5,9 @@ const chips = [
 
 export default function Hero() {
   return (
-    <section className="bg-amber-50 rounded-3xl px-10 py-16 md:px-14 md:py-20">
+    <section className="bg-orange-50 rounded-3xl px-10 py-16 md:px-14 md:py-20">
       {/* Badge */}
-      <span className="inline-block bg-orange-500 text-white text-xs font-medium px-3 py-1 rounded mb-5">
+      <span className="inline-block bg-orange-100 text-orange-700 text-xs font-medium px-3 py-1 rounded-full mb-5">
         Travel Deals &amp; Guides
       </span>
 
@@ -15,7 +15,7 @@ export default function Hero() {
       <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-5">
         <span className="text-gray-900">Plan your next trip,</span>
         <br />
-        <span className="text-amber-600">one adventure at a time.</span>
+        <span className="text-orange-600">one adventure at a time.</span>
       </h1>
 
       {/* Subtitle */}
@@ -28,7 +28,7 @@ export default function Hero() {
         {chips.map((chip) => (
           <button
             key={chip}
-            className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:border-gray-400 transition-colors whitespace-nowrap"
+            className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:border-orange-300 hover:text-orange-700 transition-colors whitespace-nowrap"
           >
             {chip}
           </button>
@@ -37,10 +37,10 @@ export default function Hero() {
 
       {/* CTA buttons */}
       <div className="flex flex-wrap gap-3">
-        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-white border border-gray-800 text-gray-900 hover:bg-gray-50 transition-colors">
+        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:border-gray-500 hover:text-gray-900 transition-colors">
           Explore Destinations
         </button>
-        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors">
+        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors">
           Start Planning
         </button>
       </div>

@@ -1,13 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Wordmark */}
         <Link href="/" className="flex items-center">
-          <Image src="/logo.png" alt="TravelPlanInfo" width={200} height={54} priority />
+          <span className="text-xl font-bold text-gray-900 tracking-tight">
+            TravelPlan<span className="text-orange-600">Info</span>
+          </span>
         </Link>
 
         {/* Nav links */}
@@ -29,7 +30,7 @@ export default function Header() {
           </Link>
           <Link
             href="/register"
-            className="text-sm font-medium text-white bg-orange-500 px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+            className="text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
           >
             Register
           </Link>

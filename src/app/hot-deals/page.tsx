@@ -39,13 +39,13 @@ const adCards = [
     title: "Cuban food tour",
     body: "Little Havana bites + mojito class.",
     btn: "Reserve spot",
-    btnColor: "bg-red-600",
+    btnColor: "bg-orange-600",
   },
 ];
 
 export default function HotDeals() {
   return (
-    <div className="min-h-screen bg-[#F5F0EB]">
+    <div className="min-h-screen bg-stone-50">
       <Header />
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -103,7 +103,7 @@ export default function HotDeals() {
               <p className="text-3xl font-bold text-orange-600 mt-3">$299</p>
               <p className="text-sm text-gray-500 mt-1">Includes airport transfer + Wynwood street art tour</p>
               <div className="flex gap-3 mt-5">
-                <button className="flex-1 bg-red-600 text-white text-sm font-medium py-3 rounded-lg hover:bg-red-700 transition-colors">
+                <button className="flex-1 bg-orange-600 text-white text-sm font-medium py-3 rounded-lg hover:bg-orange-700 transition-colors">
                   Book on partner
                 </button>
                 <button className="flex-1 border border-orange-300 text-orange-600 text-sm font-medium py-3 rounded-lg hover:bg-orange-50 transition-colors">
@@ -114,7 +114,7 @@ export default function HotDeals() {
 
             {/* Carousel dots */}
             <div className="flex items-center gap-2 mt-4 px-1">
-              <div className="h-2 w-6 rounded-full bg-red-600" />
+              <div className="h-2 w-6 rounded-full bg-orange-600" />
               <div className="h-2 w-2 rounded-full bg-orange-300" />
               <div className="h-2 w-2 rounded-full bg-orange-300" />
             </div>
@@ -125,7 +125,7 @@ export default function HotDeals() {
                 <div
                   key={d.title}
                   className={`px-4 py-3 rounded-lg text-sm text-gray-800 cursor-pointer transition-colors ${
-                    d.active ? "bg-orange-100 font-semibold" : "bg-[#FAF5EF] hover:bg-orange-50"
+                    d.active ? "bg-orange-100 font-semibold" : "bg-orange-50/60 hover:bg-orange-100"
                   }`}
                 >
                   <span className="text-gray-500 font-normal">{d.label} &bull;</span> {d.title}
@@ -194,7 +194,7 @@ export default function HotDeals() {
                 placeholder="you@email.com"
                 className="flex-1 px-4 py-3 rounded-lg text-sm bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
-              <button className="bg-red-600 text-white text-sm font-bold px-5 py-3 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap">
+              <button className="bg-orange-600 text-white text-sm font-bold px-5 py-3 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap">
                 Notify me
               </button>
             </div>

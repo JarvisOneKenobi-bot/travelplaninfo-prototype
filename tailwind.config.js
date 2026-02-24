@@ -8,11 +8,15 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['var(--font-playfair)', 'Georgia', 'serif'],
       },
       colors: {
         brand: {
-          orange: '#D97706',
+          cream: '#F5F0EB',
+          'cream-light': '#FAF5EF',
+          orange: '#EA580C',   // orange-600
+          teal: '#0F766E',     // teal-700
           dark: '#111827',
         },
       },
