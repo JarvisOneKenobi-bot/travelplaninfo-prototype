@@ -14,7 +14,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header design={design} />
+      <Header />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <Hero />
         {design === "B" ? <DesignB /> : design === "C" ? <DesignC /> : <DesignA />}

@@ -1,11 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
-interface HeaderProps {
-  design: string;
-}
-
-export default function Header({ design }: HeaderProps) {
+export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -23,21 +19,20 @@ export default function Header({ design }: HeaderProps) {
           <Link href="#" className="hover:text-gray-900 transition-colors">Guides</Link>
         </nav>
 
-        {/* A/B/C design toggle */}
-        <div className="flex items-center gap-2">
-          {["A", "B", "C"].map((d) => (
-            <Link
-              key={d}
-              href={`/?design=${d}`}
-              className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium border transition-colors ${
-                design === d
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
-              }`}
-            >
-              {d}
-            </Link>
-          ))}
+        {/* Auth buttons */}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/signin"
+            className="text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/register"
+            className="text-sm font-medium text-white bg-orange-500 px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Register
+          </Link>
         </div>
       </div>
     </header>

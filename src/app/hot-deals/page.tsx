@@ -46,7 +46,7 @@ const adCards = [
 export default function HotDeals() {
   return (
     <div className="min-h-screen bg-[#F5F0EB]">
-      <Header design="A" />
+      <Header />
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
