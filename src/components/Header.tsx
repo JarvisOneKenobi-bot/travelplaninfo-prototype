@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 interface HeaderProps {
   design: string;
@@ -10,8 +11,7 @@ export default function Header({ design }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <span className="text-xl font-bold text-gray-900">TravelPlan</span>
-          <span className="text-xl font-bold text-amber-600">Info</span>
+          <Image src="/logo.png" alt="TravelPlanInfo" width={200} height={54} priority />
         </Link>
 
         {/* Nav links */}
