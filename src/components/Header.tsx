@@ -1,23 +1,29 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Wordmark */}
+        {/* Logo */}
         <Link href="/" className="flex items-center">
-          <span className="text-xl font-bold text-gray-900 tracking-tight">
-            TravelPlan<span className="text-orange-600">Info</span>
-          </span>
+          <Image
+            src="/logo.png"
+            alt="TravelPlanInfo"
+            width={250}
+            className="h-auto"
+            style={{ paddingTop: '20px' }}
+            unoptimized
+          />
         </Link>
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
           <Link href="/" className="hover:text-gray-900 transition-colors">Home</Link>
-          <Link href="#" className="hover:text-gray-900 transition-colors">Destinations</Link>
+          <Link href="/destinations" className="hover:text-gray-900 transition-colors">Destinations</Link>
           <Link href="/hot-deals" className="text-orange-600 hover:text-orange-700 transition-colors font-semibold">🔥 Hot Deals</Link>
-          <Link href="#" className="hover:text-gray-900 transition-colors">Planner</Link>
-          <Link href="#" className="hover:text-gray-900 transition-colors">Guides</Link>
+          <Link href="/planner" className="hover:text-gray-900 transition-colors">Planner</Link>
+          <Link href="/guides" className="hover:text-gray-900 transition-colors">Guides</Link>
         </nav>
 
         {/* Auth buttons */}

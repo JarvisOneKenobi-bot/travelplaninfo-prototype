@@ -1,46 +1,13 @@
+"use client";
+
 import Header from "@/components/Header";
-
-const deals = [
-  { label: "CJ Exclusive", title: "Miami Weekend Escape", active: true },
-  { label: "Flash Fare", title: "Chicago → FLL", active: false },
-  { label: "Stay & Play", title: "South Beach", active: false },
-];
-
-const bookables = [
-  { title: "Fort Lauderdale to Miami Beach Shuttle", note: "Instant confirmation", price: "$39" },
-  { title: "Everglades Airboat + Wildlife Park", note: "Family favorite", price: "$72" },
-  { title: "South Beach Art Deco Walking Tour", note: "Small groups", price: "$22" },
-];
+import { DEALS, getAffiliateUrl, CJ_LINKS } from "@/config/affiliates";
 
 const guides = [
   "48-hour Miami itinerary (design district + Wynwood)",
   "What to pack for Miami in spring",
   "Top 8 beaches within 30 minutes of FLL",
   "Miami on a budget: food, transit, stays",
-];
-
-const adCards = [
-  {
-    label: "ADSENSE",
-    title: "Late-night hotel deals",
-    body: "Up to 45% off Miami Beach stays tonight.",
-    btn: "View rates",
-    btnColor: "bg-teal-700",
-  },
-  {
-    label: "ADSENSE",
-    title: "FLL rides from $24",
-    body: "Airport pickups + Miami Beach drop-off.",
-    btn: "Book a ride",
-    btnColor: "bg-teal-700",
-  },
-  {
-    label: "ADSENSE",
-    title: "Cuban food tour",
-    body: "Little Havana bites + mojito class.",
-    btn: "Reserve spot",
-    btnColor: "bg-orange-600",
-  },
 ];
 
 export default function HotDeals() {
@@ -50,40 +17,42 @@ export default function HotDeals() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-        {/* ── TOP 3-COLUMN SECTION ── */}
+        {/* ── HERO SECTION ── */}
         <div className="grid grid-cols-12 gap-6">
-
           {/* Col 1 — Hero copy + stats */}
           <div className="col-span-5 flex flex-col justify-between">
             <div>
               <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">
-                Live Deal Feed &nbsp;·&nbsp; Miami, FLL
+                Live Deal Feed &nbsp;·&nbsp; Hotels · Vacation Rentals · Cruises
               </p>
-              <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-4 font-serif">
-                Sun-soaked Miami trips with flight + stay bundles from $99.
+              <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-4">
+                Curated travel deals from trusted partners — book & save.
               </h1>
               <p className="text-base text-gray-600 mb-6">
-                Compare Miami flight deals, beachfront stays, and curated itineraries. Updated hourly with affiliate offers.
+                Compare hotels on Hotels.com, vacation rentals on Vrbo, and cruise deals on CruiseDirect. Every booking supports TravelPlanInfo.
               </p>
               <div className="flex gap-3 flex-wrap">
-                <button className="bg-teal-700 text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-teal-800 transition-colors">
-                  View Today&apos;s Deals
-                </button>
-                <button className="border border-gray-400 text-teal-700 text-sm font-medium px-6 py-3 rounded-full hover:bg-white transition-colors">
-                  See 3-day itinerary
-                </button>
+                <a href={CJ_LINKS.hotels()} target="_blank" rel="noopener noreferrer sponsored" className="bg-teal-700 text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-teal-800 transition-colors inline-block">
+                  🏨 Hotels.com Deals
+                </a>
+                <a href={CJ_LINKS.vrbo()} target="_blank" rel="noopener noreferrer sponsored" className="bg-blue-600 text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-blue-700 transition-colors inline-block">
+                  🏡 Vrbo Rentals
+                </a>
+                <a href={CJ_LINKS.cruises()} target="_blank" rel="noopener noreferrer sponsored" className="bg-orange-600 text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-orange-700 transition-colors inline-block">
+                  🚢 CruiseDirect
+                </a>
               </div>
             </div>
 
             {/* Quick stats */}
             <div className="grid grid-cols-3 gap-4 border-t border-gray-300 pt-5 mt-8">
               {[
-                { label: "FLIGHTS", value: "Miami (FLL) from $99" },
-                { label: "HOTELS", value: "Beachfront from $79/night" },
-                { label: "BUNDLE", value: "2-night trip from $239" },
+                { label: "HOTELS", value: "From $79/night", icon: "🏨" },
+                { label: "RENTALS", value: "From $129/night", icon: "🏡" },
+                { label: "CRUISES", value: "From $199/person", icon: "🚢" },
               ].map((s) => (
                 <div key={s.label}>
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{s.label}</p>
+                  <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{s.icon} {s.label}</p>
                   <p className="text-sm font-bold text-gray-900">{s.value}</p>
                 </div>
               ))}
@@ -92,115 +61,130 @@ export default function HotDeals() {
 
           {/* Col 2 — Featured deal card */}
           <div className="col-span-4">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <p className="text-xs uppercase tracking-widest text-orange-400 font-medium mb-2">
-                CJ Affiliate Mock
+            <a href={CJ_LINKS.cruises()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+              <p className="text-xs uppercase tracking-widest text-orange-500 font-medium mb-2">
+                🔥 Featured Deal
               </p>
-              <h2 className="text-xl font-bold text-gray-900 font-serif">
-                CJ Exclusive &bull; Miami Weekend Escape
+              <h2 className="text-xl font-bold text-gray-900">
+                Caribbean Cruise from Miami
               </h2>
-              <p className="text-sm text-gray-500 mt-1">Roundtrip from NYC + 2 nights</p>
-              <p className="text-3xl font-bold text-orange-600 mt-3">$299</p>
-              <p className="text-sm text-gray-500 mt-1">Includes airport transfer + Wynwood street art tour</p>
+              <p className="text-sm text-gray-500 mt-1">CruiseDirect · 5-night all-inclusive from Port Everglades</p>
+              <p className="text-3xl font-bold text-orange-600 mt-3">$349</p>
+              <p className="text-sm text-gray-500 mt-1">Includes meals, entertainment & port stops at Nassau + Cozumel</p>
               <div className="flex gap-3 mt-5">
-                <button className="flex-1 bg-orange-600 text-white text-sm font-medium py-3 rounded-lg hover:bg-orange-700 transition-colors">
-                  Book on partner
-                </button>
-                <button className="flex-1 border border-orange-300 text-orange-600 text-sm font-medium py-3 rounded-lg hover:bg-orange-50 transition-colors">
-                  See details
-                </button>
+                <span className="flex-1 bg-orange-600 text-white text-sm font-medium py-3 rounded-lg text-center">
+                  View on CruiseDirect →
+                </span>
               </div>
-            </div>
+            </a>
 
-            {/* Carousel dots */}
-            <div className="flex items-center gap-2 mt-4 px-1">
-              <div className="h-2 w-6 rounded-full bg-orange-600" />
-              <div className="h-2 w-2 rounded-full bg-orange-300" />
-              <div className="h-2 w-2 rounded-full bg-orange-300" />
-            </div>
-
-            {/* Deal list */}
-            <div className="mt-3 space-y-2">
-              {deals.map((d) => (
-                <div
-                  key={d.title}
-                  className={`px-4 py-3 rounded-lg text-sm text-gray-800 cursor-pointer transition-colors ${
-                    d.active ? "bg-orange-100 font-semibold" : "bg-orange-50/60 hover:bg-orange-100"
-                  }`}
+            {/* All 6 deals list */}
+            <div className="mt-4 space-y-2">
+              {DEALS.map((d) => (
+                <a
+                  key={d.id}
+                  href={getAffiliateUrl(d.program)}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="block px-4 py-3 rounded-lg text-sm text-gray-800 bg-orange-50/60 hover:bg-orange-100 transition-colors"
                 >
-                  <span className="text-gray-500 font-normal">{d.label} &bull;</span> {d.title}
-                </div>
+                  <span className="text-gray-500 font-normal">
+                    {d.program === "hotels" ? "🏨" : d.program === "vrbo" ? "🏡" : "🚢"}
+                  </span>{" "}
+                  <span className="font-medium">{d.title}</span>
+                  <span className="text-gray-400 ml-2">— {d.price}</span>
+                </a>
               ))}
             </div>
           </div>
 
-          {/* Col 3 — Ad cards */}
+          {/* Col 3 — Program cards */}
           <div className="col-span-3 space-y-4">
-            {adCards.map((ad) => (
-              <div key={ad.title} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">{ad.label}</p>
-                <h3 className="text-lg font-bold text-gray-900 font-serif leading-snug">{ad.title}</h3>
-                <p className="text-sm text-gray-600 mt-1">{ad.body}</p>
-                <button className={`mt-3 px-4 py-2 text-sm text-white rounded-lg ${ad.btnColor} hover:opacity-90 transition-opacity`}>
-                  {ad.btn}
-                </button>
-              </div>
-            ))}
+            <a href={CJ_LINKS.hotels()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs uppercase tracking-widest text-teal-600 mb-2">🏨 Hotels.com</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">Late-night hotel deals</h3>
+              <p className="text-sm text-gray-600 mt-1">Up to 45% off Miami Beach stays tonight.</p>
+              <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-teal-700 inline-block">View rates</span>
+            </a>
+            <a href={CJ_LINKS.vrbo()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs uppercase tracking-widest text-blue-600 mb-2">🏡 Vrbo</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">Entire home rentals</h3>
+              <p className="text-sm text-gray-600 mt-1">Perfect for families & groups. Free cancellation.</p>
+              <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-blue-600 inline-block">Browse homes</span>
+            </a>
+            <a href={CJ_LINKS.cruises()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs uppercase tracking-widest text-orange-500 mb-2">🚢 CruiseDirect</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">Cruise deals up to 75% off</h3>
+              <p className="text-sm text-gray-600 mt-1">Caribbean, Bahamas & Alaska from Florida.</p>
+              <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-orange-600 inline-block">See cruises</span>
+            </a>
           </div>
         </div>
 
-        {/* ── BOTTOM 3-COLUMN SECTION ── */}
+        {/* ── BOTTOM SECTION ── */}
         <div className="grid grid-cols-3 gap-6">
 
-          {/* Quick bookables */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900 font-serif mb-4">Quick bookables</h2>
-            <div className="divide-y divide-gray-100">
-              {bookables.map((item) => (
-                <div key={item.title} className="flex items-center justify-between py-4 border-l-4 border-orange-200 pl-3">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{item.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{item.note}</p>
+          {/* All deals grid */}
+          <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">All Deals</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {DEALS.map((deal) => (
+                <a
+                  key={deal.id}
+                  href={getAffiliateUrl(deal.program)}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="block p-5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{deal.savings}</span>
+                    <span className="text-lg font-bold text-gray-900">{deal.price}</span>
                   </div>
-                  <span className="text-lg font-bold text-gray-900 ml-4">{item.price}</span>
-                </div>
+                  <p className="font-medium text-gray-900 text-sm">{deal.title}</p>
+                  <p className="text-xs text-gray-500 mt-1">{deal.subtitle}</p>
+                  <span className="text-xs font-medium text-orange-600 mt-2 inline-block">{deal.cta} →</span>
+                </a>
               ))}
             </div>
           </div>
 
-          {/* Miami planning guides */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900 font-serif mb-4">Miami planning guides</h2>
-            <ul className="space-y-3">
-              {guides.map((g) => (
-                <li key={g}>
-                  <a href="#" className="text-gray-700 text-base hover:text-teal-700 hover:underline transition-colors">
-                    {g}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Deal alert */}
-          <div className="bg-teal-800 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-white font-serif">Deal alert</h2>
-            <p className="text-teal-100 text-sm mt-3">
-              Join 41,200 travelers. We send weekly Miami flight + hotel bundles with price-drop alerts.
-            </p>
-            <div className="flex gap-2 mt-5">
-              <input
-                type="email"
-                placeholder="you@email.com"
-                className="flex-1 px-4 py-3 rounded-lg text-sm bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
-              />
-              <button className="bg-orange-600 text-white text-sm font-bold px-5 py-3 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap">
-                Notify me
-              </button>
+          {/* Sidebar — guides + deal alert */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Planning Guides</h2>
+              <ul className="space-y-3">
+                {guides.map((g) => (
+                  <li key={g}>
+                    <a href="#" className="text-gray-700 text-sm hover:text-teal-700 hover:underline transition-colors">{g}</a>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="text-xs text-teal-300 mt-3">No spam. Unsubscribe anytime.</p>
+
+            <div className="bg-teal-800 rounded-2xl p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-white">Deal Alerts</h2>
+              <p className="text-teal-100 text-sm mt-2">
+                Weekly flight + hotel bundles with price-drop alerts.
+              </p>
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="email"
+                  placeholder="you@email.com"
+                  className="flex-1 px-4 py-3 rounded-lg text-sm bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                />
+                <button className="bg-orange-600 text-white text-sm font-bold px-4 py-3 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap">
+                  Subscribe
+                </button>
+              </div>
+              <p className="text-xs text-teal-300 mt-2">No spam. Unsubscribe anytime.</p>
+            </div>
           </div>
         </div>
+
+        {/* Disclosure */}
+        <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-200">
+          TravelPlanInfo earns a commission when you book through our partner links. This helps us keep the site free. Prices shown are estimates and may vary.
+        </p>
 
       </main>
     </div>

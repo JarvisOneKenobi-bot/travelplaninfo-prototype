@@ -1,5 +1,6 @@
 import LatestGuides from "@/components/LatestGuides";
 import CuratedItineraries from "@/components/CuratedItineraries";
+import { DEALS, getAffiliateUrl } from "@/config/affiliates";
 
 const stats = [
   { emoji: "🗓️", value: "2", label: "Active Trips" },
@@ -62,24 +63,26 @@ export default function DesignA() {
           <button className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">View all →</button>
         </div>
         <div className="space-y-3">
-          {[
-            { title: "Miami → NYC Round Trip", airline: "American Airlines", price: "$129", savings: "Save 40%" },
-            { title: "Cancún All-Inclusive 7 Nights", airline: "Palace Resorts", price: "$899", savings: "Save 35%" },
-            { title: "FLL → Miami Beach Shuttle", airline: "Ground Transfer", price: "$39", savings: "Book now" },
-          ].map((deal) => (
-            <div key={deal.title} className="flex items-center justify-between p-6 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-colors">
+          {DEALS.slice(0, 3).map((deal) => (
+            <a
+              key={deal.id}
+              href={getAffiliateUrl(deal.program)}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="flex items-center justify-between p-6 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-colors"
+            >
               <div>
                 <p className="font-medium text-gray-900">{deal.title}</p>
-                <p className="text-sm text-gray-500">{deal.airline}</p>
+                <p className="text-sm text-gray-500">{deal.subtitle}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full">{deal.savings}</span>
                 <span className="text-lg font-bold text-gray-900">{deal.price}</span>
-                <button className="text-sm font-medium bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                  Book
-                </button>
+                <span className="text-sm font-medium bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                  {deal.cta}
+                </span>
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>

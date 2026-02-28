@@ -62,9 +62,9 @@ export default async function BlogPost({ params }: Props) {
   return (
     <>
       <Header />
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main className="max-w-[66rem] mx-auto px-6 py-6">
         {/* Breadcrumb */}
-        <nav className="text-sm text-gray-500 mb-6">
+        <nav className="text-sm text-gray-500 mb-4">
           <Link href="/" className="hover:text-orange-600 transition-colors">Home</Link>
           <span className="mx-2">/</span>
           <span className="text-gray-900">{post.categories?.[0]?.name || "Article"}</span>
@@ -72,7 +72,7 @@ export default async function BlogPost({ params }: Props) {
 
         {/* Featured Image */}
         {post.featuredImage && (
-          <div className="mb-8 relative rounded-2xl overflow-hidden aspect-[16/9]">
+          <div className="mb-4 relative rounded-2xl overflow-hidden aspect-[16/9]">
             <Image
               src={post.featuredImage}
               alt={post.title}
@@ -84,12 +84,12 @@ export default async function BlogPost({ params }: Props) {
         )}
 
         {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+        <h1 className="text-4xl md:text-[2.1em] font-bold text-gray-900 mb-3 leading-tight">
           {post.title}
         </h1>
 
         {/* Meta */}
-        <div className="flex items-center gap-4 text-sm text-gray-500 mb-8 pb-8 border-b border-gray-200">
+        <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
           <time dateTime={post.date}>{formattedDate}</time>
           {post.categories && post.categories.length > 0 && (
             <>
