@@ -23,8 +23,8 @@ test('homepage has featured destinations', async ({ page }) => {
 
 test('homepage has hot deals section', async ({ page }) => {
   await page.goto(BASE);
-  await expect(page.locator('text=Miami → NYC Round Trip')).toBeVisible();
-  await expect(page.locator('text=Cancún All-Inclusive')).toBeVisible();
+  await expect(page.locator('text=Miami Beach Hotels')).toBeVisible();
+  await expect(page.locator('text=Miami Vacation Rentals')).toBeVisible();
 });
 
 test('homepage has curated itineraries', async ({ page }) => {

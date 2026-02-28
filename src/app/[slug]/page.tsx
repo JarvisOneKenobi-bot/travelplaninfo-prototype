@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
+import AffiliateSidebar from "@/components/AffiliateSidebar";
+import AffiliateInlineCTA from "@/components/AffiliateInlineCTA";
 import posts from "@/content/posts.json";
 
 interface Props {
@@ -101,30 +103,45 @@ export default async function BlogPost({ params }: Props) {
           )}
         </div>
 
-        {/* Content */}
-        <article
-          className="prose prose-lg prose-orange max-w-none
-            prose-headings:font-bold prose-headings:text-gray-900
-            prose-p:text-gray-700 prose-p:leading-relaxed
-            prose-a:text-orange-600 prose-a:no-underline hover:prose-a:underline
-            prose-img:rounded-xl prose-img:shadow-md
-            prose-ul:text-gray-700 prose-ol:text-gray-700
-            prose-li:marker:text-orange-500
-            prose-blockquote:border-l-orange-500 prose-blockquote:bg-orange-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
-            prose-strong:text-gray-900
-            prose-code:text-orange-600 prose-code:bg-orange-50 prose-code:px-2 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
-            prose-hr:border-gray-200"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        {/* Content + Sidebar grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+          <div>
+            {/* Content */}
+            <article
+              className="prose prose-lg prose-orange max-w-none
+                prose-headings:font-bold prose-headings:text-gray-900
+                prose-p:text-gray-700 prose-p:leading-relaxed
+                prose-a:text-orange-600 prose-a:no-underline hover:prose-a:underline
+                prose-img:rounded-xl prose-img:shadow-md
+                prose-ul:text-gray-700 prose-ol:text-gray-700
+                prose-li:marker:text-orange-500
+                prose-blockquote:border-l-orange-500 prose-blockquote:bg-orange-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+                prose-strong:text-gray-900
+                prose-code:text-orange-600 prose-code:bg-orange-50 prose-code:px-2 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+                prose-hr:border-gray-200"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
 
-        {/* Share / Back */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
-          >
-            ← Back to all articles
-          </Link>
+            {/* Inline affiliate CTA after article */}
+            <AffiliateInlineCTA />
+
+            {/* Share / Back */}
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
+              >
+                ← Back to all articles
+              </Link>
+            </div>
+          </div>
+
+          {/* Sticky affiliate sidebar */}
+          <div className="hidden lg:block">
+            <div className="sticky top-8">
+              <AffiliateSidebar />
+            </div>
+          </div>
         </div>
       </main>
     </>
