@@ -1,13 +1,10 @@
+import Link from "next/link";
+
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import TripModes from "@/components/TripModes";
 import DesignA from "@/components/DesignA";
-import DesignB from "@/components/DesignB";
-import DesignC from "@/components/DesignC";
 import posts from "@/content/posts.json";
-
-interface PageProps {
-  searchParams: Promise<{ design?: string }>;
-}
 
 // Sort posts by date (most recent first) and take top 6
 const latestPosts = [...posts]
@@ -34,9 +31,9 @@ function LatestArticles() {
     <section>
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-2xl font-bold text-gray-900">Latest Articles</h2>
-        <button className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+        <Link href="/guides" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
           View all →
-        </button>
+        </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {latestPosts.map((post) => (
@@ -86,17 +83,15 @@ function LatestArticles() {
   );
 }
 
-export default async function Home({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const design = (params.design || "A").toUpperCase();
-
+export default async function Home() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="w-full px-6 lg:px-12 py-8 space-y-8">
         <Hero />
+        <TripModes />
         <LatestArticles />
-        {design === "B" ? <DesignB /> : design === "C" ? <DesignC /> : <DesignA />}
+        <DesignA />
       </main>
     </div>
   );
