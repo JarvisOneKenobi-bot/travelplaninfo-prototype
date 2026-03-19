@@ -65,14 +65,14 @@ function buildRecommendations(
     affiliate_program: "Vrbo",
   });
 
-  // Flights
+  // Flights — use generic TP search (no reliable city→IATA mapping available client-side)
   recs.push({
     id: "flights",
     label: "✈️ Flights",
     title: `Flights to ${destination}`,
     description: "Compare hundreds of airlines for the best fare.",
     cta: "Search Flights",
-    url: TP_CONFIG.searchUrl("JFK", destination.split(",")[0].trim().substring(0, 3).toUpperCase()),
+    url: `https://www.aviasales.com/?marker=${TP_CONFIG.marker}`,
     category: "flight",
     affiliate_program: "Aviasales/Travelpayouts",
   });

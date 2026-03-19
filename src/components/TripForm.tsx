@@ -62,6 +62,10 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        router.push("/signin?callbackUrl=/planner");
+        return;
+      }
       setError("Failed to create trip. Please try again.");
       setLoading(false);
       return;

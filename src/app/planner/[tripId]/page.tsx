@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
@@ -8,6 +9,16 @@ import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 
 interface Props {
   params: Promise<{ tripId: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { tripId } = await params;
+  const db = getDb();
+  const trip = db.prepare("SELECT name, destination FROM trips WHERE id = ?").get(tripId) as any;
+  if (!trip) return { title: "Trip | TravelPlanInfo" };
+  return {
+    title: `${trip.name} — ${trip.destination} | TravelPlanInfo`,
+  };
 }
 
 export default async function TripDetail({ params }: Props) {
