@@ -11,7 +11,7 @@ const config: PlaywrightTestConfig = {
     ['html', { outputFolder: 'playwright-report' }],
   ],
   use: {
-    baseURL: 'https://travelplaninfo-proto.vercel.app',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     actionTimeout: 0,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

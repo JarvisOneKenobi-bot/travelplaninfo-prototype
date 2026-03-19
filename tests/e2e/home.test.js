@@ -1,46 +1,42 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'https://travelplaninfo-proto.vercel.app';
-
 test('homepage loads with correct title', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page).toHaveTitle(/Plan your next trip/i);
+  await page.goto('/');
+  await expect(page).toHaveTitle(/TravelPlanInfo/i);
 });
 
-test('homepage has stats row', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page.locator('text=Active Trips')).toBeVisible();
-  await expect(page.locator('text=Saved Destinations')).toBeVisible();
-  await expect(page.locator('text=Draft Itineraries')).toBeVisible();
+test('hero CTAs navigate to planner and destinations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Explore Destinations' }).click();
+  await expect(page).toHaveURL(/destinations/);
+
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Start Planning' }).click();
+  await expect(page).toHaveURL(/planner|signin/);
 });
 
-test('homepage has featured destinations', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page.getByRole('heading', { name: 'Miami Beach' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Cancún' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'New York City' })).toBeVisible();
+test('TripModes section renders', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Trip Modes')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /travel energy/i })).toBeVisible();
 });
 
-test('homepage has hot deals section', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page.locator('text=Miami Beach Hotels')).toBeVisible();
-  await expect(page.locator('text=Miami Vacation Rentals')).toBeVisible();
+test('Latest Articles section shows articles', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Latest Articles' })).toBeVisible();
+  // At least one article link should be present
+  const articleLinks = page.locator('a[href^="/"][href$="/"]').filter({ hasText: /\w/ });
+  await expect(articleLinks.first()).toBeVisible();
 });
 
-test('homepage has curated itineraries', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page.locator('text=3 Days in Miami')).toBeVisible();
-  await expect(page.locator('text=5-Day Caribbean Cruise')).toBeVisible();
-  await expect(page.locator('text=Florida Keys Road Trip')).toBeVisible();
-});
-
-test('homepage has latest guides', async ({ page }) => {
-  await page.goto(BASE);
-  await expect(page.getByRole('heading', { name: /tourist traps/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Budgeting a weekend/ })).toBeVisible();
-});
-
-test('hot-deals route loads', async ({ page }) => {
-  await page.goto(BASE + '/hot-deals/');
+test('hot-deals page loads with affiliate links', async ({ page }) => {
+  await page.goto('/hot-deals');
   await expect(page).toHaveURL(/hot-deals/);
+  const affiliateLinks = page.locator('a[rel*="sponsored"]');
+  await expect(affiliateLinks.first()).toBeVisible();
+});
+
+test('footer renders on homepage', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('footer')).toBeVisible();
 });
