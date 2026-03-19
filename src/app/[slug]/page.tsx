@@ -85,9 +85,44 @@ export default async function BlogPost({ params }: Props) {
     day: "numeric",
   });
 
+
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    datePublished: post.date,
+    dateModified: post.modified,
+    author: { "@type": "Organization", name: "TravelPlanInfo" },
+    publisher: {
+      "@type": "Organization",
+      name: "TravelPlanInfo",
+      url: "https://travelplaninfo.com",
+    },
+    ...(post.featuredImage ? { image: `https://travelplaninfo.com${post.featuredImage}` } : {}),
+    description: post.seo.description || post.excerpt,
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://travelplaninfo.com" },
+      { "@type": "ListItem", position: 2, name: "Guides", item: "https://travelplaninfo.com/guides/" },
+      { "@type": "ListItem", position: 3, name: post.title, item: `https://travelplaninfo.com/${slug}/` },
+    ],
+  };
+
   return (
     <>
       <Header />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <main className="max-w-[66rem] mx-auto px-6 py-6">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { DEALS, getAffiliateUrl } from "@/config/affiliates";
+import NewsletterForm from "@/components/NewsletterForm";
 
 export default function AffiliateSidebar() {
   return (
@@ -9,7 +10,7 @@ export default function AffiliateSidebar() {
       {DEALS.slice(0, 3).map((deal) => (
         <a
           key={deal.id}
-          href={getAffiliateUrl(deal.program)}
+          href={getAffiliateUrl(deal)}
           target="_blank"
           rel="noopener noreferrer sponsored"
           className="block p-4 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all"
@@ -29,14 +30,9 @@ export default function AffiliateSidebar() {
       <div className="p-4 rounded-xl bg-teal-800 text-white">
         <p className="text-sm font-bold">📧 Deal Alerts</p>
         <p className="text-xs text-teal-200 mt-1">Get weekly price drops on flights, hotels & cruises.</p>
-        <input
-          type="email"
-          placeholder="you@email.com"
-          className="w-full mt-3 px-3 py-2 rounded-lg text-sm bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
-        />
-        <button className="w-full mt-2 bg-orange-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-orange-700 transition-colors">
-          Subscribe
-        </button>
+        <div className="mt-3">
+          <NewsletterForm source="sidebar" />
+        </div>
       </div>
 
       <p className="text-[10px] text-gray-400 leading-snug">

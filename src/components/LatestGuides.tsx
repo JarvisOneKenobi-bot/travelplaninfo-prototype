@@ -1,3 +1,6 @@
+import Link from "next/link";
+import NewsletterForm from "@/components/NewsletterForm";
+
 const articles = [
   {
     tag: "Planning",
@@ -35,18 +38,19 @@ export default function LatestGuides() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Latest Guides</h2>
-        <button className="text-sm text-gray-900 hover:text-orange-600 transition-colors">
+        <Link href="/guides" className="text-sm text-gray-900 hover:text-orange-600 transition-colors">
           All articles →
-        </button>
+        </Link>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Article cards — 2×2 grid */}
-        <div className="flex-1 grid grid-cols-2 gap-6">
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {articles.map((a) => (
-            <div
+            <Link
               key={a.title}
-              className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-sm transition-shadow cursor-pointer"
+              href="/guides"
+              className="block bg-white border border-gray-200 rounded-xl p-6 hover:shadow-sm hover:border-orange-200 transition-all"
             >
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-orange-100 text-orange-700 text-xs font-medium px-3 py-1 rounded-full">
@@ -58,24 +62,24 @@ export default function LatestGuides() {
                 {a.title}
               </h3>
               <p className="text-sm text-gray-600">{a.desc}</p>
-            </div>
+            </Link>
           ))}
         </div>
 
         {/* Sidebar */}
-        <div className="w-72 shrink-0 space-y-5">
+        <div className="w-full lg:w-72 shrink-0 space-y-5">
           {/* Recent Blog Posts */}
           <div className="bg-orange-50 rounded-xl p-6">
             <h3 className="text-base font-semibold text-gray-900 mb-4">Recent Blog Posts</h3>
             <div className="space-y-4">
               {recentPosts.map((post) => (
-                <div key={post.title} className="flex items-start gap-3">
+                <Link key={post.title} href="/guides" className="flex items-start gap-3 group">
                   <div className="w-12 h-12 rounded-lg bg-orange-200 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 leading-snug">{post.title}</p>
+                    <p className="text-sm font-medium text-gray-900 leading-snug group-hover:text-orange-600 transition-colors">{post.title}</p>
                     <p className="text-xs text-gray-500 mt-1">{post.readTime}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -84,22 +88,10 @@ export default function LatestGuides() {
           <div className="bg-orange-50 rounded-xl p-6">
             <h3 className="text-base font-semibold text-gray-900 mb-1">📧 Stay Updated</h3>
             <p className="text-sm text-gray-600 mb-4">Get the latest travel tips and deals</p>
-            <input
-              type="email"
-              placeholder="Your email"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
-            />
-            <button className="w-full py-2.5 text-sm font-medium text-white rounded-lg bg-orange-600 hover:bg-orange-700 transition-colors">
-              Subscribe
-            </button>
+            <NewsletterForm source="latest-guides" />
           </div>
 
-          {/* AdSense slot */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
-            <p className="text-sm font-medium text-gray-500">AdSense Slot</p>
-            <p className="text-xs text-gray-400 mt-1">sidebar</p>
-            <p className="text-xs text-gray-400 mt-1">Replace with real AdSense script</p>
-          </div>
+          {/* TODO: Insert AdSense ad unit here once approved */}
         </div>
       </div>
 

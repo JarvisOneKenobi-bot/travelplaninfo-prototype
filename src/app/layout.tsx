@@ -29,9 +29,24 @@ export const metadata: Metadata = {
   },
 };
 
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "TravelPlanInfo",
+  url: "https://travelplaninfo.com",
+  description: "Expert itineraries, hidden gems, and deals for every kind of traveler.",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+      </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-gray-50 text-gray-900 antialiased`}>
         <SessionProviderWrapper>
           {children}
