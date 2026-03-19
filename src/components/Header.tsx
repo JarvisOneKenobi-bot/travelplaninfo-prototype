@@ -3,9 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
@@ -33,18 +35,40 @@ export default function Header() {
 
         {/* Auth buttons + hamburger */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/signin"
-            className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/register"
-            className="hidden md:block text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            Register
-          </Link>
+          {session ? (
+            <>
+              <span className="hidden md:block text-sm text-gray-700">
+                {session.user?.name || session.user?.email}
+              </span>
+              <Link
+                href="/planner"
+                className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
+              >
+                My Trips
+              </Link>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="hidden md:block text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                className="hidden md:block text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Register
+              </Link>
+            </>
+          )}
 
           {/* Hamburger button — mobile only */}
           <button
@@ -68,12 +92,25 @@ export default function Header() {
           <Link href="/planner" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Planner</Link>
           <Link href="/guides" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Guides</Link>
           <div className="flex gap-3 pt-2 border-t border-gray-100">
-            <Link href="/signin" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
-              Sign In
-            </Link>
-            <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-              Register
-            </Link>
+            {session ? (
+              <>
+                <Link href="/planner" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
+                  My Trips
+                </Link>
+                <button onClick={() => signOut({ callbackUrl: "/" })} className="flex-1 text-center text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/signin" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
+                  Sign In
+                </Link>
+                <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       )}

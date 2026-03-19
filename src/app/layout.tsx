@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import Footer from "@/components/Footer";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,13 +19,24 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "TravelPlanInfo • Plan Your Next Trip",
   description: "Expert itineraries, hidden gems, and deals for every kind of traveler.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: [
+      { url: "/favicon.svg" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable} font-sans bg-white text-gray-900 antialiased`}>
-        {children}
+      <body className={`${inter.variable} ${playfair.variable} font-sans bg-gray-50 text-gray-900 antialiased`}>
+        <SessionProviderWrapper>
+          {children}
+          <Footer />
+        </SessionProviderWrapper>
       </body>
     </html>
   );
