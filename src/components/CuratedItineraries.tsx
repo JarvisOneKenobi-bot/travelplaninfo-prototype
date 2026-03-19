@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const itineraries = [
   {
     emoji: "🌴",
@@ -27,12 +29,12 @@ export default function CuratedItineraries() {
     <div>
       <div className="flex items-baseline justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Curated Itineraries</h2>
-        <button className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+        <Link href="/guides" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
           Browse all →
-        </button>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {itineraries.map((item) => (
           <div
             key={item.title}
@@ -55,9 +57,9 @@ export default function CuratedItineraries() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">{item.desc}</p>
-              <button className="mt-auto text-sm font-medium text-orange-600 hover:text-orange-700 text-left transition-colors">
+              <Link href="/guides" className="mt-auto text-sm font-medium text-orange-600 hover:text-orange-700 text-left transition-colors">
                 View itinerary →
-              </button>
+              </Link>
             </div>
           </div>
         ))}

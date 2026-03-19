@@ -1,40 +1,25 @@
+import Link from "next/link";
+
 import LatestGuides from "@/components/LatestGuides";
 import CuratedItineraries from "@/components/CuratedItineraries";
 import { DEALS, getAffiliateUrl } from "@/config/affiliates";
 
-const stats = [
-  { emoji: "🗓️", value: "2", label: "Active Trips" },
-  { emoji: "⭐", value: "8", label: "Saved Destinations" },
-  { emoji: "📝", value: "3", label: "Draft Itineraries" },
-];
-
 const destinations = [
-  { name: "Miami Beach", country: "Florida, USA", desc: "Sun-soaked beaches, Art Deco architecture, and vibrant nightlife await.", emoji: "🌴" },
-  { name: "Cancún", country: "Mexico", desc: "Crystal-clear waters, ancient Mayan ruins, and all-inclusive resorts.", emoji: "🏖️" },
-  { name: "New York City", country: "New York, USA", desc: "The city that never sleeps — culture, food, and iconic skylines.", emoji: "🗽" },
+  { slug: "miami", name: "Miami Beach", country: "Florida, USA", desc: "Sun-soaked beaches, Art Deco architecture, and vibrant nightlife await.", emoji: "🌴" },
+  { slug: "cancun", name: "Cancún", country: "Mexico", desc: "Crystal-clear waters, ancient Mayan ruins, and all-inclusive resorts.", emoji: "🏖️" },
+  { slug: "new-york", name: "New York City", country: "New York, USA", desc: "The city that never sleeps — culture, food, and iconic skylines.", emoji: "🗽" },
 ];
 
 export default function DesignA() {
   return (
     <div className="space-y-10">
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-5">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-orange-50 rounded-2xl p-6 text-center">
-            <div className="text-3xl mb-2">{s.emoji}</div>
-            <div className="text-3xl font-bold text-orange-600 mb-1">{s.value}</div>
-            <div className="text-sm text-gray-500">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Featured Destinations */}
       <div>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-2xl font-bold text-gray-900">Featured Destinations</h2>
-          <button className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+          <Link href="/destinations" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
             View all →
-          </button>
+          </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {destinations.map((d) => (
@@ -47,9 +32,12 @@ export default function DesignA() {
                 <span className="text-xs font-medium bg-orange-100 text-orange-700 px-3 py-1 rounded-full">{d.country}</span>
                 <h3 className="text-lg font-bold text-gray-900 mt-3 mb-1">{d.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{d.desc}</p>
-                <button className="text-sm font-medium text-gray-900 hover:text-orange-600 transition-colors">
+                <Link
+                  href={`/destinations#${d.slug}`}
+                  className="text-sm font-medium text-gray-900 hover:text-orange-600 transition-colors"
+                >
                   Explore →
-                </button>
+                </Link>
               </div>
             </div>
           ))}
@@ -60,13 +48,15 @@ export default function DesignA() {
       <div>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-2xl font-bold text-gray-900">🔥 Hot Deals</h2>
-          <button className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">View all →</button>
+          <Link href="/hot-deals" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
+            View all →
+          </Link>
         </div>
         <div className="space-y-3">
           {DEALS.slice(0, 3).map((deal) => (
             <a
               key={deal.id}
-              href={getAffiliateUrl(deal.program)}
+              href={getAffiliateUrl(deal)}
               target="_blank"
               rel="noopener noreferrer sponsored"
               className="flex items-center justify-between p-6 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50/30 transition-colors"
