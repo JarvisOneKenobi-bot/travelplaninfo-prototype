@@ -14,10 +14,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = (credentials.email as string).trim().toLowerCase();
         const db = getDb();
         const user = db
           .prepare("SELECT * FROM users WHERE email = ?")
-          .get(credentials.email) as any;
+          .get(email) as any;
 
         if (!user || !user.password_hash) return null;
 
@@ -56,7 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
-      if (user) {
+      if (user && token.email) {
         const db = getDb();
         const dbUser = db
           .prepare("SELECT id FROM users WHERE email = ?")

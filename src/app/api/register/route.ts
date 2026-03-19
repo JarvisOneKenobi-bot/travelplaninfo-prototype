@@ -3,7 +3,10 @@ import bcrypt from "bcryptjs";
 import { getDb } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
-  const { email, password, name } = await req.json();
+  const body = await req.json();
+  const email = (body.email || "").trim().toLowerCase();
+  const password = body.password || "";
+  const name = body.name || null;
 
   if (!email || !password) {
     return NextResponse.json(
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
     .prepare(
       "INSERT INTO users (email, name, password_hash, provider) VALUES (?, ?, ?, 'credentials')"
     )
-    .run(email, name || null, password_hash) as any;
+    .run(email, name, password_hash) as any;
 
   const user = db
     .prepare("SELECT id, email, name, created_at FROM users WHERE id = ?")
