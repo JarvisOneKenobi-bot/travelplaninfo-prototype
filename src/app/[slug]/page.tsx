@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -5,7 +6,29 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import AffiliateSidebar from "@/components/AffiliateSidebar";
 import AffiliateInlineCTA from "@/components/AffiliateInlineCTA";
-import posts from "@/content/posts.json";
+import ArticleAffiliateCTA from "@/components/ArticleAffiliateCTA";
+import { getAllArticles, getArticle } from "@/lib/articles";
+
+function splitByH2(html: string): string[] {
+  return html.split(/(?=<h2[\s>])/i).filter((p) => p.trim().length > 0);
+}
+
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&hellip;/g, '…')
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/&rsquo;/g, "\u2019")
+    .replace(/&lsquo;/g, "\u2018")
+    .replace(/&rdquo;/g, "\u201D")
+    .replace(/&ldquo;/g, "\u201C")
+    .replace(/&nbsp;/g, ' ');
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -13,7 +36,7 @@ interface Props {
 
 // Generate static params for all posts (SSG)
 export async function generateStaticParams() {
-  return posts.map((post) => ({
+  return getAllArticles().map((post) => ({
     slug: post.slug,
   }));
 }
@@ -21,7 +44,7 @@ export async function generateStaticParams() {
 // Generate SEO metadata
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = posts.find((p) => p.slug === slug);
+  const post = getArticle(slug);
 
   if (!post) {
     return {
@@ -29,12 +52,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const description = decodeEntities(post.seo.description || post.excerpt);
   return {
     title: post.seo.title || post.title,
-    description: post.seo.description || post.excerpt,
+    description,
     openGraph: {
       title: post.seo.title || post.title,
-      description: post.seo.description || post.excerpt,
+      description,
       type: "article",
       publishedTime: post.date,
       modifiedTime: post.modified,
@@ -49,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPost({ params }: Props) {
   const { slug } = await params;
-  const post = posts.find((p) => p.slug === slug);
+  const post = getArticle(slug);
 
   if (!post) {
     notFound();
@@ -106,7 +130,7 @@ export default async function BlogPost({ params }: Props) {
         {/* Content + Sidebar grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
           <div>
-            {/* Content */}
+            {/* Content with interleaved contextual CTAs */}
             <article
               className="prose prose-lg prose-orange max-w-none
                 prose-headings:font-bold prose-headings:text-gray-900
@@ -119,8 +143,19 @@ export default async function BlogPost({ params }: Props) {
                 prose-strong:text-gray-900
                 prose-code:text-orange-600 prose-code:bg-orange-50 prose-code:px-2 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
                 prose-hr:border-gray-200"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            >
+              {splitByH2(post.content).map((section, i) => (
+                <Fragment key={i}>
+                  <div dangerouslySetInnerHTML={{ __html: section }} />
+                  {post.affiliateOpportunities.length > 0 && i > 0 && i % 2 === 0 && (
+                    <ArticleAffiliateCTA
+                      opportunities={post.affiliateOpportunities}
+                      destination={post.categories?.[0]?.name}
+                    />
+                  )}
+                </Fragment>
+              ))}
+            </article>
 
             {/* Inline affiliate CTA after article */}
             <AffiliateInlineCTA />
@@ -128,7 +163,7 @@ export default async function BlogPost({ params }: Props) {
             {/* Share / Back */}
             <div className="mt-8 pt-8 border-t border-gray-200">
               <Link
-                href="/"
+                href="/guides"
                 className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
               >
                 ← Back to all articles

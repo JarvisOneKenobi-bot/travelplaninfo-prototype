@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import posts from '@/content/posts.json';
+import { getAllArticles } from '@/lib/articles';
 
 const SITE_URL = 'https://travelplaninfo.com';
 
@@ -49,7 +49,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const postUrls: MetadataRoute.Sitemap = posts.map((post) => ({
+  const postUrls: MetadataRoute.Sitemap = getAllArticles().map((post) => ({
     url: `${SITE_URL}/${post.slug}/`,
     lastModified: new Date(post.date),
     changeFrequency: 'monthly' as const,

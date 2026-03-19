@@ -1,11 +1,14 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
-import posts from "@/content/posts.json";
+import { getAllArticles } from "@/lib/articles";
 import Link from "next/link";
 
-// Sort posts by date (most recent first)
-const sortedPosts = [...posts].sort((a, b) => 
-  new Date(b.date).getTime() - new Date(a.date).getTime()
-);
+export const metadata: Metadata = {
+  title: "Travel Guides & Itineraries | TravelPlanInfo",
+  description: "Expert travel guides, itineraries, and tips for destinations worldwide. Plan your perfect trip with advice from experienced travelers.",
+};
+
+const sortedPosts = getAllArticles();
 
 // Extract plain text from HTML excerpt
 function getPlainText(html: string, maxLength: number): string {
@@ -24,10 +27,10 @@ function formatDate(dateStr: string): string {
 
 export default function Guides() {
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="w-full px-6 lg:px-12 py-8">
         {/* Hero */}
         <div className="text-center mb-12">
           <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">
@@ -61,10 +64,10 @@ export default function Guides() {
         </div>
 
         {/* Posts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedPosts.map((post) => (
             <Link
-              key={post.id}
+              key={post.slug}
               href={`/${post.slug}/`}
               className="block bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all"
             >
@@ -115,7 +118,7 @@ export default function Guides() {
             Get travel tips in your inbox
           </h2>
           <p className="text-teal-100 mb-6 max-w-xl mx-auto">
-            Join 41,200+ travelers. We send weekly deals, itinerary tips, and destination guides.
+            Get weekly deals, itinerary tips, and destination guides.
           </p>
           <div className="flex gap-2 max-w-md mx-auto">
             <input

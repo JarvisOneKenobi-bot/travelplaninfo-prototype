@@ -4,12 +4,9 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TripModes from "@/components/TripModes";
 import DesignA from "@/components/DesignA";
-import posts from "@/content/posts.json";
+import { getAllArticles } from "@/lib/articles";
 
-// Sort posts by date (most recent first) and take top 6
-const latestPosts = [...posts]
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  .slice(0, 6);
+const latestPosts = getAllArticles().slice(0, 6);
 
 // Extract plain text from HTML excerpt
 function getPlainText(html: string, maxLength: number): string {
@@ -38,7 +35,7 @@ function LatestArticles() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {latestPosts.map((post) => (
           <a
-            key={post.id}
+            key={post.slug}
             href={`/${post.slug}/`}
             className="block rounded-xl p-6 shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all"
           >
