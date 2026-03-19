@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Post {
   slug: string;
@@ -68,15 +69,17 @@ export default function GuidesFilter({ posts }: { posts: Post[] }) {
             href={`/${post.slug}/`}
             className="block bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all"
           >
-            <div className="h-44 bg-gradient-to-br from-orange-50 to-orange-100 rounded-t-xl overflow-hidden flex items-center justify-center">
+            <div className="relative h-44 bg-gradient-to-br from-orange-50 to-orange-100 rounded-t-xl overflow-hidden">
               {post.featuredImage ? (
-                <img
+                <Image
                   src={post.featuredImage}
                   alt={post.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
               ) : (
-                <span className="text-5xl">✈️</span>
+                <span className="absolute inset-0 flex items-center justify-center text-5xl">✈️</span>
               )}
             </div>
 

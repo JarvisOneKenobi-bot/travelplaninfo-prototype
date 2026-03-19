@@ -39,33 +39,35 @@ export default function NewsletterForm({ source }: { source: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
-      <input
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@email.com"
-        disabled={status === "loading"}
-        className="flex-1 px-4 py-3 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-60"
-      />
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-60"
-      >
-        {status === "loading" ? "..." : "Subscribe"}
-      </button>
+    <div className="relative">
+      <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@email.com"
+          disabled={status === "loading"}
+          className="flex-1 px-4 py-3 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={status === "loading"}
+          className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-60"
+        >
+          {status === "loading" ? "..." : "Subscribe"}
+        </button>
+      </form>
       {status === "duplicate" && (
-        <p className="absolute -bottom-6 left-0 text-xs text-teal-200 w-full text-center">
+        <p className="mt-2 text-xs text-teal-200 text-center">
           You are already subscribed!
         </p>
       )}
       {status === "error" && (
-        <p className="absolute -bottom-6 left-0 text-xs text-red-300 w-full text-center">
+        <p className="mt-2 text-xs text-red-300 text-center">
           Something went wrong. Please try again.
         </p>
       )}
-    </form>
+    </div>
   );
 }

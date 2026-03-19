@@ -89,7 +89,7 @@ export default async function BlogPost({ params }: Props) {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: post.title,
+    headline: decodeEntities(post.title),
     datePublished: post.date,
     dateModified: post.modified,
     author: { "@type": "Organization", name: "TravelPlanInfo" },

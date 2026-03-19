@@ -6,8 +6,10 @@
 #
 # On first run it records a baseline hash. Subsequent runs compare against it.
 # If the hash has changed: runs `npm run build` then `pm2 restart tpi`.
+# The hash is always updated after a build attempt (success or failure) so that
+# a broken build does not spin indefinitely on every cron tick (M6 fix).
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -35,10 +37,20 @@ if [[ "${CURRENT_HASH}" == "${PREV_HASH}" ]]; then
   exit 0
 fi
 
-echo "[$(date -Iseconds)] Change detected (${PREV_HASH} → ${CURRENT_HASH}). Rebuilding..."
+echo "[$(date -Iseconds)] Change detected (${PREV_HASH} -> ${CURRENT_HASH}). Rebuilding..."
+
+# Always update the hash before the build so a failing build does not
+# get retried on every subsequent cron tick (M6 fix).
+echo "${CURRENT_HASH}" > "${HASH_FILE}"
 
 cd "${ROOT}"
-npm run build
+BUILD_OK=0
+npm run build && BUILD_OK=1
+
+if [[ $BUILD_OK -eq 0 ]]; then
+  echo "[$(date -Iseconds)] Build FAILED. Hash recorded to prevent retry loops. Fix the error and re-deploy manually."
+  exit 1
+fi
 
 # Restart pm2 process if running
 if command -v pm2 &>/dev/null && pm2 describe tpi &>/dev/null; then
@@ -48,5 +60,4 @@ else
   echo "[$(date -Iseconds)] pm2 not found or 'tpi' not running — skipping restart."
 fi
 
-echo "${CURRENT_HASH}" > "${HASH_FILE}"
 echo "[$(date -Iseconds)] Rebuild complete."
