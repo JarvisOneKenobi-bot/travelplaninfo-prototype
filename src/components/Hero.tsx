@@ -1,48 +1,53 @@
-const chips = [
-  "🏖️ Beach", "🏙️ City Break", "🌲 Nature", "👨‍👩‍👧‍👦 Family",
-  "🧗 Adventure", "🚢 Cruise", "🎒 Backpacking", "🚗 Road Trip",
-];
+import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="bg-orange-50 rounded-3xl px-10 py-16 md:px-14 md:py-20">
-      {/* Badge */}
-      <span className="inline-block bg-orange-100 text-orange-700 text-xs font-medium px-3 py-1 rounded-full mb-5">
-        Travel Deals &amp; Guides
-      </span>
+    <section
+      className="relative rounded-3xl px-10 py-20 md:px-14 md:py-28 overflow-hidden"
+      style={{
+        backgroundImage:
+          "url(/images/hero-bg.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center 40%",
+      }}
+    >
+      {/* Gradient overlay — darker on the left where text lives, lighter on the right */}
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-gray-950/80 via-gray-900/60 to-gray-800/30" />
 
-      {/* Headline */}
-      <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-5">
-        <span className="text-gray-900">Plan your next trip,</span>
-        <br />
-        <span className="text-orange-600">one adventure at a time.</span>
-      </h1>
+      {/* Content */}
+      <div className="relative z-10 max-w-3xl">
+        {/* Badge */}
+        <span className="inline-block bg-white/15 backdrop-blur-sm border border-white/20 text-white text-xs font-medium px-3 py-1 rounded-full mb-5">
+          Travel Deals &amp; Guides
+        </span>
 
-      {/* Subtitle */}
-      <p className="text-lg text-gray-500 mb-7 max-w-xl">
-        Expert itineraries, hidden gems, and deals for every kind of traveler.
-      </p>
+        {/* Headline */}
+        <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-5 text-white">
+          Plan your next trip,
+          <br />
+          <span className="text-orange-400">one adventure at a time.</span>
+        </h1>
 
-      {/* Category chips */}
-      <div className="flex flex-wrap gap-2 mb-8">
-        {chips.map((chip) => (
-          <button
-            key={chip}
-            className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:border-orange-300 hover:text-orange-700 transition-colors whitespace-nowrap"
+        {/* Subtitle */}
+        <p className="text-lg text-white/75 mb-8 max-w-xl">
+          Expert itineraries, hidden gems, and deals for every kind of traveler.
+        </p>
+
+        {/* CTA buttons */}
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/destinations"
+            className="px-6 py-3 rounded-lg text-sm font-medium bg-white text-gray-900 hover:bg-gray-100 transition-colors"
           >
-            {chip}
-          </button>
-        ))}
-      </div>
-
-      {/* CTA buttons */}
-      <div className="flex flex-wrap gap-3">
-        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:border-gray-500 hover:text-gray-900 transition-colors">
-          Explore Destinations
-        </button>
-        <button className="px-6 py-3 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors">
-          Start Planning
-        </button>
+            Explore Destinations
+          </Link>
+          <Link
+            href="/planner"
+            className="px-6 py-3 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          >
+            Start Planning
+          </Link>
+        </div>
       </div>
     </section>
   );
