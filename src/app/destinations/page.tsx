@@ -9,6 +9,7 @@ const destinations = [
   {
     slug: "miami",
     name: "Miami",
+    iata: "MIA",
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=800&q=80",
@@ -19,6 +20,7 @@ const destinations = [
   {
     slug: "new-york",
     name: "New York City",
+    iata: "JFK",
     country: "USA",
     region: "Northeast",
     image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80",
@@ -29,6 +31,7 @@ const destinations = [
   {
     slug: "los-angeles",
     name: "Los Angeles",
+    iata: "LAX",
     country: "USA",
     region: "California",
     image: "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=800&q=80",
@@ -39,6 +42,7 @@ const destinations = [
   {
     slug: "chicago",
     name: "Chicago",
+    iata: "ORD",
     country: "USA",
     region: "Midwest",
     image: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=800&q=80",
@@ -49,6 +53,7 @@ const destinations = [
   {
     slug: "las-vegas",
     name: "Las Vegas",
+    iata: "LAS",
     country: "USA",
     region: "Nevada",
     image: "https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=800&q=80",
@@ -59,6 +64,7 @@ const destinations = [
   {
     slug: "orlando",
     name: "Orlando",
+    iata: "MCO",
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1596386461350-326ea777d85f?w=800&q=80",
@@ -69,6 +75,7 @@ const destinations = [
   {
     slug: "fort-lauderdale",
     name: "Fort Lauderdale",
+    iata: "FLL",
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1560269983-3c767e1a4a5b?w=800&q=80",
@@ -79,6 +86,7 @@ const destinations = [
   {
     slug: "key-west",
     name: "Key West",
+    iata: "EYW",
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1580978955498-a1c5aa72b9b0?w=800&q=80",
@@ -89,6 +97,7 @@ const destinations = [
   {
     slug: "jamaica",
     name: "Jamaica",
+    iata: "MBJ",
     country: "Caribbean",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1552353617-3bfd679b3bdd?w=800&q=80",
@@ -99,6 +108,7 @@ const destinations = [
   {
     slug: "bahamas",
     name: "Bahamas",
+    iata: "NAS",
     country: "Caribbean",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1597423244039-d4f591d7b6a9?w=800&q=80",
@@ -109,6 +119,7 @@ const destinations = [
   {
     slug: "punta-cana",
     name: "Punta Cana",
+    iata: "PUJ",
     country: "Dominican Republic",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?w=800&q=80",
@@ -119,6 +130,7 @@ const destinations = [
   {
     slug: "cancun",
     name: "Cancún",
+    iata: "CUN",
     country: "Mexico",
     region: "Mexico",
     image: "https://images.unsplash.com/photo-1552074291-ad4dfd8b11c0?w=800&q=80",
@@ -147,10 +159,7 @@ export default function Destinations() {
     : destinations;
 
   function flightUrl(dest: typeof destinations[0]) {
-    const params = new URLSearchParams({ city_from: "NYC", city_to: dest.name.replace(/ /g, "_"), marker: TP_CONFIG.marker });
-    if (checkin) params.set("depart_date", checkin);
-    if (checkout) params.set("return_date", checkout);
-    return `https://www.aviasales.com/search?${params.toString()}`;
+    return TP_CONFIG.searchUrl("JFK", dest.iata);
   }
 
   function handleSearch(e: React.FormEvent) {
