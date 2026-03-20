@@ -8,6 +8,7 @@ import AffiliateSidebar from "@/components/AffiliateSidebar";
 import AffiliateInlineCTA from "@/components/AffiliateInlineCTA";
 import ArticleAffiliateCTA from "@/components/ArticleAffiliateCTA";
 import { getAllArticles, getArticle } from "@/lib/articles";
+import FAQAccordion from "@/components/FAQAccordion";
 
 function splitByH2(html: string): string[] {
   return html.split(/(?=<h2[\s>])/i).filter((p) => p.trim().length > 0);
@@ -63,7 +64,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.date,
       modifiedTime: post.modified,
       authors: ["TravelPlanInfo"],
-      images: (post.seo as any).ogImage ? [(post.seo as any).ogImage] : [],
+      images: post.seo.ogImage ? [post.seo.ogImage] : [],
     },
     alternates: {
       canonical: post.seo.canonical || `https://travelplaninfo.com/${slug}/`,
@@ -112,6 +113,16 @@ export default async function BlogPost({ params }: Props) {
     ],
   };
 
+  const faqSchema = post.faq?.length ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": post.faq.map(item => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": { "@type": "Answer", "text": item.answer }
+    }))
+  } : null;
+
   return (
     <>
       <Header />
@@ -123,6 +134,12 @@ export default async function BlogPost({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
       <main className="max-w-[66rem] mx-auto px-6 py-6">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-4">
@@ -194,6 +211,11 @@ export default async function BlogPost({ params }: Props) {
 
             {/* Inline affiliate CTA after article */}
             <AffiliateInlineCTA />
+
+            {/* FAQ Accordion */}
+            {post.faq && post.faq.length > 0 && (
+              <FAQAccordion items={post.faq} />
+            )}
 
             {/* Share / Back */}
             <div className="mt-8 pt-8 border-t border-gray-200">

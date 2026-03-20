@@ -2,16 +2,20 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section
-      className="relative rounded-3xl px-10 py-20 md:px-14 md:py-28 overflow-hidden"
-      style={{
-        backgroundImage:
-          "url(/images/hero-bg.jpg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center 40%",
-      }}
-    >
-      {/* Gradient overlay — darker on the left where text lives, lighter on the right */}
+    <section className="relative rounded-3xl px-10 py-20 md:px-14 md:py-28 overflow-hidden">
+      {/* Video background with image fallback */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster="/images/hero-bg.jpg"
+        className="absolute inset-0 w-full h-full object-cover rounded-3xl"
+      >
+        <source src="/images/hero-video.mp4" type="video/mp4" />
+      </video>
+
+      {/* Gradient overlay */}
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-gray-950/80 via-gray-900/60 to-gray-800/30" />
 
       {/* Content */}

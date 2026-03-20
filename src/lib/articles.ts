@@ -17,6 +17,8 @@ export interface Article {
     ogImage?: string;
   };
   affiliateOpportunities: string[];
+  faq?: { question: string; answer: string }[];
+  schemaType?: "hotel_review" | "destination_guide" | "how_to" | "comparison";
 }
 
 const ARTICLES_DIR = path.join(process.cwd(), "content", "articles");
