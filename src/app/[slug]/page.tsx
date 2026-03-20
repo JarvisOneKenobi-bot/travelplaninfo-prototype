@@ -140,7 +140,7 @@ export default async function BlogPost({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
-      <main className="max-w-[66rem] mx-auto px-6 py-6">
+      <main className="w-full px-6 py-6">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-4">
           <Link href="/" className="hover:text-orange-600 transition-colors">Home</Link>
