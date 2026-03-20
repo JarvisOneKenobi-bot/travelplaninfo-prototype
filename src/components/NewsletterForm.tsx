@@ -40,7 +40,7 @@ export default function NewsletterForm({ source }: { source: string }) {
 
   return (
     <div className="relative">
-      <form onSubmit={handleSubmit} className="flex gap-2 max-w-md mx-auto">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           type="email"
           required
@@ -48,12 +48,12 @@ export default function NewsletterForm({ source }: { source: string }) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@email.com"
           disabled={status === "loading"}
-          className="flex-1 px-4 py-3 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-60"
+          className="w-full px-4 py-3 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={status === "loading"}
-          className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-60"
+          className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-60"
         >
           {status === "loading" ? "..." : "Subscribe"}
         </button>
