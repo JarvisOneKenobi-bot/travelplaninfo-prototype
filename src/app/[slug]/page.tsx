@@ -140,7 +140,7 @@ export default async function BlogPost({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
-      <main className="w-full px-6 py-6 overflow-x-hidden">
+      <main className="w-full px-6 py-6">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-4">
           <Link href="/" className="hover:text-orange-600 transition-colors">Home</Link>
@@ -180,8 +180,8 @@ export default async function BlogPost({ params }: Props) {
         </div>
 
         {/* Content + Sidebar grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
+          <div className="min-w-0">
             {/* Content with interleaved contextual CTAs */}
             <article
               className="prose prose-lg prose-orange max-w-none

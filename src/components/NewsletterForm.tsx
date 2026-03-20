@@ -46,7 +46,7 @@ export default function NewsletterForm({ source }: { source: string }) {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@email.com"
+          placeholder="your@email.com"
           disabled={status === "loading"}
           className="w-full px-4 py-3 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-60"
         />
