@@ -10,7 +10,7 @@ export default function Header() {
   const { data: session } = useSession();
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
+    <header className="sticky top-0 z-50 backdrop-blur border-b border-gray-100" style={{ backgroundColor: "rgba(178, 107, 32, 0.7)" }}>
       <div className="w-full px-6 lg:px-12 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
@@ -19,7 +19,7 @@ export default function Header() {
             alt="TravelPlanInfo"
             width={400}
             height={400}
-            className="h-10 w-auto"
+            style={{ height: "15rem", width: "auto", paddingTop: "15px" }}
             priority
           />
         </Link>
@@ -63,7 +63,8 @@ export default function Header() {
               </Link>
               <Link
                 href="/register"
-                className="hidden md:block text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                className="hidden md:block text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: "rgba(169, 61, 4, 1)" }}
               >
                 Register
               </Link>
