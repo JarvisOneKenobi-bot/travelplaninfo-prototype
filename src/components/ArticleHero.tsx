@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import NewsletterForm from "@/components/NewsletterForm";
 
 interface ArticleHeroProps {
   title: string;
@@ -33,48 +34,49 @@ export default function ArticleHero({
       {/* Dark gradient overlay — stronger at bottom for text legibility */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
 
-      {/* Content positioned at bottom */}
-      <div className="absolute inset-0 flex flex-col justify-end px-6 sm:px-8 md:px-12 pb-8 md:pb-12">
-        <div className="max-w-3xl">
-          {/* Breadcrumb */}
-          <nav className="text-sm text-white/70 mb-3">
-            <Link href="/" className="hover:text-white transition-colors">
-              Home
-            </Link>
-            <span className="mx-2">/</span>
-            <Link href="/guides" className="hover:text-white transition-colors">
-              Guides
-            </Link>
-            {category && (
-              <>
-                <span className="mx-2">/</span>
-                <span className="text-white/90">{category.name}</span>
-              </>
-            )}
-          </nav>
+      {/* Content overlay — full width grid matching page layout */}
+      <div className="absolute inset-0 flex items-end px-6 sm:px-8 md:px-12 pb-8 md:pb-12">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
+          {/* Left — article info */}
+          <div className="max-w-2xl">
+            {/* Breadcrumb */}
+            <nav className="text-sm text-white/70 mb-3">
+              <Link href="/" className="hover:text-white transition-colors">
+                Home
+              </Link>
+              <span className="mx-2">/</span>
+              <Link href="/guides/" className="hover:text-white transition-colors">
+                Guides
+              </Link>
+            </nav>
 
-          {/* Category badge */}
-          {category && (
-            <span className="inline-block bg-orange-500/90 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-wide">
-              {category.name}
-            </span>
-          )}
+            {/* Title */}
+            <h1 className="text-[1.75rem] sm:text-[2rem] font-bold text-white leading-tight mb-3 drop-shadow-lg">
+              {title}
+            </h1>
 
-          {/* Title */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] font-bold text-white leading-tight mb-3 drop-shadow-lg">
-            {title}
-          </h1>
+            {/* Excerpt */}
+            <p className="text-sm sm:text-base text-white/80 mb-4 max-w-2xl line-clamp-2 leading-relaxed">
+              {excerpt}
+            </p>
 
-          {/* Excerpt */}
-          <p className="text-sm sm:text-base text-white/80 mb-4 max-w-2xl line-clamp-2 leading-relaxed">
-            {excerpt}
-          </p>
+            {/* Meta row */}
+            <div className="flex items-center gap-3 text-sm text-white/70">
+              <time dateTime={date}>{formattedDate}</time>
+              <span className="w-1 h-1 rounded-full bg-white/50" />
+              <span>TravelPlanInfo</span>
+            </div>
+          </div>
 
-          {/* Meta row */}
-          <div className="flex items-center gap-3 text-sm text-white/70">
-            <time dateTime={date}>{formattedDate}</time>
-            <span className="w-1 h-1 rounded-full bg-white/50" />
-            <span>TravelPlanInfo</span>
+          {/* Right — Deal Alerts, aligned with sidebar column */}
+          <div className="hidden lg:flex items-end">
+            <div className="w-full bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/20">
+              <p className="text-sm font-bold text-white">Deal Alerts</p>
+              <p className="text-xs text-white/70 mt-1 mb-3">
+                Weekly price drops on flights, hotels &amp; cruises.
+              </p>
+              <NewsletterForm source="hero" />
+            </div>
           </div>
         </div>
       </div>

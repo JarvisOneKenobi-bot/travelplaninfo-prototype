@@ -129,12 +129,11 @@ export function getAffiliateUrl(deal: AffiliateDeal): string {
   return CJ_LINKS[deal.program]();
 }
 
-// 300×250 sidebar banner units (IAB Medium Rectangle)
+// 300×60 sidebar strip banners (compact, sticky-friendly)
 export interface CJBanner {
   id: string;
   advertiser: string;
   headline: string;
-  subline: string;
   cta: string;
   url: string;
   bgFrom: string;
@@ -147,10 +146,9 @@ export interface CJBanner {
 export const CJ_BANNERS: CJBanner[] = [
   {
     id: "hotels-member-prices",
-    advertiser: "hotels.com",
+    advertiser: "Hotels.com",
     headline: "Save 10%+ with Member Prices",
-    subline: "Unlock exclusive deals — free to join",
-    cta: "Book Now",
+    cta: "Book",
     url: "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo",
     bgFrom: "#D93025",
     bgTo: "#B71C1C",
@@ -160,16 +158,39 @@ export const CJ_BANNERS: CJBanner[] = [
   },
   {
     id: "vrbo-vacation-rentals",
-    advertiser: "vrbo",
+    advertiser: "Vrbo",
     headline: "Entire Homes for Every Trip",
-    subline: "Beach houses, cabins, mountain retreats",
-    cta: "Search Rentals",
+    cta: "Search",
     url: "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo",
     bgFrom: "#1565C0",
     bgTo: "#0D47A1",
     textColor: "#ffffff",
     ctaColor: "#ffffff",
     ctaText: "#1565C0",
+  },
+  {
+    id: "cruisedirect-deals",
+    advertiser: "CruiseDirect",
+    headline: "Cruises Up to 75% Off",
+    cta: "Deals",
+    url: "https://www.dpbolvw.net/click-101692716-15734200?sid=travelplaninfo",
+    bgFrom: "#00695C",
+    bgTo: "#004D40",
+    textColor: "#ffffff",
+    ctaColor: "#FFD54F",
+    ctaText: "#004D40",
+  },
+  {
+    id: "cars-compare",
+    advertiser: "EconomyBookings",
+    headline: "Compare 500+ Car Rentals",
+    cta: "Compare",
+    url: "https://www.anrdoezrs.net/click-101692716-15736982?sid=travelplaninfo",
+    bgFrom: "#E65100",
+    bgTo: "#BF360C",
+    textColor: "#ffffff",
+    ctaColor: "#ffffff",
+    ctaText: "#E65100",
   },
 ];
 

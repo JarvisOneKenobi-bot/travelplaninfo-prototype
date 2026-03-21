@@ -10,8 +10,13 @@ import ArticleAffiliateCTA from "@/components/ArticleAffiliateCTA";
 import { getAllArticles, getArticle } from "@/lib/articles";
 import FAQAccordion from "@/components/FAQAccordion";
 
+function stripH1(html: string): string {
+  // Remove the H1 title block from content — it's already in the hero overlay
+  return html.replace(/<h1[^>]*>.*?<\/h1>/is, '');
+}
+
 function splitByH2(html: string): string[] {
-  return html.split(/(?=<h2[\s>])/i).filter((p) => p.trim().length > 0);
+  return stripH1(html).split(/(?=<h2[\s>])/i).filter((p) => p.trim().length > 0);
 }
 
 function decodeEntities(str: string): string {
@@ -158,7 +163,7 @@ export default async function BlogPost({ params }: Props) {
             <span className="mx-2">/</span>
             <span className="text-gray-900">{post.categories?.[0]?.name || "Article"}</span>
           </nav>
-          <h1 className="text-4xl md:text-[2.1em] font-bold text-gray-900 mb-3 leading-tight">
+          <h1 className="text-[2em] font-bold text-[#4b5563] mb-3 leading-tight">
             {post.title}
           </h1>
           <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
@@ -182,7 +187,8 @@ export default async function BlogPost({ params }: Props) {
             {/* Content with interleaved contextual CTAs */}
             <article
               className="prose prose-lg prose-orange max-w-none
-                prose-headings:font-bold prose-headings:text-gray-900
+                prose-headings:font-bold prose-headings:text-[#4b5563]
+                prose-h1:text-[2em]
                 prose-p:text-gray-700 prose-p:leading-relaxed
                 prose-a:text-orange-600 prose-a:no-underline hover:prose-a:underline
                 prose-img:rounded-xl prose-img:shadow-md
