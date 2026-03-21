@@ -3,13 +3,14 @@
 // CJ publisher ID 101692720 (Hotels/Vrbo) | 101692716 (CruiseDirect/EconomyBookings)
 
 export const CJ_LINKS = {
-  // Hotels.com
-  hotels: () => "https://www.dpbolvw.net/click-101692720-10433860",
+  // Hotels.com — property 101692716 (travelplaninfo)
+  hotels: () => "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo",        // evergreen $138.91 EPC
+  hotelsMemberPrices: () => "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo", // member prices $154.50 EPC
   hotelsCity: (city: string) =>
-    `https://www.dpbolvw.net/click-101692720-10433860?url=${encodeURIComponent(`https://www.hotels.com/Hotel-Search?destination=${city}`)}`,
+    `https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo&url=${encodeURIComponent(`https://www.hotels.com/Hotel-Search?destination=${city}`)}`,
 
-  // Vrbo
-  vrbo: () => "https://www.jdoqocy.com/click-101692720-10790646",
+  // Vrbo — property 101692716 (travelplaninfo)
+  vrbo: () => "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo",          // top EPC $280.26
 
   // CruiseDirect — contextual deep links (use the right one per placement)
   cruises: () => "https://www.tkqlhce.com/click-101692716-15534697",       // generic fallback
@@ -127,5 +128,49 @@ export function getAffiliateUrl(deal: AffiliateDeal): string {
   if (deal.program === "cars") return CJ_LINKS.cars();
   return CJ_LINKS[deal.program]();
 }
+
+// 300×250 sidebar banner units (IAB Medium Rectangle)
+export interface CJBanner {
+  id: string;
+  advertiser: string;
+  headline: string;
+  subline: string;
+  cta: string;
+  url: string;
+  bgFrom: string;
+  bgTo: string;
+  textColor: string;
+  ctaColor: string;
+  ctaText: string;
+}
+
+export const CJ_BANNERS: CJBanner[] = [
+  {
+    id: "hotels-member-prices",
+    advertiser: "hotels.com",
+    headline: "Save 10%+ with Member Prices",
+    subline: "Unlock exclusive deals — free to join",
+    cta: "Book Now",
+    url: "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo",
+    bgFrom: "#D93025",
+    bgTo: "#B71C1C",
+    textColor: "#ffffff",
+    ctaColor: "#ffffff",
+    ctaText: "#D93025",
+  },
+  {
+    id: "vrbo-vacation-rentals",
+    advertiser: "vrbo",
+    headline: "Entire Homes for Every Trip",
+    subline: "Beach houses, cabins, mountain retreats",
+    cta: "Search Rentals",
+    url: "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo",
+    bgFrom: "#1565C0",
+    bgTo: "#0D47A1",
+    textColor: "#ffffff",
+    ctaColor: "#ffffff",
+    ctaText: "#1565C0",
+  },
+];
 
 export default CJ_LINKS;

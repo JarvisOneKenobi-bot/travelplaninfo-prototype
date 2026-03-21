@@ -1,6 +1,6 @@
 "use client";
 
-import { DEALS, getAffiliateUrl } from "@/config/affiliates";
+import { DEALS, CJ_BANNERS, getAffiliateUrl } from "@/config/affiliates";
 import NewsletterForm from "@/components/NewsletterForm";
 
 export default function AffiliateSidebar() {
@@ -24,6 +24,48 @@ export default function AffiliateSidebar() {
           <p className="text-sm font-medium text-gray-900">{deal.title}</p>
           <p className="text-xs text-gray-500 mt-0.5">{deal.subtitle}</p>
           <span className="text-xs font-medium text-orange-600 mt-2 inline-block">{deal.cta} →</span>
+        </a>
+      ))}
+
+      {/* 300×250 CJ banner units */}
+      {CJ_BANNERS.map((banner) => (
+        <a
+          key={banner.id}
+          href={banner.url}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="block w-[300px] h-[250px] mx-auto rounded-xl overflow-hidden hover:opacity-95 hover:shadow-lg transition-all relative"
+          style={{ background: `linear-gradient(135deg, ${banner.bgFrom}, ${banner.bgTo})` }}
+          aria-label={`${banner.advertiser} — ${banner.headline}`}
+        >
+          <div className="flex flex-col justify-between h-full p-5">
+            <div>
+              <p
+                className="text-xs font-bold uppercase tracking-widest mb-3 opacity-80"
+                style={{ color: banner.textColor }}
+              >
+                {banner.advertiser}
+              </p>
+              <p
+                className="text-xl font-extrabold leading-tight"
+                style={{ color: banner.textColor }}
+              >
+                {banner.headline}
+              </p>
+              <p
+                className="text-sm mt-2 opacity-80"
+                style={{ color: banner.textColor }}
+              >
+                {banner.subline}
+              </p>
+            </div>
+            <span
+              className="inline-block text-sm font-bold px-5 py-2.5 rounded-full self-start"
+              style={{ backgroundColor: banner.ctaColor, color: banner.ctaText }}
+            >
+              {banner.cta} →
+            </span>
+          </div>
         </a>
       ))}
 

@@ -2,8 +2,8 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import Header from "@/components/Header";
+import ArticleHero from "@/components/ArticleHero";
 import AffiliateSidebar from "@/components/AffiliateSidebar";
 import AffiliateInlineCTA from "@/components/AffiliateInlineCTA";
 import ArticleAffiliateCTA from "@/components/ArticleAffiliateCTA";
@@ -140,45 +140,42 @@ export default async function BlogPost({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
-      <main className="w-full px-6 py-6">
-        {/* Breadcrumb */}
-        <nav className="text-sm text-gray-500 mb-4">
-          <Link href="/" className="hover:text-orange-600 transition-colors">Home</Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">{post.categories?.[0]?.name || "Article"}</span>
-        </nav>
-
-        {/* Featured Image */}
-        {post.featuredImage && (
-          <div className="mb-4 relative rounded-2xl overflow-hidden aspect-[16/9]">
-            <Image
-              src={post.featuredImage}
-              alt={post.title}
-              fill
-              className="object-cover"
-              priority
-            />
+      {/* Article Hero — featured image with overlay */}
+      {post.featuredImage ? (
+        <ArticleHero
+          title={post.title}
+          excerpt={post.excerpt}
+          featuredImage={post.featuredImage}
+          date={post.date}
+          formattedDate={formattedDate}
+          category={post.categories?.[0]}
+        />
+      ) : (
+        <div className="w-full px-6 pt-6">
+          {/* Breadcrumb (no-image fallback) */}
+          <nav className="text-sm text-gray-500 mb-4">
+            <Link href="/" className="hover:text-orange-600 transition-colors">Home</Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-900">{post.categories?.[0]?.name || "Article"}</span>
+          </nav>
+          <h1 className="text-4xl md:text-[2.1em] font-bold text-gray-900 mb-3 leading-tight">
+            {post.title}
+          </h1>
+          <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
+            <time dateTime={post.date}>{formattedDate}</time>
+            {post.categories && post.categories.length > 0 && (
+              <>
+                <span>&bull;</span>
+                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium">
+                  {post.categories[0].name}
+                </span>
+              </>
+            )}
           </div>
-        )}
-
-        {/* Title */}
-        <h1 className="text-4xl md:text-[2.1em] font-bold text-gray-900 mb-3 leading-tight">
-          {post.title}
-        </h1>
-
-        {/* Meta */}
-        <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-200">
-          <time dateTime={post.date}>{formattedDate}</time>
-          {post.categories && post.categories.length > 0 && (
-            <>
-              <span>•</span>
-              <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium">
-                {post.categories[0].name}
-              </span>
-            </>
-          )}
         </div>
+      )}
 
+      <main className="w-full px-6 py-6">
         {/* Content + Sidebar grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
           <div className="min-w-0">
