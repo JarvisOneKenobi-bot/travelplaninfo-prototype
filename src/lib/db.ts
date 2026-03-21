@@ -63,6 +63,30 @@ export function getDb(): Database.Database {
       subscribed_at TEXT NOT NULL DEFAULT (datetime('now')),
       source        TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      prefs      TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id         TEXT PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title      TEXT DEFAULT 'New Chat',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      role       TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system', 'tool')),
+      content    TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
   `);
 
   return _db;
