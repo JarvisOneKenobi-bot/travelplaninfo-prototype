@@ -1,0 +1,393 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
+import type { UserPreferences } from "@/lib/preferences";
+import { PREF_ENUMS } from "@/lib/preferences";
+
+export default function PreferencesPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/signin");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetch("/api/user/preferences")
+        .then((r) => r.json())
+        .then((data) => setPrefs(data))
+        .catch(() => setToast({ type: "error", message: "Failed to load preferences" }));
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!prefs) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      const updated = await res.json();
+      setPrefs(updated);
+      setToast({ type: "success", message: "Preferences saved!" });
+    } catch {
+      setToast({ type: "error", message: "Failed to save preferences" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleInterest(interest: (typeof PREF_ENUMS.interests)[number]) {
+    if (!prefs) return;
+    const current = prefs.interests;
+    const next = current.includes(interest)
+      ? current.filter((i) => i !== interest)
+      : [...current, interest];
+    setPrefs({ ...prefs, interests: next });
+  }
+
+  if (status === "loading" || !prefs) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-gray-500">Loading...</div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="min-h-screen bg-gray-50 py-10 px-4">
+        <form onSubmit={handleSave} className="max-w-3xl mx-auto space-y-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Travel Profile</h1>
+
+          {/* Toast */}
+          {toast && (
+            <div
+              className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                toast.type === "success"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
+              }`}
+            >
+              {toast.message}
+            </div>
+          )}
+
+          {/* Travel Profile */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Travel Profile</h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Home Airport (IATA)</label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={prefs.home_airport}
+                  onChange={(e) => setPrefs({ ...prefs, home_airport: e.target.value.toUpperCase() })}
+                  placeholder="e.g. MIA"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Home City</label>
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={prefs.home_city}
+                  onChange={(e) => setPrefs({ ...prefs, home_city: e.target.value })}
+                  placeholder="e.g. Miami, FL"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Budget Tier</label>
+              <div className="flex gap-3">
+                {PREF_ENUMS.budget_tier.map((tier) => (
+                  <label key={tier} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="budget_tier"
+                      value={tier}
+                      checked={prefs.budget_tier === tier}
+                      onChange={() => setPrefs({ ...prefs, budget_tier: tier })}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 capitalize">{tier}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <select
+                value={prefs.currency_pref}
+                onChange={(e) =>
+                  setPrefs({ ...prefs, currency_pref: e.target.value as typeof prefs.currency_pref })
+                }
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              >
+                {PREF_ENUMS.currency_pref.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+
+          {/* Party */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Travel Party</h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={prefs.party.adults}
+                  onChange={(e) =>
+                    setPrefs({ ...prefs, party: { ...prefs.party, adults: Math.max(0, parseInt(e.target.value) || 0) } })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={prefs.party.children}
+                  onChange={(e) =>
+                    setPrefs({ ...prefs, party: { ...prefs.party, children: Math.max(0, parseInt(e.target.value) || 0) } })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={prefs.party.has_pets}
+                    onChange={(e) =>
+                      setPrefs({ ...prefs, party: { ...prefs.party, has_pets: e.target.checked } })
+                    }
+                    className="rounded text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Pets</span>
+                </label>
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={prefs.party.accessibility_needs}
+                    onChange={(e) =>
+                      setPrefs({ ...prefs, party: { ...prefs.party, accessibility_needs: e.target.checked } })
+                    }
+                    className="rounded text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Accessibility</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* Interests */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
+            <div className="flex flex-wrap gap-2">
+              {PREF_ENUMS.interests.map((interest) => {
+                const selected = prefs.interests.includes(interest);
+                return (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => toggleInterest(interest)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selected
+                        ? "bg-orange-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {interest}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Trip Preferences */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Trip Preferences</h2>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Default Search Mode</label>
+              <div className="flex flex-wrap gap-3">
+                {PREF_ENUMS.default_search_mode.map((mode) => (
+                  <label key={mode} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="default_search_mode"
+                      value={mode}
+                      checked={prefs.default_search_mode === mode}
+                      onChange={() => setPrefs({ ...prefs, default_search_mode: mode })}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {mode.replace(/_/g, " ")}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Trip Length</label>
+              <div className="flex flex-wrap gap-3">
+                {PREF_ENUMS.trip_length_pref.map((len) => (
+                  <label key={len} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="trip_length_pref"
+                      value={len}
+                      checked={prefs.trip_length_pref === len}
+                      onChange={() => setPrefs({ ...prefs, trip_length_pref: len })}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {len.replace(/_/g, " ")}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Climate Preference</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={prefs.climate_pref}
+                onChange={(e) => setPrefs({ ...prefs, climate_pref: e.target.value })}
+                placeholder="e.g. warm, tropical, temperate"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+          </section>
+
+          {/* Assistant Settings */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Assistant Settings</h2>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Response Style</label>
+              <div className="flex gap-3">
+                {PREF_ENUMS.assistant_style.map((style) => (
+                  <label key={style} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="assistant_style"
+                      value={style}
+                      checked={prefs.assistant_style === style}
+                      onChange={() => setPrefs({ ...prefs, assistant_style: style })}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 capitalize">{style}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={prefs.voice_enabled}
+                onChange={(e) => setPrefs({ ...prefs, voice_enabled: e.target.checked })}
+                className="rounded text-orange-500 focus:ring-orange-500"
+              />
+              <span className="text-sm text-gray-700">Enable voice responses</span>
+            </label>
+          </section>
+
+          {/* Deal Alerts */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900">Deal Alerts</h2>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={prefs.deal_alerts}
+                onChange={(e) => setPrefs({ ...prefs, deal_alerts: e.target.checked })}
+                className="rounded text-orange-500 focus:ring-orange-500"
+              />
+              <span className="text-sm text-gray-700">Enable deal alerts</span>
+            </label>
+
+            {prefs.deal_alerts && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Alert threshold: {prefs.deal_alert_threshold_pct}% off
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={prefs.deal_alert_threshold_pct}
+                  onChange={(e) =>
+                    setPrefs({ ...prefs, deal_alert_threshold_pct: parseInt(e.target.value) })
+                  }
+                  className="w-full accent-orange-500"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Save button */}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-orange-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? "Saving..." : "Save Preferences"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </>
+  );
+}

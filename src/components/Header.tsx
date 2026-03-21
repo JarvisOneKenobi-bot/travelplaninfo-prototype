@@ -41,6 +41,12 @@ export default function Header() {
                 {session.user?.name || session.user?.email}
               </span>
               <Link
+                href="/account/preferences"
+                className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
+              >
+                My Profile
+              </Link>
+              <Link
                 href="/planner"
                 className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
               >
@@ -95,6 +101,9 @@ export default function Header() {
           <div className="flex gap-3 pt-2 border-t border-gray-100">
             {session ? (
               <>
+                <Link href="/account/preferences" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
+                  My Profile
+                </Link>
                 <Link href="/planner" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
                   My Trips
                 </Link>
