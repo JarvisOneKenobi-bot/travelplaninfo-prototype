@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
+import OnboardingWrapper from "@/components/OnboardingWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-gray-50 text-gray-900 antialiased`}>
         <SessionProviderWrapper>
+          <OnboardingWrapper />
           {children}
           <Footer />
         </SessionProviderWrapper>
