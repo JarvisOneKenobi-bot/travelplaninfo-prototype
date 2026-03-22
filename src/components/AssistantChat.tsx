@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
 import HotelCard from "./atlas/HotelCard";
@@ -8,6 +8,12 @@ import DealCard from "./atlas/DealCard";
 import DestinationCard from "./atlas/DestinationCard";
 import ArticleCard from "./atlas/ArticleCard";
 import ActivityCard from "./atlas/ActivityCard";
+import TripResultsModal from "./atlas/TripResultsModal";
+import type { FlightResult, HotelResult, ActivityResult, BudgetTier } from "./atlas/types";
+
+// ── Trip tool detection — only these tools trigger the modal ─────────────────
+
+const TRIP_TOOLS = new Set(["search_flights", "search_hotels", "search_activities"]);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +22,21 @@ interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   isStreaming?: boolean;
+}
+
+interface TripContext {
+  destination: string;
+  dates?: { start: string; end: string };
+  adults: number;
+  budgetTier: BudgetTier;
+  tripId?: number;
+}
+
+interface ModalData {
+  flights: FlightResult[];
+  hotels: HotelResult[];
+  activities: ActivityResult[];
+  tripContext: TripContext;
 }
 
 // ── Quick-action chips ───────────────────────────────────────────────────────
@@ -67,6 +88,132 @@ function parseMessageContent(content: string): ToolResult[] {
   }
 
   return parts.length > 0 ? parts : [{ type: "text", text: content }];
+}
+
+// ── Helpers: parse numeric values from price strings + duration ──────────────
+
+function parsePriceValue(priceStr: string): number {
+  const match = priceStr.replace(/,/g, "").match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : 0;
+}
+
+function parseDurationMinutes(durationStr: string): number {
+  const hMatch = durationStr.match(/(\d+)h/);
+  const mMatch = durationStr.match(/(\d+)m/);
+  return (hMatch ? parseInt(hMatch[1]) * 60 : 0) + (mMatch ? parseInt(mMatch[1]) : 0);
+}
+
+/** Count how many trip-specific tools appear in parsed parts */
+function countTripTools(parts: ToolResult[]): number {
+  const seen = new Set<string>();
+  for (const p of parts) {
+    if (p.type === "tool" && p.toolName && TRIP_TOOLS.has(p.toolName)) {
+      seen.add(p.toolName);
+    }
+  }
+  return seen.size;
+}
+
+/** Extract typed arrays from parsed tool results */
+function extractTripData(parts: ToolResult[]): {
+  flights: FlightResult[];
+  hotels: HotelResult[];
+  activities: ActivityResult[];
+} {
+  const flights: FlightResult[] = [];
+  const hotels: HotelResult[] = [];
+  const activities: ActivityResult[] = [];
+
+  for (const p of parts) {
+    if (p.type !== "tool" || !p.data) continue;
+
+    if (p.toolName === "search_flights" && Array.isArray(p.data.flights)) {
+      for (const f of p.data.flights as Record<string, unknown>[]) {
+        const price = String(f.price || "$0");
+        const duration = String(f.duration || "0h 0m");
+        const stops = String(f.stops || "");
+        flights.push({
+          airline: String(f.airline || ""),
+          route: String(f.route || ""),
+          price,
+          price_value: typeof f.price_value === "number" ? f.price_value : parsePriceValue(price),
+          duration,
+          duration_minutes: typeof f.duration_minutes === "number" ? f.duration_minutes : parseDurationMinutes(duration),
+          stops,
+          nonstop: typeof f.nonstop === "boolean" ? f.nonstop : /nonstop/i.test(stops),
+          depart_date: f.depart_date ? String(f.depart_date) : undefined,
+          return_date: f.return_date ? String(f.return_date) : undefined,
+          book_url: String(f.book_url || ""),
+        });
+      }
+    }
+
+    if (p.toolName === "search_hotels" && Array.isArray(p.data.hotels)) {
+      for (const h of p.data.hotels as Record<string, unknown>[]) {
+        const priceNight = String(h.price_night || "$0");
+        hotels.push({
+          name: String(h.name || ""),
+          price_night: priceNight,
+          price_night_value: typeof h.price_night_value === "number" ? h.price_night_value : parsePriceValue(priceNight),
+          total_cost: h.total_cost ? String(h.total_cost) : undefined,
+          rating: typeof h.rating === "number" ? h.rating : 0,
+          tier: (["budget", "mid", "luxury"].includes(String(h.tier)) ? String(h.tier) : "mid") as "budget" | "mid" | "luxury",
+          book_url: String(h.book_url || ""),
+        });
+      }
+    }
+
+    if (p.toolName === "search_activities" && Array.isArray(p.data.activities)) {
+      for (const a of p.data.activities as Record<string, unknown>[]) {
+        const price = String(a.price || "$0");
+        activities.push({
+          name: String(a.name || ""),
+          price,
+          price_value: typeof a.price_value === "number" ? a.price_value : parsePriceValue(price),
+          tier: (["budget", "mid", "luxury"].includes(String(a.tier)) ? String(a.tier) : "mid") as "budget" | "mid" | "luxury",
+          interest: String(a.interest || "other"),
+          duration: a.duration ? String(a.duration) : undefined,
+        });
+      }
+    }
+  }
+
+  return { flights, hotels, activities };
+}
+
+/** Read trip context from the #atlas-trip-context script tag */
+function readTripContext(): TripContext {
+  const defaults: TripContext = {
+    destination: "your destination",
+    adults: 1,
+    budgetTier: "mid",
+  };
+
+  try {
+    const el = document.getElementById("atlas-trip-context");
+    if (!el) return defaults;
+    const data = JSON.parse(el.textContent || "{}");
+    return {
+      destination: data.destination || defaults.destination,
+      dates: data.start_date && data.end_date
+        ? { start: data.start_date, end: data.end_date }
+        : undefined,
+      adults: data.travelers_adults || defaults.adults,
+      budgetTier: (["budget", "mid", "luxury"].includes(data.budget) ? data.budget : "mid") as BudgetTier,
+      tripId: data.trip_id || data.id,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+/** Get text-only summary from parsed parts (strips tool JSON) */
+function getTextSummary(parts: ToolResult[]): string {
+  return parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text || "")
+    .join(" ")
+    .trim();
 }
 
 // ── Tool card renderers using dedicated card components ──────────────────────
@@ -189,6 +336,9 @@ export default function AssistantChat() {
   const [error, setError] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [hasBouncedOnce, setHasBouncedOnce] = useState(false);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<ModalData | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -528,54 +678,118 @@ export default function AssistantChat() {
               </div>
             )}
 
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
-              >
+            {messages.map((msg) => {
+              // ── Multi-tool trip detection (assistant messages only) ──
+              const parsed = msg.role === "assistant" ? parseMessageContent(msg.content) : [];
+              const tripToolCount = msg.role === "assistant" ? countTripTools(parsed) : 0;
+              const isMultiTripTool = tripToolCount >= 2;
+
+              return (
                 <div
-                  className={[
-                    "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
-                    msg.role === "user"
-                      ? "bg-orange-500 text-white rounded-br-md"
-                      : "bg-gray-100 text-gray-800 rounded-bl-md",
-                  ].join(" ")}
+                  key={msg.id}
+                  className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
                 >
-                  {msg.role === "assistant" ? (
-                    <div>
-                      {parseMessageContent(msg.content).map((part, i) => {
-                        if (part.type === "tool" && part.toolName && part.data) {
-                          return (
-                            <ToolResultCards
-                              key={i}
-                              toolName={part.toolName}
-                              data={part.data}
-                            />
-                          );
-                        }
-                        return (
-                          <span
-                            key={i}
-                            dangerouslySetInnerHTML={{
-                              __html: renderMarkdownLite(part.text || ""),
-                            }}
-                          />
-                        );
-                      })}
-                      {msg.isStreaming && (
-                        <span className="inline-flex gap-1 ml-1">
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    msg.content
-                  )}
+                  <div
+                    className={[
+                      "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
+                      msg.role === "user"
+                        ? "bg-orange-500 text-white rounded-br-md"
+                        : "bg-gray-100 text-gray-800 rounded-bl-md",
+                    ].join(" ")}
+                  >
+                    {msg.role === "assistant" ? (
+                      <div>
+                        {isMultiTripTool ? (
+                          <>
+                            {/* Show text summary only (strip tool JSON) */}
+                            {(() => {
+                              const summary = getTextSummary(parsed);
+                              return summary ? (
+                                <span
+                                  dangerouslySetInnerHTML={{
+                                    __html: renderMarkdownLite(summary),
+                                  }}
+                                />
+                              ) : null;
+                            })()}
+                            {/* Render non-trip tool results inline as before */}
+                            {parsed
+                              .filter(
+                                (p) =>
+                                  p.type === "tool" &&
+                                  p.toolName &&
+                                  !TRIP_TOOLS.has(p.toolName) &&
+                                  p.data
+                              )
+                              .map((part, i) => (
+                                <ToolResultCards
+                                  key={`nontool-${i}`}
+                                  toolName={part.toolName!}
+                                  data={part.data!}
+                                />
+                              ))}
+                            {/* "View Full Plan" button — only when streaming is complete */}
+                            {!msg.isStreaming && (
+                              <button
+                                onClick={() => {
+                                  const tripData = extractTripData(parsed);
+                                  const ctx = readTripContext();
+                                  setModalData({
+                                    flights: tripData.flights,
+                                    hotels: tripData.hotels,
+                                    activities: tripData.activities,
+                                    tripContext: ctx,
+                                  });
+                                  setModalOpen(true);
+                                }}
+                                className="mt-3 w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors"
+                              >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                                  <line x1="3" y1="9" x2="21" y2="9" />
+                                  <line x1="9" y1="21" x2="9" y2="9" />
+                                </svg>
+                                View Full Plan
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          /* Standard rendering: inline cards for single-tool or non-trip tools */
+                          parsed.map((part, i) => {
+                            if (part.type === "tool" && part.toolName && part.data) {
+                              return (
+                                <ToolResultCards
+                                  key={i}
+                                  toolName={part.toolName}
+                                  data={part.data}
+                                />
+                              );
+                            }
+                            return (
+                              <span
+                                key={i}
+                                dangerouslySetInnerHTML={{
+                                  __html: renderMarkdownLite(part.text || ""),
+                                }}
+                              />
+                            );
+                          })
+                        )}
+                        {msg.isStreaming && (
+                          <span className="inline-flex gap-1 ml-1">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             <div ref={messagesEndRef} />
           </div>
@@ -640,6 +854,21 @@ export default function AssistantChat() {
             </button>
           </div>
         </div>
+      )}
+      {/* Trip Results Modal */}
+      {modalData && (
+        <TripResultsModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          destination={modalData.tripContext.destination}
+          dates={modalData.tripContext.dates}
+          adults={modalData.tripContext.adults}
+          flights={modalData.flights}
+          hotels={modalData.hotels}
+          activities={modalData.activities}
+          budgetTier={modalData.tripContext.budgetTier}
+          tripId={modalData.tripContext.tripId}
+        />
       )}
     </>
   );
