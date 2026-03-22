@@ -18,7 +18,7 @@ const INTERESTS = [
   { value: "budget", label: "Budget Travel", icon: "\uD83D\uDCF8" },
 ];
 
-const AI_ASSISTED_CHIP = { value: "ai_assisted", label: "AI Assisted", icon: "\u2728" };
+const AI_ASSISTED_CHIP = { value: "ai_assisted", label: "Let Atlas decide", icon: "\u2728" };
 
 const BUDGET_OPTIONS = [
   { value: "budget", label: "Budget", icon: "\uD83D\uDCB0" },
@@ -239,7 +239,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </div>
       </div>
 
-      {/* Step 5: Interests (with AI Assisted chip) */}
+      {/* Step 5: Interests (with "Let Atlas decide" chip) */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
@@ -256,7 +256,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
             </label>
           ))}
 
-          {/* AI Assisted chip with sparkle icon */}
+          {/* "Let Atlas decide" chip with sparkle icon */}
           <label className="cursor-pointer">
             <input type="checkbox" checked={interests.includes(AI_ASSISTED_CHIP.value)}
               onChange={() => toggleInterest(AI_ASSISTED_CHIP.value)} className="sr-only" />
