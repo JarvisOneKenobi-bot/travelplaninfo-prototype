@@ -148,13 +148,30 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
 
 // ── Markdown-lite renderer ───────────────────────────────────────────────────
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function renderMarkdownLite(text: string) {
+  // Escape HTML first to prevent XSS — content comes from the LLM, which could
+  // theoretically output raw HTML or be influenced by prompt injection.
+  let html = escapeHtml(text);
   // Bold
-  let html = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  // Links — safe because we only render known-format markdown links
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // Links — only allow http(s) URLs to prevent javascript: protocol injection
   html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
+    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
     '<a href="$2" class="text-orange-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
+  );
+  // Also handle relative URLs (for TPI article links like /slug/)
+  html = html.replace(
+    /\[([^\]]+)\]\((\/[^)]+)\)/g,
+    '<a href="$2" class="text-orange-600 hover:underline">$1</a>'
   );
   // Newlines to br
   html = html.replace(/\n/g, "<br/>");
@@ -264,7 +281,15 @@ export default function AssistantChat() {
       ]);
 
       try {
-        const pageContext = window.location.pathname + " | " + document.title;
+        // Build rich page context — include trip data if on itinerary page
+        let pageContext = window.location.pathname + " | " + document.title;
+        const tripContextEl = document.getElementById("atlas-trip-context");
+        if (tripContextEl) {
+          try {
+            const tripData = JSON.parse(tripContextEl.textContent || "{}");
+            pageContext += "\n\nActive trip: " + JSON.stringify(tripData);
+          } catch { /* ignore parse errors */ }
+        }
 
         const res = await fetch("/api/assistant/chat", {
           method: "POST",

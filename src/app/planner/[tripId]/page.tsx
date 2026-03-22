@@ -83,6 +83,23 @@ export default async function TripDetail({ params }: Props) {
         </div>
       </main>
       <HelpButton pageId="planner-itinerary" />
+      {/* Trip context for Atlas — server-rendered, read-only, no user input */}
+      <script
+        id="atlas-trip-context"
+        type="application/json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          tripId: trip.id,
+          destination: trip.destination,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+          budget: trip.budget,
+          adults: trip.travelers_adults,
+          children: trip.travelers_children,
+          rooms: trip.rooms,
+          interests,
+          itemCount: items.length,
+        }) }}
+      />
     </div>
   );
 }
