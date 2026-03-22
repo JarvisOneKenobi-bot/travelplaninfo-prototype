@@ -4,7 +4,7 @@ export const PREF_ENUMS = {
   default_search_mode: ["flight_only", "flight_hotel", "flight_hotel_car", "flight_limo", "surprise_me"] as const,
   trip_length_pref: ["day_trip", "weekend", "week", "two_weeks", "month_plus"] as const,
   assistant_style: ["concise", "detailed", "friendly"] as const,
-  interests: ["beach", "adventure", "culture", "food", "nightlife", "nature", "wellness", "family", "luxury", "budget", "cruise", "city", "ai_assisted"] as const,
+  interests: ["beach", "adventure", "culture", "food", "nightlife", "nature", "wellness", "family", "luxury", "budget", "cruise", "city", "backpacking", "business", "ai_assisted"] as const,
 } as const;
 
 export interface UserPreferences {

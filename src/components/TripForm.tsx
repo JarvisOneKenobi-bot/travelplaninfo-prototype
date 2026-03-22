@@ -16,6 +16,8 @@ const INTERESTS = [
   { value: "cruise", label: "Cruises", icon: "\uD83D\uDEA2" },
   { value: "luxury", label: "Luxury", icon: "\uD83C\uDF77" },
   { value: "budget", label: "Budget Travel", icon: "\uD83D\uDCF8" },
+  { value: "backpacking", label: "Backpacking", icon: "\uD83C\uDFD5\uFE0F" },
+  { value: "business", label: "Business Travel", icon: "\uD83D\uDCBC" },
 ];
 
 const AI_ASSISTED_CHIP = { value: "ai_assisted", label: "Let Atlas decide", icon: "\u2728" };
