@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import VoiceInput from "./VoiceInput";
+import FlightCard from "./atlas/FlightCard";
+import HotelCard from "./atlas/HotelCard";
+import DealCard from "./atlas/DealCard";
+import DestinationCard from "./atlas/DestinationCard";
+import ArticleCard from "./atlas/ArticleCard";
+import ActivityCard from "./atlas/ActivityCard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,7 +69,7 @@ function parseMessageContent(content: string): ToolResult[] {
   return parts.length > 0 ? parts : [{ type: "text", text: content }];
 }
 
-// ── Tool card renderers (inline — Task 6 will add proper card components) ───
+// ── Tool card renderers using dedicated card components ──────────────────────
 
 function ToolResultCards({ toolName, data }: { toolName: string; data: Record<string, unknown> }) {
   if (toolName === "search_flights" && data.flights) {
@@ -71,19 +77,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {flights.map((f, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-medium text-sm">{f.airline}</p>
-                <p className="text-xs text-gray-500">{f.route} &middot; {f.duration} &middot; {f.stops}</p>
-              </div>
-              <p className="font-bold text-orange-600">{f.price}</p>
-            </div>
-            <a href={f.book_url} target="_blank" rel="noopener noreferrer"
-              className="mt-2 inline-block text-xs font-medium text-orange-600 hover:text-orange-700">
-              Book on Aviasales &rarr;
-            </a>
-          </div>
+          <FlightCard key={i} flight={f as never} />
         ))}
       </div>
     );
@@ -94,22 +88,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {hotels.map((h, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-medium text-sm">{h.name as string}</p>
-                <p className="text-xs text-gray-500">
-                  {"*".repeat(Math.round(h.rating as number))} {h.rating as number} &middot;{" "}
-                  <span className="capitalize">{h.tier as string}</span>
-                </p>
-              </div>
-              <p className="font-bold text-orange-600">{h.price_night as string}/night</p>
-            </div>
-            <a href={h.book_url as string} target="_blank" rel="noopener noreferrer"
-              className="mt-2 inline-block text-xs font-medium text-orange-600 hover:text-orange-700">
-              Find on Hotels.com &rarr;
-            </a>
-          </div>
+          <HotelCard key={i} hotel={h as never} />
         ))}
       </div>
     );
@@ -120,16 +99,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {deals.map((d, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3 flex justify-between items-center">
-            <div>
-              <p className="font-medium text-sm">{d.destination as string}</p>
-              <p className="text-xs text-gray-500">{d.date as string}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-orange-600">{d.price as string}</p>
-              <p className="text-xs text-green-600">-{d.savings_pct as number}%</p>
-            </div>
-          </div>
+          <DealCard key={i} deal={d as never} />
         ))}
       </div>
     );
@@ -140,11 +110,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {suggestions.map((s, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3">
-            <p className="font-medium text-sm">{s.city as string}</p>
-            <p className="text-xs text-gray-600 mt-1">{s.tagline as string}</p>
-            <p className="text-xs text-orange-600 mt-1">{s.estimated_flight as string}</p>
-          </div>
+          <DestinationCard key={i} destination={s as never} />
         ))}
       </div>
     );
@@ -155,13 +121,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {articles.map((a, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3">
-            <p className="font-medium text-sm">{a.title}</p>
-            <p className="text-xs text-gray-500 line-clamp-2">{a.excerpt}</p>
-            <a href={a.url} className="mt-1 inline-block text-xs font-medium text-orange-600 hover:text-orange-700">
-              Read Guide &rarr;
-            </a>
-          </div>
+          <ArticleCard key={i} article={a as never} />
         ))}
       </div>
     );
@@ -172,16 +132,7 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
     return (
       <div className="space-y-2 my-2">
         {activities.map((a, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm border p-3 flex justify-between items-center">
-            <div>
-              <p className="font-medium text-sm">{a.name}</p>
-              <p className="text-xs text-gray-500">{a.duration} &middot; {a.interest}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-sm">{a.price}</p>
-              <span className="text-xs bg-gray-100 rounded px-1 capitalize">{a.tier}</span>
-            </div>
-          </div>
+          <ActivityCard key={i} activity={a as never} />
         ))}
       </div>
     );
