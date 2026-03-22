@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import ArticleHero from "@/components/ArticleHero";
 import AffiliateSidebar from "@/components/AffiliateSidebar";
 import AffiliateInlineCTA from "@/components/AffiliateInlineCTA";
@@ -239,6 +240,7 @@ export default async function BlogPost({ params }: Props) {
           </div>
         </div>
       </main>
+      <HelpButton pageId="article" />
     </>
   );
 }

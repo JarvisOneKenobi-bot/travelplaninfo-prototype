@@ -20,7 +20,7 @@ export interface UserPreferences {
     accessibility_needs: boolean;
   };
   default_search_mode: (typeof PREF_ENUMS.default_search_mode)[number];
-  interests: (typeof PREF_ENUMS.interests)[number][];
+  interests: ((typeof PREF_ENUMS.interests)[number] | string)[];
   excluded_vibes: string[];
   climate_pref: string;
   trip_length_pref: (typeof PREF_ENUMS.trip_length_pref)[number];
@@ -115,14 +115,16 @@ export function validatePreferences(input: Record<string, unknown>): Partial<Use
     }
   }
 
-  // Validate interests array
+  // Validate interests array — allow custom strings alongside enum values
   if (result.interests !== undefined) {
     if (!Array.isArray(result.interests)) {
       delete result.interests;
     } else {
-      result.interests = (result.interests as string[]).filter(
-        (i) => (PREF_ENUMS.interests as readonly string[]).includes(i)
-      );
+      result.interests = (result.interests as unknown[])
+        .filter((i): i is string => typeof i === "string")
+        .map((i) => i.trim().slice(0, 50))
+        .filter((i) => i.length > 0)
+        .slice(0, 30); // cap at 30 interests to prevent abuse
     }
   }
 

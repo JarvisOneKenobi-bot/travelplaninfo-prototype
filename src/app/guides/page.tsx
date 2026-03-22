@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import { getAllArticles } from "@/lib/articles";
 import GuidesFilter from "@/components/GuidesFilter";
 import NewsletterForm from "@/components/NewsletterForm";
@@ -44,6 +45,7 @@ export default function Guides() {
           <p className="text-xs text-teal-300 mt-3">No spam. Unsubscribe anytime.</p>
         </div>
       </main>
+      <HelpButton pageId="guides" />
     </div>
   );
 }

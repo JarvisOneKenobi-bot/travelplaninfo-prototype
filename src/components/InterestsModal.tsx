@@ -16,6 +16,10 @@ interface InterestsModalProps {
  */
 export default function InterestsModal({ onSave, onClose, initialInterests }: InterestsModalProps) {
   const [selected, setSelected] = useState<string[]>(initialInterests);
+  const [customInput, setCustomInput] = useState("");
+  const [customInterests, setCustomInterests] = useState<string[]>(
+    initialInterests.filter((i) => !PREF_ENUMS.interests.includes(i as any) && i !== "ai_assisted")
+  );
 
   function toggle(interest: string) {
     setSelected((prev) =>
@@ -23,6 +27,14 @@ export default function InterestsModal({ onSave, onClose, initialInterests }: In
         ? prev.filter((i) => i !== interest)
         : [...prev, interest]
     );
+  }
+
+  function addCustom() {
+    const trimmed = customInput.trim().toLowerCase();
+    if (!trimmed || selected.includes(trimmed) || customInterests.includes(trimmed)) return;
+    setCustomInterests((prev) => [...prev, trimmed]);
+    setSelected((prev) => [...prev, trimmed]);
+    setCustomInput("");
   }
 
   function handleSave() {
@@ -52,8 +64,29 @@ export default function InterestsModal({ onSave, onClose, initialInterests }: In
 
         <h2 className="text-xl font-bold text-gray-900 text-center">Select Your Interests</h2>
         <p className="text-sm text-gray-600 text-center">
-          Choose interests so Atlas can suggest activities for your trip.
+          Pick at least one so Atlas can suggest activities for your trip.
         </p>
+
+        {/* Custom interest input */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
+            placeholder="Add custom interest..."
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+            maxLength={30}
+          />
+          <button
+            type="button"
+            onClick={addCustom}
+            disabled={!customInput.trim()}
+            className="px-4 py-2 text-sm font-medium bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            + Add
+          </button>
+        </div>
 
         <div className="flex flex-wrap gap-2 justify-center">
           {/* AI Assisted chip */}
@@ -83,6 +116,24 @@ export default function InterestsModal({ onSave, onClose, initialInterests }: In
                   isSelected
                     ? "bg-orange-500 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {interest}
+              </button>
+            );
+          })}
+          {/* Custom interest chips */}
+          {customInterests.map((interest) => {
+            const isSelected = selected.includes(interest);
+            return (
+              <button
+                key={interest}
+                type="button"
+                onClick={() => toggle(interest)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors border-2 border-dashed ${
+                  isSelected
+                    ? "bg-orange-500 text-white border-orange-500"
+                    : "bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100"
                 }`}
               >
                 {interest}

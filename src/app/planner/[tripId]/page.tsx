@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 
@@ -64,7 +65,15 @@ export default async function TripDetail({ params }: Props) {
 
         {/* Two-column layout: itinerary + sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-          <ItineraryBuilder tripId={trip.id} initialItems={items} />
+          <ItineraryBuilder
+            tripId={trip.id}
+            initialItems={items}
+            tripDestination={trip.destination}
+            tripBudget={trip.budget}
+            tripInterests={interests}
+            tripStartDate={trip.start_date}
+            tripEndDate={trip.end_date}
+          />
           <AffiliateRecommendations
             tripId={trip.id}
             destination={trip.destination}
@@ -73,6 +82,7 @@ export default async function TripDetail({ params }: Props) {
           />
         </div>
       </main>
+      <HelpButton pageId="planner-itinerary" />
     </div>
   );
 }

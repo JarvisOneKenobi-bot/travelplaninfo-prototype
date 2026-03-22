@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import Link from "next/link";
 import PlannerDashboard from "@/components/PlannerDashboard";
 import TripForm from "@/components/TripForm";
@@ -67,6 +68,7 @@ export default async function Planner() {
           </div>
         </div>
       </main>
+      <HelpButton pageId="planner-new" />
     </div>
   );
 }

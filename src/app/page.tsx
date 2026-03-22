@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TripModes from "@/components/TripModes";
 import DesignA from "@/components/DesignA";
+import HelpButton from "@/components/HelpButton";
 import { getAllArticles } from "@/lib/articles";
 
 const latestPosts = getAllArticles().slice(0, 6);
@@ -90,6 +91,7 @@ export default async function Home() {
         <LatestArticles />
         <DesignA />
       </main>
+      <HelpButton pageId="home" />
     </div>
   );
 }

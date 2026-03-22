@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import type { UserPreferences } from "@/lib/preferences";
 import { PREF_ENUMS } from "@/lib/preferences";
 
@@ -57,7 +58,7 @@ export default function PreferencesPage() {
     }
   }
 
-  function toggleInterest(interest: (typeof PREF_ENUMS.interests)[number]) {
+  function toggleInterest(interest: (typeof PREF_ENUMS.interests)[number] | string) {
     if (!prefs) return;
     if (interest === "ai_assisted") {
       setPrefs({ ...prefs, ai_assisted: !prefs.ai_assisted });
@@ -90,6 +91,7 @@ export default function PreferencesPage() {
         <main className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-gray-500">Loading...</div>
         </main>
+        <HelpButton pageId="preferences" />
       </>
     );
   }
@@ -321,6 +323,53 @@ export default function PreferencesPage() {
                   </button>
                 );
               })}
+              {/* Custom interest chips */}
+              {prefs.interests
+                .filter((i) => !PREF_ENUMS.interests.includes(i as any) && i !== "ai_assisted")
+                .map((interest) => (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => toggleInterest(interest)}
+                    className="px-4 py-2 rounded-full text-sm font-medium bg-orange-500 text-white border-2 border-dashed border-orange-300"
+                  >
+                    {interest} ×
+                  </button>
+                ))}
+            </div>
+            {/* Add custom interest */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add your own interest..."
+                maxLength={30}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim().toLowerCase();
+                    if (val && !prefs.interests.includes(val)) {
+                      setPrefs(p => p ? { ...p, interests: [...p.interests, val] } : p);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }
+                }}
+                id="custom-interest-input"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.getElementById("custom-interest-input") as HTMLInputElement;
+                  const val = input?.value.trim().toLowerCase();
+                  if (val && !prefs.interests.includes(val)) {
+                    setPrefs(p => p ? { ...p, interests: [...p.interests, val] } : p);
+                    input.value = "";
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+              >
+                + Add
+              </button>
             </div>
           </section>
 
@@ -467,6 +516,7 @@ export default function PreferencesPage() {
           </div>
         </form>
       </main>
+      <HelpButton pageId="preferences" />
     </>
   );
 }
