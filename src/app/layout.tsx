@@ -4,6 +4,7 @@ import "./globals.css";
 import Footer from "@/components/Footer";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 import OnboardingWrapper from "@/components/OnboardingWrapper";
+import AssistantChat from "@/components/AssistantChat";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <OnboardingWrapper />
           {children}
           <Footer />
+          <AssistantChat />
         </SessionProviderWrapper>
       </body>
     </html>
