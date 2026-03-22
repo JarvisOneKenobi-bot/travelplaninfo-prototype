@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const INTERESTS = [
@@ -26,10 +26,44 @@ const BUDGET_OPTIONS = [
   { value: "luxury", label: "Luxury", icon: "\uD83D\uDC8E" },
 ];
 
+// Nearby airport groups — Atlas will search all airports in the group for best fares
+const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
+  MIA: { label: "Miami area", airports: ["MIA", "FLL", "PBI"] },
+  FLL: { label: "Fort Lauderdale area", airports: ["FLL", "MIA", "PBI"] },
+  PBI: { label: "West Palm Beach area", airports: ["PBI", "FLL", "MIA"] },
+  JFK: { label: "New York area", airports: ["JFK", "EWR", "LGA"] },
+  EWR: { label: "Newark area", airports: ["EWR", "JFK", "LGA"] },
+  LGA: { label: "New York area", airports: ["LGA", "JFK", "EWR"] },
+  LAX: { label: "Los Angeles area", airports: ["LAX", "SNA", "BUR", "LGB", "ONT"] },
+  SFO: { label: "San Francisco area", airports: ["SFO", "OAK", "SJC"] },
+  ORD: { label: "Chicago area", airports: ["ORD", "MDW"] },
+  DFW: { label: "Dallas area", airports: ["DFW", "DAL", "IAH"] },
+  IAH: { label: "Houston area", airports: ["IAH", "HOU"] },
+  ATL: { label: "Atlanta area", airports: ["ATL"] },
+  DCA: { label: "Washington DC area", airports: ["DCA", "IAD", "BWI"] },
+  IAD: { label: "Washington DC area", airports: ["IAD", "DCA", "BWI"] },
+  BOS: { label: "Boston area", airports: ["BOS", "PVD", "MHT"] },
+  SEA: { label: "Seattle area", airports: ["SEA"] },
+  MCO: { label: "Orlando area", airports: ["MCO", "SFB", "TPA"] },
+  TPA: { label: "Tampa area", airports: ["TPA", "SRQ", "PIE"] },
+};
+
 export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter();
+  const [origin, setOrigin] = useState("");
+  const [includeNearby, setIncludeNearby] = useState(true);
   const [destination, setDestination] = useState("");
   const [tripName, setTripName] = useState("");
+
+  // Pre-fill origin from user preferences on mount
+  useEffect(() => {
+    fetch("/api/user/preferences")
+      .then(r => r.ok ? r.json() : null)
+      .then(prefs => {
+        if (prefs?.home_airport) setOrigin(prefs.home_airport.toUpperCase());
+      })
+      .catch(() => {});
+  }, []);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
@@ -81,6 +115,11 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         travelers_children: children,
         rooms,
         interests,
+        origin: origin.trim().toUpperCase(),
+        include_nearby_airports: includeNearby,
+        nearby_airports: includeNearby && NEARBY_AIRPORTS[origin.trim().toUpperCase()]
+          ? NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
+          : [origin.trim().toUpperCase()],
       }),
     });
 
@@ -104,10 +143,48 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
-      {/* Step 1: Destination */}
+      {/* Step 0: Departing from */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+          <h2 className="text-xl font-bold text-gray-900">Departing from</h2>
+        </div>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            required
+            value={origin}
+            onChange={e => setOrigin(e.target.value.toUpperCase())}
+            placeholder="Airport code (e.g., MIA, JFK, LAX)"
+            maxLength={4}
+            className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent uppercase font-mono text-lg tracking-wider"
+          />
+        </div>
+        {origin.trim().length >= 3 && NEARBY_AIRPORTS[origin.trim().toUpperCase()] && (
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeNearby}
+              onChange={e => setIncludeNearby(e.target.checked)}
+              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+            />
+            <span>
+              Also search nearby airports: {NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
+                .filter(a => a !== origin.trim().toUpperCase())
+                .join(", ")}
+            </span>
+            <span className="text-xs text-orange-600 font-medium">(often cheaper fares)</span>
+          </label>
+        )}
+        {origin.trim().length >= 3 && !NEARBY_AIRPORTS[origin.trim().toUpperCase()] && (
+          <p className="text-xs text-gray-400">Atlas will search flights from {origin.trim().toUpperCase()}</p>
+        )}
+      </div>
+
+      {/* Step 2: Destination */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
           <h2 className="text-xl font-bold text-gray-900">Where are you going?</h2>
         </div>
 
@@ -152,10 +229,10 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         />
       </div>
 
-      {/* Step 2: Dates */}
+      {/* Step 3: Dates */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
           <h2 className="text-xl font-bold text-gray-900">When are you traveling?</h2>
         </div>
 
@@ -188,10 +265,10 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </label>
       </div>
 
-      {/* Step 3: Travelers */}
+      {/* Step 4: Travelers */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
           <h2 className="text-xl font-bold text-gray-900">Who&apos;s traveling?</h2>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -219,10 +296,10 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </div>
       </div>
 
-      {/* Step 4: Budget (labels only, no dollar amounts per product spec) */}
+      {/* Step 5: Budget (labels only, no dollar amounts per product spec) */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
           <h2 className="text-xl font-bold text-gray-900">What&apos;s your budget?</h2>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -242,7 +319,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
       {/* Step 5: Interests (with "Let Atlas decide" chip) */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">6</span>
           <h2 className="text-xl font-bold text-gray-900">What interests you?</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
