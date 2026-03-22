@@ -59,11 +59,28 @@ export default function PreferencesPage() {
 
   function toggleInterest(interest: (typeof PREF_ENUMS.interests)[number]) {
     if (!prefs) return;
+    if (interest === "ai_assisted") {
+      setPrefs({ ...prefs, ai_assisted: !prefs.ai_assisted });
+      return;
+    }
     const current = prefs.interests;
     const next = current.includes(interest)
       ? current.filter((i) => i !== interest)
       : [...current, interest];
     setPrefs({ ...prefs, interests: next });
+  }
+
+  function setBudgetMax(value: number) {
+    if (!prefs) return;
+    const clamped = Math.max(1, Math.floor(value));
+    const midMax = Math.max(clamped + 1, prefs.budget_ranges.mid_max);
+    setPrefs({ ...prefs, budget_ranges: { budget_max: clamped, mid_max: midMax } });
+  }
+
+  function setMidMax(value: number) {
+    if (!prefs) return;
+    const clamped = Math.max(prefs.budget_ranges.budget_max + 1, Math.floor(value));
+    setPrefs({ ...prefs, budget_ranges: { ...prefs.budget_ranges, mid_max: clamped } });
   }
 
   if (status === "loading" || !prefs) {
@@ -142,6 +159,52 @@ export default function PreferencesPage() {
                     <span className="text-sm text-gray-700 capitalize">{tier}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+
+            {/* Custom budget ranges */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Custom Budget Ranges
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Atlas uses these thresholds to label prices as Budget, Mid-range, or Luxury.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <span className="block text-xs font-medium text-gray-500 mb-1">Budget</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-gray-600">Under $</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={prefs.budget_ranges.budget_max}
+                      onChange={(e) => setBudgetMax(parseInt(e.target.value) || 1)}
+                      className="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                    <span className="text-sm text-gray-600">/day</span>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <span className="block text-xs font-medium text-gray-500 mb-1">Mid-range</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-gray-600">${prefs.budget_ranges.budget_max} to $</span>
+                    <input
+                      type="number"
+                      min={prefs.budget_ranges.budget_max + 1}
+                      value={prefs.budget_ranges.mid_max}
+                      onChange={(e) => setMidMax(parseInt(e.target.value) || prefs.budget_ranges.budget_max + 1)}
+                      className="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                    <span className="text-sm text-gray-600">/day</span>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <span className="block text-xs font-medium text-gray-500 mb-1">Luxury</span>
+                  <div className="flex items-center gap-1 py-1">
+                    <span className="text-sm text-gray-600">${prefs.budget_ranges.mid_max}+ /day</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -225,7 +288,23 @@ export default function PreferencesPage() {
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
             <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
             <div className="flex flex-wrap gap-2">
-              {PREF_ENUMS.interests.map((interest) => {
+              {/* AI Assisted chip — special styling */}
+              <button
+                type="button"
+                onClick={() => toggleInterest("ai_assisted")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+                  prefs.ai_assisted
+                    ? "bg-orange-500 text-white"
+                    : "bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a1 1 0 011 1v1.323l1.954.674a1 1 0 01.07 1.846L11 7.692V9h1.308l.849-2.024a1 1 0 011.846.07L14.329 9H16a1 1 0 110 2h-1.671l-.674 1.954a1 1 0 01-1.846.07L11 11.308V13a1 1 0 11-2 0v-1.692l-2.024.849a1 1 0 01-.07-1.846L9 9.308V8H7.692l-.849 2.024a1 1 0 01-1.846-.07L5.671 8H4a1 1 0 110-2h1.671l.674-1.954a1 1 0 011.846-.07L9 5.692V4a1 1 0 011-1z" />
+                </svg>
+                Let Atlas decide
+              </button>
+              {/* Regular interest chips */}
+              {PREF_ENUMS.interests.filter((i) => i !== "ai_assisted").map((interest) => {
                 const selected = prefs.interests.includes(interest);
                 return (
                   <button

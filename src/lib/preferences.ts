@@ -4,7 +4,7 @@ export const PREF_ENUMS = {
   default_search_mode: ["flight_only", "flight_hotel", "flight_hotel_car", "flight_limo", "surprise_me"] as const,
   trip_length_pref: ["day_trip", "weekend", "week", "two_weeks", "month_plus"] as const,
   assistant_style: ["concise", "detailed", "friendly"] as const,
-  interests: ["beach", "adventure", "culture", "food", "nightlife", "nature", "wellness", "family", "luxury", "budget", "cruise", "city"] as const,
+  interests: ["beach", "adventure", "culture", "food", "nightlife", "nature", "wellness", "family", "luxury", "budget", "cruise", "city", "ai_assisted"] as const,
 } as const;
 
 export interface UserPreferences {
@@ -31,6 +31,11 @@ export interface UserPreferences {
   voice_enabled: boolean;
   deal_alerts: boolean;
   deal_alert_threshold_pct: number;
+  budget_ranges: {
+    budget_max: number;   // default 100 — anything below is "budget"
+    mid_max: number;      // default 250 — between budget_max and this is "mid", above is "luxury"
+  };
+  ai_assisted: boolean;   // default false — user wants Atlas to pick interests
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -52,6 +57,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   voice_enabled: false,
   deal_alerts: true,
   deal_alert_threshold_pct: 20,
+  budget_ranges: { budget_max: 100, mid_max: 250 },
+  ai_assisted: false,
 };
 
 export function mergePreferences(saved: Partial<UserPreferences>): UserPreferences {
@@ -59,6 +66,7 @@ export function mergePreferences(saved: Partial<UserPreferences>): UserPreferenc
     ...DEFAULT_PREFERENCES,
     ...saved,
     party: { ...DEFAULT_PREFERENCES.party, ...(saved.party || {}) },
+    budget_ranges: { ...DEFAULT_PREFERENCES.budget_ranges, ...(saved.budget_ranges || {}) },
   };
 }
 
@@ -76,6 +84,9 @@ export function validatePreferences(input: Record<string, unknown>): Partial<Use
       result[key] = input[key];
     }
   }
+
+  // version is server-controlled — never accept from client
+  delete result.version;
 
   // Validate enum fields
   if (result.budget_tier !== undefined) {
@@ -126,20 +137,21 @@ export function validatePreferences(input: Record<string, unknown>): Partial<Use
     result.climate_pref = (result.climate_pref as string).slice(0, 100);
   }
 
-  // Clamp numeric fields in party
+  // Clamp numeric fields in party and strip unknown keys
   if (result.party !== undefined && typeof result.party === "object" && result.party !== null) {
-    const party = result.party as Record<string, unknown>;
-    if (typeof party.adults === "number") {
-      party.adults = Math.max(0, Math.floor(party.adults));
+    const raw = result.party as Record<string, unknown>;
+    const party: Record<string, unknown> = {};
+    if (typeof raw.adults === "number") {
+      party.adults = Math.max(0, Math.floor(raw.adults));
     }
-    if (typeof party.children === "number") {
-      party.children = Math.max(0, Math.floor(party.children));
+    if (typeof raw.children === "number") {
+      party.children = Math.max(0, Math.floor(raw.children));
     }
-    if (typeof party.has_pets !== "boolean") {
-      delete party.has_pets;
+    if (typeof raw.has_pets === "boolean") {
+      party.has_pets = raw.has_pets;
     }
-    if (typeof party.accessibility_needs !== "boolean") {
-      delete party.accessibility_needs;
+    if (typeof raw.accessibility_needs === "boolean") {
+      party.accessibility_needs = raw.accessibility_needs;
     }
     result.party = party;
   }
@@ -155,6 +167,29 @@ export function validatePreferences(input: Record<string, unknown>): Partial<Use
   }
   if (result.deal_alerts !== undefined && typeof result.deal_alerts !== "boolean") {
     delete result.deal_alerts;
+  }
+  if (result.ai_assisted !== undefined && typeof result.ai_assisted !== "boolean") {
+    delete result.ai_assisted;
+  }
+
+  // Validate budget_ranges — clamp to positive numbers, ensure budget_max < mid_max
+  if (result.budget_ranges !== undefined && typeof result.budget_ranges === "object" && result.budget_ranges !== null) {
+    const raw = result.budget_ranges as Record<string, unknown>;
+    const ranges: Record<string, unknown> = {};
+    if (typeof raw.budget_max === "number") {
+      ranges.budget_max = Math.max(1, Math.floor(raw.budget_max));
+    }
+    if (typeof raw.mid_max === "number") {
+      ranges.mid_max = Math.max(1, Math.floor(raw.mid_max));
+    }
+    // Ensure budget_max < mid_max when both are present
+    const bMax = (ranges.budget_max ?? DEFAULT_PREFERENCES.budget_ranges.budget_max) as number;
+    const mMax = (ranges.mid_max ?? DEFAULT_PREFERENCES.budget_ranges.mid_max) as number;
+    if (bMax >= mMax) {
+      // Force mid_max to be at least budget_max + 1
+      ranges.mid_max = bMax + 1;
+    }
+    result.budget_ranges = ranges;
   }
 
   // Array string fields — sanitize to string arrays with length limits
