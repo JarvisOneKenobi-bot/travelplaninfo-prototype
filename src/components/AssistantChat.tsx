@@ -59,26 +59,45 @@ interface ToolResult {
 
 function parseMessageContent(content: string): ToolResult[] {
   const parts: ToolResult[] = [];
-  const toolPattern = /\[TOOL:(\w+)\](\{[\s\S]*?\})(?=\[TOOL:|$)/g;
+  const markerPattern = /\[TOOL:(\w+)\]/g;
 
   let lastIndex = 0;
   let match;
 
-  while ((match = toolPattern.exec(content)) !== null) {
+  while ((match = markerPattern.exec(content)) !== null) {
     // Text before this tool marker
     if (match.index > lastIndex) {
       const text = content.slice(lastIndex, match.index).trim();
       if (text) parts.push({ type: "text", text });
     }
 
-    try {
-      const data = JSON.parse(match[2]);
-      parts.push({ type: "tool", toolName: match[1], data });
-    } catch {
-      parts.push({ type: "text", text: match[0] });
-    }
+    const toolName = match[1];
+    const jsonStart = match.index + match[0].length;
 
-    lastIndex = match.index + match[0].length;
+    // Find matching JSON using brace counting (handles nested objects)
+    if (jsonStart < content.length && content[jsonStart] === "{") {
+      let depth = 0;
+      let jsonEnd = jsonStart;
+      for (let i = jsonStart; i < content.length; i++) {
+        if (content[i] === "{") depth++;
+        else if (content[i] === "}") {
+          depth--;
+          if (depth === 0) { jsonEnd = i + 1; break; }
+        }
+      }
+      const jsonStr = content.slice(jsonStart, jsonEnd);
+      try {
+        const data = JSON.parse(jsonStr);
+        parts.push({ type: "tool", toolName, data });
+      } catch {
+        parts.push({ type: "text", text: match[0] + jsonStr });
+      }
+      lastIndex = jsonEnd;
+      markerPattern.lastIndex = jsonEnd;
+    } else {
+      parts.push({ type: "text", text: match[0] });
+      lastIndex = match.index + match[0].length;
+    }
   }
 
   // Remaining text
