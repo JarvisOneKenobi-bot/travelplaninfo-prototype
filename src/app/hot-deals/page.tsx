@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/Header";
+import HelpButton from "@/components/HelpButton";
 import Link from "next/link";
 import { DEALS, getAffiliateUrl, CJ_LINKS } from "@/config/affiliates";
 import NewsletterForm from "@/components/NewsletterForm";
@@ -192,6 +193,7 @@ export default function HotDeals() {
         </p>
 
       </main>
+      <HelpButton pageId="hot-deals" />
     </div>
   );
 }
