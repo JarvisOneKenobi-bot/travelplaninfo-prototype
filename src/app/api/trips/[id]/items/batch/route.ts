@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+
+type Params = { params: Promise<{ id: string }> };
+
+const VALID_CATEGORIES = new Set([
+  "flight",
+  "hotel",
+  "car_rental",
+  "activity",
+  "restaurant",
+  "transportation",
+  "note",
+]);
+
+const MAX_BATCH_SIZE = 50;
+
+async function verifyTripOwnership(userId: string, tripId: string) {
+  const db = getDb();
+  const trip = db.prepare("SELECT id, user_id FROM trips WHERE id = ?").get(tripId) as
+    | { id: number; user_id: number }
+    | undefined;
+  return trip && String(trip.user_id) === String(userId) ? trip : null;
+}
+
+interface BatchItem {
+  day_number?: number;
+  category?: string;
+  title?: string;
+  description?: string;
+  price_estimate?: string;
+  affiliate_url?: string;
+}
+
+export async function POST(req: NextRequest, { params }: Params) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const userId = (session.user as { id: string }).id;
+
+  if (!(await verifyTripOwnership(userId, id))) {
+    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+  }
+
+  let body: { items?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  // ── Validate items array ────────────────────────────────────────────────
+
+  if (!body.items || !Array.isArray(body.items)) {
+    return NextResponse.json(
+      { error: "items must be a non-empty array" },
+      { status: 400 }
+    );
+  }
+
+  const items = body.items as BatchItem[];
+
+  if (items.length === 0) {
+    return NextResponse.json(
+      { error: "items must be a non-empty array" },
+      { status: 400 }
+    );
+  }
+
+  if (items.length > MAX_BATCH_SIZE) {
+    return NextResponse.json(
+      { error: `Maximum ${MAX_BATCH_SIZE} items per batch` },
+      { status: 400 }
+    );
+  }
+
+  // ── Validate each item ──────────────────────────────────────────────────
+
+  const errors: string[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (!item.title || typeof item.title !== "string" || item.title.trim().length === 0) {
+      errors.push(`Item ${i}: title is required and must be a non-empty string`);
+      continue;
+    }
+
+    if (item.day_number !== undefined) {
+      const day = Number(item.day_number);
+      if (!Number.isInteger(day) || day < 1) {
+        errors.push(`Item ${i}: day_number must be a positive integer`);
+      }
+    }
+
+    if (item.category !== undefined && !VALID_CATEGORIES.has(item.category)) {
+      errors.push(
+        `Item ${i}: category must be one of: ${Array.from(VALID_CATEGORIES).join(", ")}`
+      );
+    }
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors.join("; ") }, { status: 400 });
+  }
+
+  // ── Bulk insert in a transaction ────────────────────────────────────────
+
+  const db = getDb();
+
+  const insertStmt = db.prepare(
+    `INSERT INTO trip_items
+      (trip_id, day_number, category, title, description, affiliate_url, price_estimate, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const insertMany = db.transaction(
+    (rows: { day_number: number; category: string; title: string; description: string | null; affiliate_url: string | null; price_estimate: string | null; sort_order: number }[]) => {
+      const ids: number[] = [];
+      for (const row of rows) {
+        const result = insertStmt.run(
+          id,
+          row.day_number,
+          row.category,
+          row.title,
+          row.description,
+          row.affiliate_url,
+          row.price_estimate,
+          row.sort_order
+        ) as { lastInsertRowid: number };
+        ids.push(Number(result.lastInsertRowid));
+      }
+      return ids;
+    }
+  );
+
+  try {
+    const rows = items.map((item, i) => ({
+      day_number: Math.max(1, Math.floor(Number(item.day_number) || 1)),
+      category: item.category && VALID_CATEGORIES.has(item.category) ? item.category : "note",
+      title: item.title!.trim(),
+      description: item.description?.trim() || null,
+      affiliate_url: item.affiliate_url?.trim() || null,
+      price_estimate: item.price_estimate?.trim() || null,
+      sort_order: i,
+    }));
+
+    const ids = insertMany(rows);
+
+    // Fetch created items
+    const placeholders = ids.map(() => "?").join(",");
+    const createdItems = db
+      .prepare(`SELECT * FROM trip_items WHERE id IN (${placeholders})`)
+      .all(...ids);
+
+    return NextResponse.json({ items: createdItems }, { status: 201 });
+  } catch (err) {
+    console.error("Batch insert error:", err);
+    return NextResponse.json(
+      { error: "Failed to add items" },
+      { status: 500 }
+    );
+  }
+}
