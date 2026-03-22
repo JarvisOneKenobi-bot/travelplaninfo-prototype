@@ -98,6 +98,11 @@ export async function POST(req: NextRequest) {
   }));
 
   // 8. Forward to FastAPI backend
+  // The conversation history already includes the user message we just saved (step 6),
+  // so we send it as-is. The backend appends `message` separately, so we must exclude
+  // the latest user message from conversation_history to avoid duplication.
+  const historyWithoutCurrent = conversationHistory.slice(0, -1);
+
   let fullResponse = "";
   const encoder = new TextEncoder();
 
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             preferences_json: preferencesJson,
             message,
-            conversation_history: conversationHistory,
+            conversation_history: historyWithoutCurrent,
             session_id,
             stream: true,
             page_context: page_context || null,
