@@ -60,9 +60,13 @@ export default function TripResultsModal({
   const [activeTab, setActiveTab] = useState<TabId>("Flights");
   const [flightSort, setFlightSort] = useState<"price" | "duration" | "airline">("price");
   const [hotelSort, setHotelSort] = useState<"price" | "rating">("price");
+  const [selectedFlights, setSelectedFlights] = useState<Set<number>>(new Set());
+  const [selectedHotels, setSelectedHotels] = useState<Set<number>>(new Set());
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
   const [addingAll, setAddingAll] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
+
+  const totalSelected = selectedFlights.size + selectedHotels.size + selectedActivities.size;
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -162,14 +166,18 @@ export default function TripResultsModal({
 
   // ── Activity selection toggle ──────────────────────────────────────────
 
-  const toggleActivity = useCallback((idx: number) => {
-    setSelectedActivities((prev) => {
+  const toggleSelection = useCallback((setter: React.Dispatch<React.SetStateAction<Set<number>>>, idx: number) => {
+    setter((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx);
       else next.add(idx);
       return next;
     });
   }, []);
+
+  const toggleFlight = useCallback((idx: number) => toggleSelection(setSelectedFlights, idx), [toggleSelection]);
+  const toggleHotel = useCallback((idx: number) => toggleSelection(setSelectedHotels, idx), [toggleSelection]);
+  const toggleActivity = useCallback((idx: number) => toggleSelection(setSelectedActivities, idx), [toggleSelection]);
 
   // ── Summary calculations ───────────────────────────────────────────────
 
@@ -222,9 +230,13 @@ export default function TripResultsModal({
 
     const items: BatchItem[] = [];
 
-    // Add cheapest flight
-    if (sortedFlights.length > 0) {
-      const f = sortedFlights[0];
+    // Add selected flights (or cheapest if none selected)
+    const flightIndices = selectedFlights.size > 0
+      ? Array.from(selectedFlights)
+      : sortedFlights.length > 0 ? [0] : [];
+    for (const idx of flightIndices) {
+      const f = flights[idx];
+      if (!f) continue;
       items.push({
         day_number: 1,
         category: "flight",
@@ -235,15 +247,19 @@ export default function TripResultsModal({
       });
     }
 
-    // Add cheapest hotel
-    if (sortedHotels.length > 0) {
-      const h = sortedHotels[0];
+    // Add selected hotels (or cheapest if none selected)
+    const hotelIndices = selectedHotels.size > 0
+      ? Array.from(selectedHotels)
+      : sortedHotels.length > 0 ? [0] : [];
+    for (const idx of hotelIndices) {
+      const h = hotels[idx];
+      if (!h) continue;
       items.push({
         day_number: 1,
         category: "hotel",
         title: h.name,
-        description: `${h.price_night}/night - ${h.rating} stars`,
-        price_estimate: h.price_night,
+        description: `${h.price_night}/night × ${nights} nights - ${h.rating} stars`,
+        price_estimate: `$${h.price_night_value * nights}`,
         affiliate_url: h.book_url,
       });
     }
@@ -415,17 +431,29 @@ export default function TripResultsModal({
 
                 <div className="space-y-3">
                   {sortedFlights.map((f, i) => {
+                    const realIdx = flights.indexOf(f);
                     const isCheapest = f.price_value === cheapestFlightValue;
+                    const isSelected = selectedFlights.has(realIdx);
                     return (
                       <div
                         key={i}
+                        onClick={() => toggleFlight(realIdx)}
                         className={[
+                          "cursor-pointer",
                           "bg-white rounded-lg border p-4 hover:shadow-md transition-shadow",
-                          isCheapest ? "border-green-300 ring-1 ring-green-200" : "border-gray-200",
+                          isSelected ? "border-orange-400 ring-2 ring-orange-200 bg-orange-50/30" : isCheapest ? "border-green-300 ring-1 ring-green-200" : "border-gray-200",
                         ].join(" ")}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleFlight(realIdx)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 shrink-0 mt-1"
+                            />
+                            <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <div className="w-7 h-7 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">
                                 {f.airline.charAt(0)}
@@ -451,6 +479,7 @@ export default function TripResultsModal({
                                 {f.return_date ? ` - ${f.return_date}` : " (one-way)"}
                               </p>
                             )}
+                          </div>
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-bold text-xl text-orange-600">{f.price}</p>
@@ -508,15 +537,28 @@ export default function TripResultsModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sortedHotels.map((h, i) => {
+                    const realIdx = hotels.indexOf(h);
                     const stars = Math.round(h.rating);
                     const tierClass = TIER_BADGE[h.tier] || "bg-gray-100 text-gray-600";
                     const totalCost = h.total_cost || `$${(h.price_night_value * nights).toLocaleString()}`;
+                    const isSelected = selectedHotels.has(realIdx);
                     return (
                       <div
                         key={i}
-                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                        onClick={() => toggleHotel(realIdx)}
+                        className={[
+                          "cursor-pointer bg-white rounded-lg border p-4 hover:shadow-md transition-shadow",
+                          isSelected ? "border-orange-400 ring-2 ring-orange-200 bg-orange-50/30" : "border-gray-200",
+                        ].join(" ")}
                       >
                         <div className="flex justify-between items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleHotel(realIdx)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 shrink-0 mt-1"
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{h.name}</p>
                             <div className="flex items-center gap-2 mt-1">
@@ -739,7 +781,7 @@ export default function TripResultsModal({
               disabled={addingAll || !tripId}
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {addingAll ? "Adding..." : "Add All to Itinerary"}
+              {addingAll ? "Adding..." : totalSelected > 0 ? `Add Selected (${totalSelected}) to Itinerary` : "Add All to Itinerary"}
             </button>
           </div>
         </div>

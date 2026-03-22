@@ -195,12 +195,12 @@ function readTripContext(): TripContext {
     const data = JSON.parse(el.textContent || "{}");
     return {
       destination: data.destination || defaults.destination,
-      dates: data.start_date && data.end_date
-        ? { start: data.start_date, end: data.end_date }
+      dates: (data.startDate || data.start_date) && (data.endDate || data.end_date)
+        ? { start: data.startDate || data.start_date, end: data.endDate || data.end_date }
         : undefined,
-      adults: data.travelers_adults || defaults.adults,
+      adults: data.adults || data.travelers_adults || defaults.adults,
       budgetTier: (["budget", "mid", "luxury"].includes(data.budget) ? data.budget : "mid") as BudgetTier,
-      tripId: data.trip_id || data.id,
+      tripId: data.tripId || data.trip_id || data.id,
     };
   } catch {
     return defaults;
