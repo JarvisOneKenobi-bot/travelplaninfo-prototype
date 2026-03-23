@@ -65,6 +65,8 @@ export default function TripResultsModal({
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
   const [addingAll, setAddingAll] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
+  // Per-activity selected day (keyed by global activity index)
+  const [activityDays, setActivityDays] = useState<Record<number, number>>({});
 
   const totalSelected = selectedFlights.size + selectedHotels.size + selectedActivities.size;
 
@@ -72,7 +74,7 @@ export default function TripResultsModal({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<Element | null>(null);
 
-  // ── Calculate nights ───────────────────────────────────────────────────
+  // ── Calculate nights and total trip days ───────────────────────────────
 
   const nights = useMemo(() => {
     if (!dates?.start || !dates?.end) return 1;
@@ -80,6 +82,12 @@ export default function TripResultsModal({
     const end = new Date(dates.end);
     const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     return diff > 0 ? diff : 1;
+  }, [dates]);
+
+  // Total trip days (inclusive of arrival and departure day)
+  const dayCount = useMemo(() => {
+    if (!dates?.start || !dates?.end) return 1;
+    return Math.ceil((new Date(dates.end).getTime() - new Date(dates.start).getTime()) / 86400000) + 1;
   }, [dates]);
 
   // ── Sorted data ────────────────────────────────────────────────────────
@@ -163,6 +171,26 @@ export default function TripResultsModal({
       }
     };
   }, [isOpen, onClose]);
+
+  // ── Default day for a new activity (day with fewest activities assigned) ──
+
+  const getDefaultDay = useCallback((): number => {
+    if (dayCount <= 1) return 1;
+    // Count how many activities are currently assigned to each day
+    const counts: Record<number, number> = {};
+    for (let d = 1; d <= dayCount; d++) counts[d] = 0;
+    for (const day of Object.values(activityDays)) {
+      if (day >= 1 && day <= dayCount) {
+        counts[day] = (counts[day] ?? 0) + 1;
+      }
+    }
+    // Return the day with the fewest assignments; ties go to the lowest day number
+    let best = 1;
+    for (let d = 2; d <= dayCount; d++) {
+      if ((counts[d] ?? 0) < (counts[best] ?? 0)) best = d;
+    }
+    return best;
+  }, [dayCount, activityDays]);
 
   // ── Activity selection toggle ──────────────────────────────────────────
 
@@ -271,7 +299,7 @@ export default function TripResultsModal({
       const a = activities[idx];
       if (!a) continue;
       items.push({
-        day_number: 1,
+        day_number: activityDays[idx] ?? 1,
         category: "activity",
         title: a.name,
         description: `${a.duration || ""} - ${a.interest}`.trim(),
@@ -307,7 +335,7 @@ export default function TripResultsModal({
     }
 
     setAddingAll(false);
-  }, [tripId, sortedFlights, sortedHotels, activities, selectedActivities]);
+  }, [tripId, sortedFlights, sortedHotels, activities, selectedActivities, activityDays]);
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -670,8 +698,32 @@ export default function TripResultsModal({
                               </div>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
+                              {/* Day selector dropdown */}
+                              <select
+                                value={activityDays[globalIdx] ?? getDefaultDay()}
+                                onChange={(e) => {
+                                  const day = Number(e.target.value);
+                                  setActivityDays((prev) => ({ ...prev, [globalIdx]: day }));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Select day for ${a.name}`}
+                                className="text-xs border border-gray-300 rounded-full px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 cursor-pointer"
+                              >
+                                {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                                  <option key={d} value={d}>
+                                    Day {d}
+                                  </option>
+                                ))}
+                              </select>
+                              {/* Add / Selected toggle button */}
                               <button
-                                onClick={() => toggleActivity(globalIdx)}
+                                onClick={() => {
+                                  // Ensure day is set before toggling selection
+                                  if (activityDays[globalIdx] === undefined) {
+                                    setActivityDays((prev) => ({ ...prev, [globalIdx]: getDefaultDay() }));
+                                  }
+                                  toggleActivity(globalIdx);
+                                }}
                                 className={[
                                   "text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
                                   isSelected
@@ -679,7 +731,7 @@ export default function TripResultsModal({
                                     : "bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600",
                                 ].join(" ")}
                               >
-                                {isSelected ? "Selected" : "Add to Day 1"}
+                                {isSelected ? "Selected" : "Add"}
                               </button>
                             </div>
                           </div>
