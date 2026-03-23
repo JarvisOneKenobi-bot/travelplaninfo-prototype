@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   let completion: Anthropic.Message;
   try {
     completion = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 500,
       messages: [
         {
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         input_tokens: inputTokens,
         output_tokens: outputTokens,
       }),
