@@ -77,6 +77,18 @@ export async function POST(req: NextRequest) {
     .get(userId) as { prefs: string } | undefined;
   const preferencesJson = prefRow?.prefs || "{}";
 
+  // 5b. Load user memory (cross-session context)
+  const memoryRows = db
+    .prepare(
+      "SELECT key, value FROM user_memory WHERE user_id = ? ORDER BY updated_at DESC LIMIT 50"
+    )
+    .all(userId) as { key: string; value: string }[];
+
+  let memoryContext = "";
+  if (memoryRows.length > 0) {
+    memoryContext = memoryRows.map((m) => `${m.key}: ${m.value}`).join("; ");
+  }
+
   // 6. Save user message to chat_messages
   db.prepare(
     "INSERT INTO chat_messages (session_id, role, content) VALUES (?, 'user', ?)"
@@ -119,6 +131,7 @@ export async function POST(req: NextRequest) {
             session_id,
             stream: true,
             page_context: page_context || null,
+            memory_context: memoryContext,
           }),
         });
 

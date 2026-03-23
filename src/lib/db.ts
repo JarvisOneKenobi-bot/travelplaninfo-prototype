@@ -85,8 +85,20 @@ export function getDb(): Database.Database {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS user_memory (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      key        TEXT NOT NULL,
+      value      TEXT NOT NULL,
+      source     TEXT DEFAULT 'atlas',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, key)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
+    CREATE INDEX IF NOT EXISTS idx_user_memory_user ON user_memory(user_id);
   `);
 
   return _db;
