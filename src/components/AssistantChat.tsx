@@ -8,12 +8,13 @@ import DealCard from "./atlas/DealCard";
 import DestinationCard from "./atlas/DestinationCard";
 import ArticleCard from "./atlas/ArticleCard";
 import ActivityCard from "./atlas/ActivityCard";
+import RestaurantCard from "./atlas/RestaurantCard";
 import TripResultsModal from "./atlas/TripResultsModal";
-import type { FlightResult, HotelResult, ActivityResult, BudgetTier } from "./atlas/types";
+import type { FlightResult, HotelResult, ActivityResult, RestaurantResult, BudgetTier } from "./atlas/types";
 
 // ── Trip tool detection — only these tools trigger the modal ─────────────────
 
-const TRIP_TOOLS = new Set(["search_flights", "search_hotels", "search_activities"]);
+const TRIP_TOOLS = new Set(["search_flights", "search_hotels", "search_activities", "search_restaurants"]);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,10 +139,12 @@ function extractTripData(parts: ToolResult[]): {
   flights: FlightResult[];
   hotels: HotelResult[];
   activities: ActivityResult[];
+  restaurants: RestaurantResult[];
 } {
   const flights: FlightResult[] = [];
   const hotels: HotelResult[] = [];
   const activities: ActivityResult[] = [];
+  const restaurants: RestaurantResult[] = [];
 
   for (const p of parts) {
     if (p.type !== "tool" || !p.data) continue;
@@ -195,9 +198,23 @@ function extractTripData(parts: ToolResult[]): {
         });
       }
     }
+
+    if (p.toolName === "search_restaurants" && Array.isArray(p.data.restaurants)) {
+      for (const r of p.data.restaurants as Record<string, unknown>[]) {
+        restaurants.push({
+          name: String(r.name || ""),
+          cuisine: String(r.cuisine || ""),
+          price_range: String(r.price_range || "$"),
+          neighborhood: String(r.neighborhood || ""),
+          rating: typeof r.rating === "number" ? r.rating : undefined,
+          highlights: Array.isArray(r.highlights) ? (r.highlights as unknown[]).map(String) : [],
+          budget_tier: (["budget", "mid", "luxury"].includes(String(r.budget_tier)) ? String(r.budget_tier) : "mid") as BudgetTier,
+        });
+      }
+    }
   }
 
-  return { flights, hotels, activities };
+  return { flights, hotels, activities, restaurants };
 }
 
 /** Read trip context from the #atlas-trip-context script tag */
@@ -299,6 +316,17 @@ function ToolResultCards({ toolName, data }: { toolName: string; data: Record<st
       <div className="space-y-2 my-2">
         {activities.map((a, i) => (
           <ActivityCard key={i} activity={a as never} />
+        ))}
+      </div>
+    );
+  }
+
+  if (toolName === "search_restaurants" && data.restaurants) {
+    const restaurants = data.restaurants as Array<Record<string, unknown>>;
+    return (
+      <div className="space-y-2 my-2">
+        {restaurants.map((r, i) => (
+          <RestaurantCard key={i} restaurant={r as never} />
         ))}
       </div>
     );

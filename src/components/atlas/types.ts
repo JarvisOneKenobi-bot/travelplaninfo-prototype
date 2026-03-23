@@ -36,5 +36,16 @@ export interface ActivityResult {
   duration?: string;
 }
 
+/** Extends RestaurantCard data with budget tier */
+export interface RestaurantResult {
+  name: string;
+  cuisine: string;
+  price_range: string;      // "$", "$$", "$$$"
+  neighborhood: string;
+  rating?: number;           // 1-5
+  highlights: string[];      // e.g. ["outdoor seating", "live music"]
+  budget_tier: BudgetTier;
+}
+
 /** Budget tier type reused across modal and chat */
 export type BudgetTier = "budget" | "mid" | "luxury";
