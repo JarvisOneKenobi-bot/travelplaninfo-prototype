@@ -97,7 +97,12 @@ export default async function TripDetail({ params }: Props) {
           children: trip.travelers_children,
           rooms: trip.rooms,
           interests,
-          itemCount: items.length,
+          items: items.map((item) => ({
+            day: item.day_number,
+            category: item.category,
+            title: item.title,
+            price_estimate: item.price_estimate,
+          })),
         }) }}
       />
     </div>

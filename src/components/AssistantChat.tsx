@@ -25,12 +25,20 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
+interface TripContextItem {
+  day: number;
+  category: string;
+  title: string;
+  price_estimate: number | null;
+}
+
 interface TripContext {
   destination: string;
   dates?: { start: string; end: string };
   adults: number;
   budgetTier: BudgetTier;
   tripId?: number;
+  items?: TripContextItem[];
 }
 
 interface ModalData {
@@ -229,14 +237,17 @@ function readTripContext(): TripContext {
     const el = document.getElementById("atlas-trip-context");
     if (!el) return defaults;
     const data = JSON.parse(el.textContent || "{}");
+    const budgetMap: Record<string, BudgetTier> = { budget: "budget", midrange: "mid", mid: "mid", luxury: "luxury" };
+    const budgetTier = (budgetMap[data.budget] || "mid") as BudgetTier;
     return {
       destination: data.destination || defaults.destination,
       dates: (data.startDate || data.start_date) && (data.endDate || data.end_date)
         ? { start: data.startDate || data.start_date, end: data.endDate || data.end_date }
         : undefined,
       adults: data.adults || data.travelers_adults || defaults.adults,
-      budgetTier: (["budget", "mid", "luxury"].includes(data.budget) ? data.budget : "mid") as BudgetTier,
+      budgetTier,
       tripId: data.tripId || data.trip_id || data.id,
+      items: Array.isArray(data.items) ? data.items : undefined,
     };
   } catch {
     return defaults;
