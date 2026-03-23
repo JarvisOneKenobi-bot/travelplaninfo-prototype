@@ -84,9 +84,64 @@ export async function POST(req: NextRequest) {
     )
     .all(userId) as { key: string; value: string }[];
 
+  // Format memory context with summary-aware grouping
+  const summaries = memoryRows.filter((m) =>
+    m.key.startsWith("conversation_summary_")
+  );
+  const facts = memoryRows.filter(
+    (m) => !m.key.startsWith("conversation_summary_")
+  );
+
   let memoryContext = "";
-  if (memoryRows.length > 0) {
-    memoryContext = memoryRows.map((m) => `${m.key}: ${m.value}`).join("; ");
+  if (facts.length > 0) {
+    memoryContext +=
+      "Known preferences: " +
+      facts.map((m) => `${m.key}=${m.value}`).join(", ");
+  }
+  if (summaries.length > 0) {
+    memoryContext +=
+      (memoryContext ? "\n" : "") +
+      "Previous sessions: " +
+      summaries.map((m) => m.value).join("; ");
+  }
+
+  // 5c. Auto-summarize previous session if needed
+  // Check if this user has older sessions with 3+ exchanges that haven't been summarized
+  const unsummarizedSession = db
+    .prepare(
+      `SELECT cs.id, DATE(cs.created_at) as session_date,
+              COUNT(cm.id) as msg_count
+       FROM chat_sessions cs
+       JOIN chat_messages cm ON cm.session_id = cs.id
+       WHERE cs.user_id = ?
+         AND cs.id != ?
+         AND NOT EXISTS (
+           SELECT 1 FROM user_memory um
+           WHERE um.user_id = cs.user_id
+             AND um.key = 'conversation_summary_' || DATE(cs.created_at)
+         )
+       GROUP BY cs.id
+       HAVING msg_count >= 6
+       ORDER BY cs.created_at DESC
+       LIMIT 1`
+    )
+    .get(userId, session_id) as
+    | { id: string; session_date: string; msg_count: number }
+    | undefined;
+
+  if (unsummarizedSession) {
+    // Fire-and-forget: summarize in background (don't block the chat response)
+    const cookieHeader = req.headers.get("cookie") || "";
+    fetch("http://localhost:3000/api/assistant/summarize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookieHeader,
+      },
+      body: JSON.stringify({ session_id: unsummarizedSession.id }),
+    }).catch((err) =>
+      console.error("Background summarization failed:", err)
+    );
   }
 
   // 6. Save user message to chat_messages
