@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { geocodeItem } from "@/lib/geocode";
+import { parseCost } from "@/lib/cost-utils";
 
 const VALID_CATEGORIES = new Set([
   "flight",
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     affiliate_url,
     price_estimate,
     sort_order = 0,
+    is_placeholder = 0,
   } = body;
 
   if (!title) {
@@ -78,13 +80,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   const trip = db.prepare("SELECT destination FROM trips WHERE id = ?").get(id) as { destination: string } | undefined;
   const destination = trip?.destination || "";
 
+  const estimated_cost = parseCost(price_estimate);
+
   const result = db
     .prepare(
       `INSERT INTO trip_items
-        (trip_id, day_number, category, title, description, affiliate_program, affiliate_url, price_estimate, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (trip_id, day_number, category, title, description, affiliate_program, affiliate_url, price_estimate, estimated_cost, sort_order, is_placeholder)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(id, day_number, category, title, description || null, affiliate_program || null, affiliate_url || null, price_estimate || null, sort_order) as any;
+    .run(id, day_number, category, title, description || null, affiliate_program || null, affiliate_url || null, price_estimate || null, estimated_cost, sort_order, is_placeholder ? 1 : 0) as any;
 
   const item = db.prepare("SELECT * FROM trip_items WHERE id = ?").get(result.lastInsertRowid);
 

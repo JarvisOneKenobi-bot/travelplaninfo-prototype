@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { geocodeItem } from "@/lib/geocode";
+import { parseCost } from "@/lib/cost-utils";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,6 +33,7 @@ interface BatchItem {
   description?: string;
   price_estimate?: string;
   affiliate_url?: string;
+  is_placeholder?: number;
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -118,12 +120,12 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const insertStmt = db.prepare(
     `INSERT INTO trip_items
-      (trip_id, day_number, category, title, description, affiliate_url, price_estimate, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      (trip_id, day_number, category, title, description, affiliate_url, price_estimate, estimated_cost, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const insertMany = db.transaction(
-    (rows: { day_number: number; category: string; title: string; description: string | null; affiliate_url: string | null; price_estimate: string | null; sort_order: number }[]) => {
+    (rows: { day_number: number; category: string; title: string; description: string | null; affiliate_url: string | null; price_estimate: string | null; estimated_cost: number | null; sort_order: number }[]) => {
       const ids: number[] = [];
       for (const row of rows) {
         const result = insertStmt.run(
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           row.description,
           row.affiliate_url,
           row.price_estimate,
+          row.estimated_cost,
           row.sort_order
         ) as { lastInsertRowid: number };
         ids.push(Number(result.lastInsertRowid));
@@ -147,15 +150,28 @@ export async function POST(req: NextRequest, { params }: Params) {
   const destination = tripRow?.destination || "";
 
   try {
-    const rows = items.map((item, i) => ({
-      day_number: Math.max(1, Math.floor(Number(item.day_number) || 1)),
-      category: item.category && VALID_CATEGORIES.has(item.category) ? item.category : "note",
-      title: item.title!.trim(),
-      description: item.description?.trim() || null,
-      affiliate_url: item.affiliate_url?.trim() || null,
-      price_estimate: item.price_estimate?.trim() || null,
-      sort_order: i,
-    }));
+    // Placeholder cleanup: remove placeholders of same category before inserting real items
+    const placeholderCategories = ['flight', 'hotel', 'car_rental'];
+    const categoriesToClean = [...new Set(items.map(i => i.category).filter(Boolean))] as string[];
+    for (const cat of categoriesToClean) {
+      if (placeholderCategories.includes(cat)) {
+        db.prepare('DELETE FROM trip_items WHERE trip_id = ? AND category = ? AND is_placeholder = 1').run(id, cat);
+      }
+    }
+
+    const rows = items.map((item, i) => {
+      const priceEstimate = item.price_estimate?.trim() || null;
+      return {
+        day_number: Math.max(1, Math.floor(Number(item.day_number) || 1)),
+        category: item.category && VALID_CATEGORIES.has(item.category) ? item.category : "note",
+        title: item.title!.trim(),
+        description: item.description?.trim() || null,
+        affiliate_url: item.affiliate_url?.trim() || null,
+        price_estimate: priceEstimate,
+        estimated_cost: parseCost(priceEstimate),
+        sort_order: i,
+      };
+    });
 
     const ids = insertMany(rows);
 

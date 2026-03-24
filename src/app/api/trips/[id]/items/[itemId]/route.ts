@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import { parseCost } from "@/lib/cost-utils";
 
 type Params = { params: Promise<{ id: string; itemId: string }> };
 
@@ -24,6 +25,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   const body = await req.json();
   const db = getDb();
+
   db.prepare(
     `UPDATE trip_items SET
       day_number = COALESCE(?, day_number),
@@ -44,6 +46,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
     body.sort_order ?? null,
     itemId
   );
+
+  // Recalculate estimated_cost when price_estimate is explicitly provided
+  if ('price_estimate' in body) {
+    const newCost = parseCost(body.price_estimate ?? null);
+    db.prepare('UPDATE trip_items SET estimated_cost = ? WHERE id = ?').run(newCost, itemId);
+  }
 
   const item = db.prepare("SELECT * FROM trip_items WHERE id = ?").get(itemId);
   return NextResponse.json(item);

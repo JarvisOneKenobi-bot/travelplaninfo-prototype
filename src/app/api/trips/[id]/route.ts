@@ -63,6 +63,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
     id
   );
 
+  // budget_override is nullable-as-feature: null means "use auto", so COALESCE won't work
+  if ('budget_override' in body) {
+    const val = body.budget_override;
+    db.prepare('UPDATE trips SET budget_override = ? WHERE id = ?')
+      .run(val === 0 ? null : val, id);
+  }
+
   const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id);
   return NextResponse.json(updated);
 }
