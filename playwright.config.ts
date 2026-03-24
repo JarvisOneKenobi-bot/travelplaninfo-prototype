@@ -11,7 +11,7 @@ const config: PlaywrightTestConfig = {
     ['html', { outputFolder: 'playwright-report' }],
   ],
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3001',
     actionTimeout: 0,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
