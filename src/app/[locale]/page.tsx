@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getTranslations } from "next-intl/server";
 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -25,13 +25,14 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function LatestArticles() {
+async function LatestArticles() {
+  const t = await getTranslations("home");
   return (
     <section>
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-2xl font-bold text-gray-900">Latest Articles</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t("latestArticles")}</h2>
         <Link href="/guides" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
-          View all →
+          {t("viewAll")}
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

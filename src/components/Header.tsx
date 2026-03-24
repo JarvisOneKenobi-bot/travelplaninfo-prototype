@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
 const LANGUAGES = [
@@ -38,12 +38,16 @@ export default function Header() {
   // useLocale() requires NextIntlClientProvider — fall back to "en" when outside locale context
   // (e.g. root-level article pages that don't use the [locale] layout)
   let locale = "en";
+  let t: ReturnType<typeof useTranslations> | null = null;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     locale = useLocale();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    t = useTranslations("nav");
   } catch {
     // Not inside NextIntlClientProvider — default to English
   }
+  const nav = (key: string, fallback: string) => (t ? t(key) : fallback);
   // usePathname from next/navigation always works without a provider
   const pathname = usePathname();
 
@@ -74,11 +78,11 @@ export default function Header() {
 
         {/* Desktop nav links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
-          <Link href="/" className="hover:text-gray-900 transition-colors">Home</Link>
-          <Link href="/destinations" className="hover:text-gray-900 transition-colors">Destinations</Link>
-          <Link href="/hot-deals" className="text-orange-600 hover:text-orange-700 transition-colors font-semibold">🔥 Hot Deals</Link>
-          <Link href="/planner" className="hover:text-gray-900 transition-colors">Planner</Link>
-          <Link href="/guides" className="hover:text-gray-900 transition-colors">Guides</Link>
+          <Link href="/" className="hover:text-gray-900 transition-colors">{nav("home", "Home")}</Link>
+          <Link href="/destinations" className="hover:text-gray-900 transition-colors">{nav("destinations", "Destinations")}</Link>
+          <Link href="/hot-deals" className="text-orange-600 hover:text-orange-700 transition-colors font-semibold">🔥 {nav("hotDeals", "Hot Deals")}</Link>
+          <Link href="/planner" className="hover:text-gray-900 transition-colors">{nav("planner", "Planner")}</Link>
+          <Link href="/guides" className="hover:text-gray-900 transition-colors">{nav("guides", "Guides")}</Link>
         </nav>
 
         {/* Auth buttons + language switcher + hamburger */}
@@ -103,19 +107,19 @@ export default function Header() {
                 href="/account/preferences"
                 className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
               >
-                My Profile
+                {nav("myProfile", "My Profile")}
               </Link>
               <Link
                 href="/planner"
                 className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
               >
-                My Trips
+                {nav("myTrips", "My Trips")}
               </Link>
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="hidden md:block text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
               >
-                Sign Out
+                {nav("signOut", "Sign Out")}
               </button>
             </>
           ) : (
@@ -124,14 +128,14 @@ export default function Header() {
                 href="/signin"
                 className="hidden md:block text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 hover:text-gray-900 transition-colors"
               >
-                Sign In
+                {nav("signIn", "Sign In")}
               </Link>
               <Link
                 href="/register"
                 className="hidden md:block text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
                 style={{ backgroundColor: "rgba(169, 61, 4, 1)" }}
               >
-                Register
+                {nav("register", "Register")}
               </Link>
             </>
           )}
@@ -152,31 +156,31 @@ export default function Header() {
       {/* Mobile nav drawer */}
       {menuOpen && (
         <nav className="md:hidden border-t border-gray-100 bg-white px-6 py-4 flex flex-col gap-4 text-sm font-medium text-gray-700">
-          <Link href="/" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Home</Link>
-          <Link href="/destinations" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Destinations</Link>
-          <Link href="/hot-deals" onClick={() => setMenuOpen(false)} className="text-orange-600 font-semibold hover:text-orange-700 transition-colors">🔥 Hot Deals</Link>
-          <Link href="/planner" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Planner</Link>
-          <Link href="/guides" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">Guides</Link>
+          <Link href="/" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">{nav("home", "Home")}</Link>
+          <Link href="/destinations" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">{nav("destinations", "Destinations")}</Link>
+          <Link href="/hot-deals" onClick={() => setMenuOpen(false)} className="text-orange-600 font-semibold hover:text-orange-700 transition-colors">🔥 {nav("hotDeals", "Hot Deals")}</Link>
+          <Link href="/planner" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">{nav("planner", "Planner")}</Link>
+          <Link href="/guides" onClick={() => setMenuOpen(false)} className="hover:text-gray-900 transition-colors">{nav("guides", "Guides")}</Link>
           <div className="flex gap-3 pt-2 border-t border-gray-100">
             {session ? (
               <>
                 <Link href="/account/preferences" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
-                  My Profile
+                  {nav("myProfile", "My Profile")}
                 </Link>
                 <Link href="/planner" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
-                  My Trips
+                  {nav("myTrips", "My Trips")}
                 </Link>
                 <button onClick={() => signOut({ callbackUrl: "/" })} className="flex-1 text-center text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                  Sign Out
+                  {nav("signOut", "Sign Out")}
                 </button>
               </>
             ) : (
               <>
                 <Link href="/signin" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:border-gray-500 transition-colors">
-                  Sign In
+                  {nav("signIn", "Sign In")}
                 </Link>
                 <Link href="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm font-medium text-white bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                  Register
+                  {nav("register", "Register")}
                 </Link>
               </>
             )}

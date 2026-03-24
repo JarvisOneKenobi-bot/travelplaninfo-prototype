@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getTranslations } from "next-intl/server";
 import { getUserId } from "@/lib/guest";
 import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
@@ -20,6 +20,7 @@ export default async function Planner({ params }: Props) {
   setRequestLocale(locale);
 
   const ctx = await getUserId();
+  const t = await getTranslations("planner");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,10 +29,10 @@ export default async function Planner({ params }: Props) {
       <main className="max-w-4xl mx-auto px-6 py-8">
         {/* Hero */}
         <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">Trip Planner</p>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Plan your perfect trip</h1>
+          <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">{t("title")}</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t("heading")}</h1>
           <p className="text-lg text-gray-600">
-            Answer a few questions and we&apos;ll help you build an itinerary that fits your budget and interests.
+            {t("subheading")}
           </p>
         </div>
 
@@ -47,18 +48,18 @@ export default async function Planner({ params }: Props) {
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center p-6">
             <div className="text-3xl mb-3">🔍</div>
-            <h3 className="font-bold text-gray-900 mb-2">Smart Search</h3>
-            <p className="text-sm text-gray-600">We compare prices across 100+ booking sites</p>
+            <h3 className="font-bold text-gray-900 mb-2">{t("smartSearch")}</h3>
+            <p className="text-sm text-gray-600">{t("smartSearchDesc")}</p>
           </div>
           <div className="text-center p-6">
             <div className="text-3xl mb-3">📋</div>
-            <h3 className="font-bold text-gray-900 mb-2">Personalized Itinerary</h3>
-            <p className="text-sm text-gray-600">Get a custom day-by-day plan</p>
+            <h3 className="font-bold text-gray-900 mb-2">{t("personalizedItinerary")}</h3>
+            <p className="text-sm text-gray-600">{t("personalizedItineraryDesc")}</p>
           </div>
           <div className="text-center p-6">
             <div className="text-3xl mb-3">💰</div>
-            <h3 className="font-bold text-gray-900 mb-2">Best Deals</h3>
-            <p className="text-sm text-gray-600">Contextual affiliate deals matched to your trip</p>
+            <h3 className="font-bold text-gray-900 mb-2">{t("bestDeals")}</h3>
+            <p className="text-sm text-gray-600">{t("bestDealsDesc")}</p>
           </div>
         </div>
       </main>

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-
 // Root-level not-found — rendered outside [locale]/layout.tsx so cannot use Header
 // (Header requires SessionProvider and NextIntlClientProvider).
-// Uses a static minimal header instead.
+// Use static import of English messages as fallback since next-intl hooks are unavailable.
+import enMessages from "../../messages/en/common.json";
+
+const nf = enMessages.notFound;
+
 export default function NotFound() {
   return (
     <html lang="en">
@@ -25,28 +28,28 @@ export default function NotFound() {
         </header>
         <main className="max-w-2xl mx-auto px-6 py-24 text-center">
           <p className="text-6xl mb-6">🗺️</p>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Page not found</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{nf.title}</h1>
           <p className="text-lg text-gray-600 mb-8">
-            Looks like this destination doesn&apos;t exist on our map. Let&apos;s get you back on track.
+            {nf.message}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/"
               className="bg-teal-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-800 transition-colors"
             >
-              Back to Home
+              {nf.backToHome}
             </Link>
             <Link
               href="/guides"
               className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:border-gray-500 transition-colors"
             >
-              Browse Travel Guides
+              {nf.browseGuides}
             </Link>
             <Link
               href="/destinations"
               className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors"
             >
-              Explore Destinations
+              {nf.exploreDestinations}
             </Link>
           </div>
         </main>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PREF_ENUMS } from "@/lib/preferences";
 import MapDrawer from "@/components/MapDrawer";
 import BudgetBar from "@/components/BudgetBar";
+import { useTranslations } from "next-intl";
 
 /* ── Item categories (multi-layer dropdown per product spec) ── */
 const CATEGORIES = [
@@ -80,6 +81,7 @@ export default function ItineraryBuilder({
   tripAdults = 1,
   initialBudgetOverride = null,
 }: Props) {
+  const t = useTranslations("itineraryBuilder");
   const [items, setItems] = useState<Item[]>(initialItems);
   const [addingDay, setAddingDay] = useState<number | null>(null);
   const [form, setForm] = useState<AddItemFormState>({ day: 1, category: "hotel", title: "", description: "", price_estimate: "" });
@@ -403,7 +405,7 @@ export default function ItineraryBuilder({
 
       {/* Header with Add Day + Show Map buttons */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Itinerary</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t("itinerary")}</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowMap(v => !v)}
@@ -416,13 +418,13 @@ export default function ItineraryBuilder({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            {showMap ? "Hide Map" : "Show Map"}
+            {showMap ? t("hideMap") : t("showMap")}
           </button>
           <button
             onClick={addDay}
             className="text-sm text-orange-700 hover:text-orange-800 font-medium border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
           >
-            + Add Day {dayCount + 1}
+            {t("addDay")} {dayCount + 1}
           </button>
         </div>
       </div>
@@ -436,12 +438,12 @@ export default function ItineraryBuilder({
             </svg>
           </span>
           <div>
-            <p className="text-sm font-medium text-orange-900">Select your interests so Atlas can suggest daily activities for your trip</p>
+            <p className="text-sm font-medium text-orange-900">{t("selectInterestsTip")}</p>
             <button
               onClick={() => { setModalInterests([]); setShowInterestsModal(true); setPendingActivityDay(null); }}
               className="mt-2 text-xs font-medium text-orange-700 underline hover:text-orange-800"
             >
-              Choose interests now
+              {t("chooseInterestsNow")}
             </button>
           </div>
         </div>
@@ -458,7 +460,7 @@ export default function ItineraryBuilder({
               <svg className={`w-4 h-4 text-gray-400 transition-transform ${collapsedDays.has(day) ? "" : "rotate-90"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              Day {day}
+              {t("day")} {day}
               <span className="text-xs font-normal text-gray-400">({items.filter(i => i.day_number === day).length} items)</span>
             </h3>
             <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -466,7 +468,7 @@ export default function ItineraryBuilder({
                 onClick={() => dropdownDay === day ? closeDropdown() : startAddItem(day)}
                 className="text-xs text-orange-700 hover:text-orange-800 font-medium"
               >
-                + Add item
+                {t("addItem")}
               </button>
 
               {/* Multi-layer category dropdown */}
@@ -500,9 +502,9 @@ export default function ItineraryBuilder({
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Back to categories
+                    {t("backToCategories")}
                   </button>
-                  <p className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider">Your Interests</p>
+                  <p className="px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider">{t("yourInterests")}</p>
                   {userInterests.filter(i => i !== "ai_assisted").map(interest => (
                     <button
                       key={interest}
@@ -523,7 +525,7 @@ export default function ItineraryBuilder({
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
                     >
-                      Other activity...
+                      {t("otherActivity")}
                     </button>
                   </div>
                 </div>
@@ -541,12 +543,12 @@ export default function ItineraryBuilder({
                   <div key={item.id} className="px-5 py-4 bg-orange-50 border-t border-orange-100 space-y-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${cat.color}`}>{cat.icon} {cat.label}</span>
-                      <span className="text-xs text-gray-400">Editing</span>
+                      <span className="text-xs text-gray-400">{t("editing")}</span>
                     </div>
                     <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Title *" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder={t("titlePlaceholder")} />
                     <input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Notes (optional)" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder={t("notesPlaceholder")} />
                     <div className="flex gap-1">
                       {(["budget", "mid", "luxury"] as const).map(tier => (
                         <button key={tier} type="button"
@@ -558,18 +560,18 @@ export default function ItineraryBuilder({
                                 : "bg-purple-100 text-purple-700 ring-1 ring-purple-400"
                               : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                           }`}>
-                          {tier === "budget" ? "Budget" : tier === "mid" ? "Mid" : "Luxury"}
+                          {tier === "budget" ? t("budget") : tier === "mid" ? t("mid") : t("luxury")}
                         </button>
                       ))}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => saveEdit(item.id)} disabled={saving || !editForm.title.trim()}
                         className="flex-1 bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-60">
-                        {saving ? "Saving\u2026" : "Save"}
+                        {saving ? t("saving") : t("save")}
                       </button>
                       <button onClick={() => setEditingItem(null)}
                         className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                        Cancel
+                        {t("cancel")}
                       </button>
                     </div>
                   </div>
@@ -599,9 +601,9 @@ export default function ItineraryBuilder({
                             : item.price_estimate === "luxury" ? "bg-purple-100 text-purple-700"
                             : "text-gray-400"
                         }`}>
-                          {item.price_estimate === "budget" ? "Budget"
-                            : item.price_estimate === "mid" ? "Mid-range"
-                            : item.price_estimate === "luxury" ? "Luxury"
+                          {item.price_estimate === "budget" ? t("budget")
+                            : item.price_estimate === "mid" ? t("mid")
+                            : item.price_estimate === "luxury" ? t("luxury")
                             : item.price_estimate}
                         </span>
                       )}
@@ -617,7 +619,7 @@ export default function ItineraryBuilder({
                   <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => toggleBooked(item)}
                       className={`text-xs px-2 py-1 rounded font-medium transition-colors ${item.booked ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-                      {item.booked ? "\u2713 Booked" : "Mark booked"}
+                      {item.booked ? t("booked") : t("markBooked")}
                     </button>
                     <button onClick={() => deleteItem(item.id)}
                       className="text-xs text-red-400 hover:text-red-600 px-1">&times;</button>
@@ -627,7 +629,7 @@ export default function ItineraryBuilder({
             })}
 
             {items.filter(i => i.day_number === day).length === 0 && addingDay !== day && (
-              <p className="text-sm text-gray-400 px-5 py-4 italic">No items for Day {day} yet.</p>
+              <p className="text-sm text-gray-400 px-5 py-4 italic">{t("noItemsForDay")}</p>
             )}
 
             {/* Inline add-item form */}
@@ -652,23 +654,23 @@ export default function ItineraryBuilder({
                             : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                         }`}
                       >
-                        {tier === "budget" ? "Budget" : tier === "mid" ? "Mid" : "Luxury"}
+                        {tier === "budget" ? t("budget") : tier === "mid" ? t("mid") : t("luxury")}
                       </button>
                     ))}
                   </div>
                 </div>
                 <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Title *" className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                  placeholder={t("titlePlaceholder")} className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
                 <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Notes (optional)" className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                  placeholder={t("notesPlaceholder")} className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
                 <div className="flex gap-2">
                   <button type="submit" disabled={saving}
                     className="flex-1 bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-60">
-                    {saving ? "Adding\u2026" : "Add Item"}
+                    {saving ? t("adding") : t("addItemButton")}
                   </button>
                   <button type="button" onClick={() => setAddingDay(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                    Cancel
+                    {t("cancel")}
                   </button>
                 </div>
               </form>
@@ -722,9 +724,9 @@ export default function ItineraryBuilder({
             </button>
 
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">Select Your Interests</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t("selectInterests")}</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Pick at least one so Atlas can suggest activities for your trip.
+                {t("pickAtLeastOne")}
               </p>
             </div>
 
@@ -753,14 +755,14 @@ export default function ItineraryBuilder({
                 onClick={() => setShowInterestsModal(false)}
                 className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={saveInterests}
                 disabled={modalInterests.length === 0 || savingInterests}
                 className="flex-1 bg-orange-600 text-white py-2.5 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {savingInterests ? "Saving..." : "Save & Continue"}
+                {savingInterests ? t("saving") : t("saveContinue")}
               </button>
             </div>
           </div>

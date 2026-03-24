@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import Link from "next/link";
 
 export default function Register() {
   const router = useRouter();
+  const t = useTranslations("auth.register");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +22,7 @@ export default function Register() {
     setError("");
 
     if (!agreed) {
-      setError("Please agree to the Terms of Service and Privacy Policy.");
+      setError(t("agreeError"));
       return;
     }
 
@@ -34,7 +36,7 @@ export default function Register() {
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || "Registration failed. Please try again.");
+      setError(data.error || t("registrationFailed"));
       setLoading(false);
       return;
     }
@@ -51,8 +53,8 @@ export default function Register() {
       <main className="max-w-md mx-auto px-6 py-16">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create an account</h1>
-            <p className="text-gray-600">Start planning your perfect trip</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("title")}</h1>
+            <p className="text-gray-600">{t("subtitle")}</p>
           </div>
 
           {error && (
@@ -63,17 +65,17 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("nameLabel")}</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t("namePlaceholder")}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("emailLabel")}</label>
               <input
                 type="email"
                 required
@@ -84,7 +86,7 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("passwordLabel")}</label>
               <input
                 type="password"
                 required
@@ -94,7 +96,7 @@ export default function Register() {
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
-              <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
+              <p className="text-xs text-gray-500 mt-1">{t("passwordHint")}</p>
             </div>
             <div>
               <label className="flex items-start gap-2">
@@ -105,10 +107,10 @@ export default function Register() {
                   className="mt-1 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                 />
                 <span className="text-sm text-gray-600">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-teal-700 hover:underline">Terms of Service</Link>
-                  {" "}and{" "}
-                  <Link href="/privacy" className="text-teal-700 hover:underline">Privacy Policy</Link>
+                  {t("agreeTerms")}{" "}
+                  <Link href="/terms" className="text-teal-700 hover:underline">{t("termsOfService")}</Link>
+                  {" "}{t("and")}{" "}
+                  <Link href="/privacy" className="text-teal-700 hover:underline">{t("privacyPolicy")}</Link>
                 </span>
               </label>
             </div>
@@ -117,15 +119,15 @@ export default function Register() {
               disabled={loading}
               className="w-full bg-teal-700 text-white py-3 rounded-lg font-medium hover:bg-teal-800 transition-colors disabled:opacity-60"
             >
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? t("creatingAccount") : t("createAccount")}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{" "}
+              {t("alreadyHaveAccount")}{" "}
               <Link href="/signin" className="text-teal-700 font-medium hover:text-teal-800">
-                Sign In
+                {t("signIn")}
               </Link>
             </p>
           </div>

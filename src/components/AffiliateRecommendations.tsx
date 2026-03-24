@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CJ_LINKS, TP_CONFIG } from "@/config/affiliates";
+import { useTranslations } from "next-intl";
 
 interface Recommendation {
   id: string;
@@ -130,6 +131,7 @@ export default function AffiliateRecommendations({
   budget: string | null;
   interests: string[];
 }) {
+  const t = useTranslations("affiliateRecommendations");
   const [adding, setAdding] = useState<string | null>(null);
 
   const recs = buildRecommendations(destination, budget, interests);
@@ -155,8 +157,8 @@ export default function AffiliateRecommendations({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-900">Recommended Bookings</h2>
-      <p className="text-xs text-gray-500">Matched to your destination and interests. Click &ldquo;Add&rdquo; to add to your itinerary with a direct booking link.</p>
+      <h2 className="text-xl font-bold text-gray-900">{t("recommendedBookings")}</h2>
+      <p className="text-xs text-gray-500">{t("matchedToTrip")}</p>
 
       {recs.map(rec => (
         <div key={rec.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
@@ -182,7 +184,7 @@ export default function AffiliateRecommendations({
               disabled={adding === rec.id}
               className="flex-1 text-xs font-medium bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-60"
             >
-              {adding === rec.id ? "Adding…" : "+ Add to Itinerary"}
+              {adding === rec.id ? t("adding") : t("addToItinerary")}
             </button>
           </div>
         </div>

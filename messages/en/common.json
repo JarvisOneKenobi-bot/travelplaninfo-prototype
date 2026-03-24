@@ -291,5 +291,68 @@
   },
   "languageSwitcher": {
     "label": "Language"
+  },
+  "budgetBar": {
+    "of": "of",
+    "budget": "budget",
+    "breakdown": "Breakdown",
+    "byDay": "By Day",
+    "byCategory": "By Category",
+    "noCostsYet": "No costs yet",
+    "total": "Total",
+    "day": "Day",
+    "overBudget": "Over budget",
+    "clickToSetBudget": "Click to set custom budget"
+  },
+  "mapDrawer": {
+    "tripMap": "Trip Map",
+    "all": "All",
+    "day": "Day",
+    "mapUnavailable": "Map unavailable. Showing pin list:",
+    "noLocations": "No locations to show.",
+    "noMappedLocations": "No mapped locations yet.",
+    "addItems": "Add items to your itinerary to see them here.",
+    "loadingMap": "Loading map…"
+  },
+  "itineraryBuilder": {
+    "itinerary": "Itinerary",
+    "hideMap": "Hide Map",
+    "showMap": "Show Map",
+    "addDay": "+ Add Day",
+    "day": "Day",
+    "addItem": "+ Add item",
+    "backToCategories": "Back to categories",
+    "yourInterests": "Your Interests",
+    "otherActivity": "Other activity...",
+    "editing": "Editing",
+    "saving": "Saving…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "adding": "Adding…",
+    "addItemButton": "Add Item",
+    "markBooked": "Mark booked",
+    "booked": "✓ Booked",
+    "budget": "Budget",
+    "mid": "Mid",
+    "luxury": "Luxury",
+    "noItemsForDay": "No items for this day yet.",
+    "titlePlaceholder": "Title *",
+    "notesPlaceholder": "Notes (optional)",
+    "selectInterests": "Select Your Interests",
+    "pickAtLeastOne": "Pick at least one so Atlas can suggest activities for your trip.",
+    "saveContinue": "Save & Continue",
+    "selectInterestsTip": "Select your interests so Atlas can suggest daily activities for your trip",
+    "chooseInterestsNow": "Choose interests now"
+  },
+  "affiliateRecommendations": {
+    "recommendedBookings": "Recommended Bookings",
+    "matchedToTrip": "Matched to your destination and interests. Click \"Add\" to add to your itinerary with a direct booking link.",
+    "adding": "Adding…",
+    "addToItinerary": "+ Add to Itinerary"
+  },
+  "atlas": {
+    "bookOnAviasales": "Book on Aviasales",
+    "findOnHotels": "Find on Hotels.com",
+    "perNight": "/night"
   }
 }

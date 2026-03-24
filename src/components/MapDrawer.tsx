@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { useTranslations } from "next-intl";
 
 export interface MapItem {
   id: number;
@@ -50,6 +51,7 @@ export default function MapDrawer({
   hoveredItemId,
   onPinClick,
 }: Props) {
+  const t = useTranslations("mapDrawer");
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<GoogleMap>(null);
   const markersRef = useRef<Map<number, AdvancedMarker>>(new Map());
@@ -244,7 +246,7 @@ export default function MapDrawer({
             <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            <h2 className="font-semibold text-gray-900 text-sm">Trip Map</h2>
+            <h2 className="font-semibold text-gray-900 text-sm">{t("tripMap")}</h2>
             {destination && <span className="text-xs text-gray-500">{destination}</span>}
           </div>
           <button
@@ -268,7 +270,7 @@ export default function MapDrawer({
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
-            All
+            {t("all")}
           </button>
           {days.map((d) => (
             <button
@@ -280,7 +282,7 @@ export default function MapDrawer({
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              Day {d}
+              {t("day")} {d}
             </button>
           ))}
         </div>
@@ -290,9 +292,9 @@ export default function MapDrawer({
           {mapError ? (
             // Fallback: address list
             <div className="absolute inset-0 overflow-y-auto p-4 space-y-2">
-              <p className="text-xs text-gray-500 mb-3">Map unavailable. Showing pin list:</p>
+              <p className="text-xs text-gray-500 mb-3">{t("mapUnavailable")}</p>
               {filteredItems.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No locations to show.</p>
+                <p className="text-sm text-gray-400 italic">{t("noLocations")}</p>
               ) : (
                 filteredItems.map((item, i) => (
                   <button
@@ -308,7 +310,7 @@ export default function MapDrawer({
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
-                      <p className="text-xs text-gray-400">Day {item.day_number}</p>
+                      <p className="text-xs text-gray-400">{t("day")} {item.day_number}</p>
                     </div>
                   </button>
                 ))
@@ -321,15 +323,15 @@ export default function MapDrawer({
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
                   <div className="text-center">
                     <div className="w-8 h-8 border-2 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Loading map…</p>
+                    <p className="text-sm text-gray-500">{t("loadingMap")}</p>
                   </div>
                 </div>
               )}
               {mapLoaded && filteredItems.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="text-center bg-white/90 rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-gray-500">No mapped locations yet.</p>
-                    <p className="text-xs text-gray-400 mt-1">Add items to your itinerary to see them here.</p>
+                    <p className="text-sm text-gray-500">{t("noMappedLocations")}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t("addItems")}</p>
                   </div>
                 </div>
               )}

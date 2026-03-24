@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import TripForm from "./TripForm";
 
 interface Trip {
@@ -16,6 +17,7 @@ interface Trip {
 }
 
 export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolean }) {
+  const t = useTranslations("plannerDashboard");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -42,7 +44,7 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
   if (showForm) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">New Trip</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">{t("newTrip")}</h2>
         <TripForm onCancel={() => setShowForm(false)} />
       </div>
     );
@@ -52,31 +54,31 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
     <div className="space-y-6">
       {isGuest && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
-          <p className="text-sm text-amber-800">Your trips are saved temporarily. <Link href="/register?callbackUrl=/planner" className="font-medium underline hover:text-amber-900">Create a free account</Link> to keep them forever.</p>
+          <p className="text-sm text-amber-800">{t("guestWarning")} <Link href="/register?callbackUrl=/planner" className="font-medium underline hover:text-amber-900">{t("createFreeAccount")}</Link> {t("keepForever")}</p>
         </div>
       )}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">My Trips</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t("myTrips")}</h2>
         <button
           onClick={() => setShowForm(true)}
           className="bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-teal-800 transition-colors text-sm"
         >
-          + Create New Trip
+          {t("createNewTrip")}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading trips…</div>
+        <div className="text-center py-16 text-gray-400">{t("loadingTrips")}</div>
       ) : trips.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
           <div className="text-5xl mb-4">✈️</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">No trips yet</h3>
-          <p className="text-gray-500 mb-6">Create your first trip to start building an itinerary.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">{t("noTrips")}</h3>
+          <p className="text-gray-500 mb-6">{t("noTripsDesc")}</p>
           <button
             onClick={() => setShowForm(true)}
             className="bg-teal-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-800 transition-colors"
           >
-            Plan My First Trip
+            {t("planFirstTrip")}
           </button>
         </div>
       ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
 import HotelCard from "./atlas/HotelCard";
@@ -401,6 +402,7 @@ function renderMarkdownLite(text: string) {
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function AssistantChat() {
+  const t = useTranslations("assistant");
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -810,7 +812,7 @@ export default function AssistantChat() {
           <div className="flex items-center justify-between px-4 py-3 bg-orange-500 text-white">
             <div className="flex items-center gap-2">
               <img src="/images/atlas-avatar.png" alt="Atlas" className="w-7 h-7 rounded-full ring-1 ring-white/30" />
-              <span className="font-semibold">Atlas</span>
+              <span className="font-semibold">{t("title")}</span>
             </div>
             <div className="flex items-center gap-1">
               {/* Voice toggle */}
@@ -1030,7 +1032,7 @@ export default function AssistantChat() {
                   sendMessage(input);
                 }
               }}
-              placeholder="Ask Atlas..."
+              placeholder={t("placeholder")}
               disabled={isLoading}
               className="flex-1 text-sm px-3 py-2 rounded-full border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none disabled:opacity-50"
             />

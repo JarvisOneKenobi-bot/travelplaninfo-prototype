@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { DEALS, getAffiliateUrl, CJ_LINKS } from "@/config/affiliates";
 import NewsletterForm from "@/components/NewsletterForm";
 
 export default function HotDeals() {
+  const t = useTranslations("hotDeals");
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -19,13 +21,13 @@ export default function HotDeals() {
           <div className="lg:col-span-5 flex flex-col justify-between">
             <div>
               <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">
-                Live Deal Feed &nbsp;·&nbsp; Hotels · Vacation Rentals · Car Rentals · Cruises
+                {t("tagline")}
               </p>
               <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-4">
-                Curated travel deals from trusted partners — book &amp; save.
+                {t("heading")}
               </h1>
               <p className="text-base text-gray-600 mb-6">
-                Compare hotels on Hotels.com, vacation rentals on Vrbo, car rentals on EconomyBookings, and cruise deals on CruiseDirect. Every booking supports TravelPlanInfo.
+                {t("subheading")}
               </p>
               <div className="flex gap-3 flex-wrap">
                 <a href={CJ_LINKS.hotels()} target="_blank" rel="noopener noreferrer sponsored" className="bg-teal-700 text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-teal-800 transition-colors inline-block">
@@ -63,7 +65,7 @@ export default function HotDeals() {
           <div className="lg:col-span-4">
             <a href={CJ_LINKS.cruises()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
               <p className="text-xs uppercase tracking-widest text-orange-500 font-medium mb-2">
-                🔥 Featured Deal
+                🔥 {t("featuredDeal")}
               </p>
               <h2 className="text-xl font-bold text-gray-900">
                 Caribbean Cruise from Miami
@@ -131,7 +133,7 @@ export default function HotDeals() {
 
           {/* All deals grid */}
           <div className="md:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">All Deals</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t("allDeals")}</h2>
             <div className="grid grid-cols-2 gap-4">
               {DEALS.map((deal) => (
                 <a
@@ -156,20 +158,20 @@ export default function HotDeals() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Planning Guides</h2>
-              <p className="text-sm text-gray-500 mb-4">Destination-specific guides coming soon.</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t("planningGuides")}</h2>
+              <p className="text-sm text-gray-500 mb-4">{t("guidesComingSoon")}</p>
               <Link
                 href="/guides"
                 className="block w-full text-center bg-teal-700 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-teal-800 transition-colors"
               >
-                Browse All Guides →
+                {t("browseAllGuides")}
               </Link>
             </div>
 
             <div className="bg-teal-800 rounded-2xl p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-white">Deal Alerts</h2>
+              <h2 className="text-xl font-bold text-white">{t("dealAlerts")}</h2>
               <p className="text-teal-100 text-sm mt-2">
-                Weekly flight + hotel bundles with price-drop alerts.
+                {t("dealAlertsDesc")}
               </p>
               <div className="mt-4">
                 <NewsletterForm source="hot-deals" />
@@ -181,7 +183,7 @@ export default function HotDeals() {
 
         {/* Disclosure */}
         <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-200">
-          TravelPlanInfo earns a commission when you book through our partner links. This helps us keep the site free. Prices shown are estimates and may vary.
+          {t("affiliateDisclosure")}
         </p>
 
       </main>

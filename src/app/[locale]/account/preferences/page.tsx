@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
 import type { UserPreferences } from "@/lib/preferences";
@@ -11,6 +12,7 @@ import { PREF_ENUMS } from "@/lib/preferences";
 export default function PreferencesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("preferences");
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -26,7 +28,7 @@ export default function PreferencesPage() {
       fetch("/api/user/preferences")
         .then((r) => r.json())
         .then((data) => setPrefs(data))
-        .catch(() => setToast({ type: "error", message: "Failed to load preferences" }));
+        .catch(() => setToast({ type: "error", message: t("loadFailed") }));
     }
   }, [status]);
 
@@ -50,9 +52,9 @@ export default function PreferencesPage() {
       if (!res.ok) throw new Error("Save failed");
       const updated = await res.json();
       setPrefs(updated);
-      setToast({ type: "success", message: "Preferences saved!" });
+      setToast({ type: "success", message: t("savedSuccess") });
     } catch {
-      setToast({ type: "error", message: "Failed to save preferences" });
+      setToast({ type: "error", message: t("saveFailed") });
     } finally {
       setSaving(false);
     }
@@ -89,7 +91,7 @@ export default function PreferencesPage() {
       <>
         <Header />
         <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">{t("loading")}</div>
         </main>
         <HelpButton pageId="preferences" />
       </>
@@ -101,7 +103,7 @@ export default function PreferencesPage() {
       <Header />
       <main className="min-h-screen bg-gray-50 py-10 px-4">
         <form onSubmit={handleSave} className="max-w-3xl mx-auto space-y-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Travel Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t("title")}</h1>
 
           {/* Toast */}
           {toast && (
@@ -118,35 +120,35 @@ export default function PreferencesPage() {
 
           {/* Travel Profile */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Travel Profile</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("travelProfile")}</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Home Airport (IATA)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("homeAirportLabel")}</label>
                 <input
                   type="text"
                   maxLength={4}
                   value={prefs.home_airport}
                   onChange={(e) => setPrefs({ ...prefs, home_airport: e.target.value.toUpperCase() })}
-                  placeholder="e.g. MIA"
+                  placeholder={t("homeAirportPlaceholder")}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Home City</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("homeCityLabel")}</label>
                 <input
                   type="text"
                   maxLength={100}
                   value={prefs.home_city}
                   onChange={(e) => setPrefs({ ...prefs, home_city: e.target.value })}
-                  placeholder="e.g. Miami, FL"
+                  placeholder={t("homeCityPlaceholder")}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Budget Tier</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("budgetTierLabel")}</label>
               <div className="flex gap-3">
                 {PREF_ENUMS.budget_tier.map((tier) => (
                   <label key={tier} className="flex items-center gap-2 cursor-pointer">
@@ -167,16 +169,16 @@ export default function PreferencesPage() {
             {/* Custom budget ranges */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Budget Ranges
+                {t("customBudgetRanges")}
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Atlas uses these thresholds to label prices as Budget, Mid-range, or Luxury.
+                {t("customBudgetRangesDesc")}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <span className="block text-xs font-medium text-gray-500 mb-1">Budget</span>
+                  <span className="block text-xs font-medium text-gray-500 mb-1">{t("budgetLabel")}</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-sm text-gray-600">Under $</span>
+                    <span className="text-sm text-gray-600">{t("underDollar")}</span>
                     <input
                       type="number"
                       min={1}
@@ -184,11 +186,11 @@ export default function PreferencesPage() {
                       onChange={(e) => setBudgetMax(parseInt(e.target.value) || 1)}
                       className="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
-                    <span className="text-sm text-gray-600">/day</span>
+                    <span className="text-sm text-gray-600">{t("perDay")}</span>
                   </div>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <span className="block text-xs font-medium text-gray-500 mb-1">Mid-range</span>
+                  <span className="block text-xs font-medium text-gray-500 mb-1">{t("midrangeLabel")}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-sm text-gray-600">${prefs.budget_ranges.budget_max} to $</span>
                     <input
@@ -198,20 +200,20 @@ export default function PreferencesPage() {
                       onChange={(e) => setMidMax(parseInt(e.target.value) || prefs.budget_ranges.budget_max + 1)}
                       className="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
-                    <span className="text-sm text-gray-600">/day</span>
+                    <span className="text-sm text-gray-600">{t("perDay")}</span>
                   </div>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <span className="block text-xs font-medium text-gray-500 mb-1">Luxury</span>
+                  <span className="block text-xs font-medium text-gray-500 mb-1">{t("luxuryLabel")}</span>
                   <div className="flex items-center gap-1 py-1">
-                    <span className="text-sm text-gray-600">${prefs.budget_ranges.mid_max}+ /day</span>
+                    <span className="text-sm text-gray-600">${prefs.budget_ranges.mid_max}+ {t("perDay")}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("currencyLabel")}</label>
               <select
                 value={prefs.currency_pref}
                 onChange={(e) =>
@@ -230,11 +232,11 @@ export default function PreferencesPage() {
 
           {/* Party */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Travel Party</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("travelParty")}</h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("adultsLabel")}</label>
                 <input
                   type="number"
                   min={0}
@@ -246,7 +248,7 @@ export default function PreferencesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("childrenLabel")}</label>
                 <input
                   type="number"
                   min={0}
@@ -267,7 +269,7 @@ export default function PreferencesPage() {
                     }
                     className="rounded text-orange-500 focus:ring-orange-500"
                   />
-                  <span className="text-sm text-gray-700">Pets</span>
+                  <span className="text-sm text-gray-700">{t("petsLabel")}</span>
                 </label>
               </div>
               <div className="flex items-end">
@@ -280,7 +282,7 @@ export default function PreferencesPage() {
                     }
                     className="rounded text-orange-500 focus:ring-orange-500"
                   />
-                  <span className="text-sm text-gray-700">Accessibility</span>
+                  <span className="text-sm text-gray-700">{t("accessibilityLabel")}</span>
                 </label>
               </div>
             </div>
@@ -288,7 +290,7 @@ export default function PreferencesPage() {
 
           {/* Interests */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("interestsTitle")}</h2>
             <div className="flex flex-wrap gap-2">
               {/* AI Assisted chip */}
               <button
@@ -303,7 +305,7 @@ export default function PreferencesPage() {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 2a1 1 0 011 1v1.323l1.954.674a1 1 0 01.07 1.846L11 7.692V9h1.308l.849-2.024a1 1 0 011.846.07L14.329 9H16a1 1 0 110 2h-1.671l-.674 1.954a1 1 0 01-1.846.07L11 11.308V13a1 1 0 11-2 0v-1.692l-2.024.849a1 1 0 01-.07-1.846L9 9.308V8H7.692l-.849 2.024a1 1 0 01-1.846-.07L5.671 8H4a1 1 0 110-2h1.671l.674-1.954a1 1 0 011.846-.07L9 5.692V4a1 1 0 011-1z" />
                 </svg>
-                Let Atlas decide
+                {t("letAtlasDecide")}
               </button>
               {PREF_ENUMS.interests.filter((i) => i !== "ai_assisted").map((interest) => {
                 const selected = prefs.interests.includes(interest);
@@ -338,7 +340,7 @@ export default function PreferencesPage() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Add your own interest..."
+                placeholder={t("addCustomInterest")}
                 maxLength={30}
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 onKeyDown={(e) => {
@@ -365,17 +367,17 @@ export default function PreferencesPage() {
                 }}
                 className="px-4 py-2 text-sm font-medium bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
               >
-                + Add
+                {t("addButton")}
               </button>
             </div>
           </section>
 
           {/* Trip Preferences */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Trip Preferences</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("tripPreferences")}</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Default Search Mode</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("defaultSearchMode")}</label>
               <div className="flex flex-wrap gap-3">
                 {PREF_ENUMS.default_search_mode.map((mode) => (
                   <label key={mode} className="flex items-center gap-2 cursor-pointer">
@@ -396,7 +398,7 @@ export default function PreferencesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Trip Length</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("tripLengthLabel")}</label>
               <div className="flex flex-wrap gap-3">
                 {PREF_ENUMS.trip_length_pref.map((len) => (
                   <label key={len} className="flex items-center gap-2 cursor-pointer">
@@ -417,13 +419,13 @@ export default function PreferencesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Climate Preference</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("climatePref")}</label>
               <input
                 type="text"
                 maxLength={100}
                 value={prefs.climate_pref}
                 onChange={(e) => setPrefs({ ...prefs, climate_pref: e.target.value })}
-                placeholder="e.g. warm, tropical, temperate"
+                placeholder={t("climatePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
@@ -431,10 +433,10 @@ export default function PreferencesPage() {
 
           {/* Assistant Settings */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Assistant Settings</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("assistantSettings")}</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Response Style</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("responseStyle")}</label>
               <div className="flex gap-3">
                 {PREF_ENUMS.assistant_style.map((style) => (
                   <label key={style} className="flex items-center gap-2 cursor-pointer">
@@ -459,13 +461,13 @@ export default function PreferencesPage() {
                 onChange={(e) => setPrefs({ ...prefs, voice_enabled: e.target.checked })}
                 className="rounded text-orange-500 focus:ring-orange-500"
               />
-              <span className="text-sm text-gray-700">Enable voice responses</span>
+              <span className="text-sm text-gray-700">{t("voiceEnabled")}</span>
             </label>
           </section>
 
           {/* Deal Alerts */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900">Deal Alerts</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("dealAlerts")}</h2>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -474,13 +476,13 @@ export default function PreferencesPage() {
                 onChange={(e) => setPrefs({ ...prefs, deal_alerts: e.target.checked })}
                 className="rounded text-orange-500 focus:ring-orange-500"
               />
-              <span className="text-sm text-gray-700">Enable deal alerts</span>
+              <span className="text-sm text-gray-700">{t("enableDealAlerts")}</span>
             </label>
 
             {prefs.deal_alerts && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alert threshold: {prefs.deal_alert_threshold_pct}% off
+                  {t("alertThreshold")} {prefs.deal_alert_threshold_pct}{t("percentOff")}
                 </label>
                 <input
                   type="range"
@@ -508,7 +510,7 @@ export default function PreferencesPage() {
               disabled={saving}
               className="bg-orange-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Saving..." : "Save Preferences"}
+              {saving ? t("saving") : t("savePreferences")}
             </button>
           </div>
         </form>

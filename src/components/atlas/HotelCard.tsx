@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface HotelData {
   name: string;
   price_night: string;
@@ -16,6 +18,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function HotelCard({ hotel }: { hotel: HotelData }) {
+  const t = useTranslations("atlas");
   const stars = Math.round(hotel.rating);
   const tierClass = TIER_COLORS[hotel.tier] || "bg-gray-100 text-gray-600";
 
@@ -36,7 +39,7 @@ export default function HotelCard({ hotel }: { hotel: HotelData }) {
         </div>
         <div className="text-right">
           <p className="font-bold text-lg text-orange-600">{hotel.price_night}</p>
-          <p className="text-xs text-gray-400">/night</p>
+          <p className="text-xs text-gray-400">{t("perNight")}</p>
           {hotel.is_mock && (
             <span className="text-xs text-amber-600 bg-amber-50 rounded px-1 py-0.5">(estimated)</span>
           )}
@@ -48,7 +51,7 @@ export default function HotelCard({ hotel }: { hotel: HotelData }) {
         rel="noopener noreferrer"
         className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-full px-3 py-1.5 transition-colors"
       >
-        Find on Hotels.com
+        {t("findOnHotels")}
         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>

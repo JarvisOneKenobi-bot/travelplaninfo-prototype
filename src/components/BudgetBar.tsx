@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { calculateBudgetLimit } from "@/lib/cost-utils";
+import { useTranslations } from "next-intl";
 
 interface ItemWithCost {
   id: number;
@@ -39,6 +40,7 @@ export default function BudgetBar({
   tripId,
   onBudgetOverrideChange,
 }: Props) {
+  const t = useTranslations("budgetBar");
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [editingBudget, setEditingBudget] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -145,7 +147,7 @@ export default function BudgetBar({
         {/* Cost vs Budget label */}
         <div className="flex items-center gap-1 shrink-0">
           <span className={`font-semibold text-sm ${textColor}`}>{fmt(totalCost)}</span>
-          <span className="text-xs text-gray-400">of</span>
+          <span className="text-xs text-gray-400">{t("of")}</span>
           {editingBudget ? (
             <div className="flex items-center gap-1">
               <span className="text-xs text-gray-400">$</span>
@@ -166,16 +168,16 @@ export default function BudgetBar({
           ) : (
             <button
               onClick={startEditBudget}
-              title="Click to set custom budget"
+              title={t("clickToSetBudget")}
               className="text-sm font-semibold text-gray-700 hover:text-orange-600 hover:underline transition-colors"
             >
               {fmt(budgetLimit)}
             </button>
           )}
-          <span className="text-xs text-gray-400">budget</span>
+          <span className="text-xs text-gray-400">{t("budget")}</span>
           {overBudget && (
             <span className="ml-1 text-xs font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
-              Over budget
+              {t("overBudget")}
             </span>
           )}
         </div>
@@ -199,7 +201,7 @@ export default function BudgetBar({
             onClick={() => setShowBreakdown(v => !v)}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
           >
-            Breakdown
+            {t("breakdown")}
             <svg
               className={`w-3 h-3 transition-transform ${showBreakdown ? "rotate-180" : ""}`}
               fill="none"
@@ -216,15 +218,15 @@ export default function BudgetBar({
                 {/* By Day */}
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    By Day
+                    {t("byDay")}
                   </p>
                   {dayKeys.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No costs yet</p>
+                    <p className="text-xs text-gray-400 italic">{t("noCostsYet")}</p>
                   ) : (
                     <ul className="space-y-1">
                       {dayKeys.map(day => (
                         <li key={day} className="flex justify-between text-xs">
-                          <span className="text-gray-600">Day {day}</span>
+                          <span className="text-gray-600">{t("day")} {day}</span>
                           <span className="font-medium text-gray-800">{fmt(byDay[day])}</span>
                         </li>
                       ))}
@@ -235,10 +237,10 @@ export default function BudgetBar({
                 {/* By Category */}
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    By Category
+                    {t("byCategory")}
                   </p>
                   {catKeys.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No costs yet</p>
+                    <p className="text-xs text-gray-400 italic">{t("noCostsYet")}</p>
                   ) : (
                     <ul className="space-y-1">
                       {catKeys.map(cat => (
@@ -256,7 +258,7 @@ export default function BudgetBar({
 
               {/* Total row */}
               <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs font-semibold">
-                <span className="text-gray-700">Total</span>
+                <span className="text-gray-700">{t("total")}</span>
                 <span className={textColor}>{fmt(totalCost)}</span>
               </div>
             </div>

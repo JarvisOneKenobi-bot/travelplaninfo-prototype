@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
-export default function Footer() {
+export default async function Footer() {
   const year = new Date().getFullYear();
+  const t = await getTranslations("footer");
+  const tNav = await getTranslations("nav");
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
@@ -11,28 +14,28 @@ export default function Footer() {
           <div>
             <p className="text-white font-bold text-lg mb-2">TravelPlanInfo</p>
             <p className="text-sm text-gray-400">
-              Expert itineraries, hidden gems, and deals for every kind of traveler.
+              {t("tagline")}
             </p>
           </div>
 
           {/* Navigation */}
           <div>
-            <p className="text-white font-semibold text-sm mb-3 uppercase tracking-widest">Explore</p>
+            <p className="text-white font-semibold text-sm mb-3 uppercase tracking-widest">{t("explore")}</p>
             <nav className="flex flex-col gap-2 text-sm">
-              <Link href="/" className="hover:text-white transition-colors">Home</Link>
-              <Link href="/destinations" className="hover:text-white transition-colors">Destinations</Link>
-              <Link href="/hot-deals" className="hover:text-white transition-colors">Hot Deals</Link>
-              <Link href="/planner" className="hover:text-white transition-colors">Trip Planner</Link>
-              <Link href="/guides" className="hover:text-white transition-colors">Travel Guides</Link>
+              <Link href="/" className="hover:text-white transition-colors">{tNav("home")}</Link>
+              <Link href="/destinations" className="hover:text-white transition-colors">{tNav("destinations")}</Link>
+              <Link href="/hot-deals" className="hover:text-white transition-colors">{tNav("hotDeals")}</Link>
+              <Link href="/planner" className="hover:text-white transition-colors">{t("tripPlanner")}</Link>
+              <Link href="/guides" className="hover:text-white transition-colors">{t("travelGuides")}</Link>
             </nav>
           </div>
 
           {/* Legal */}
           <div>
-            <p className="text-white font-semibold text-sm mb-3 uppercase tracking-widest">Legal</p>
+            <p className="text-white font-semibold text-sm mb-3 uppercase tracking-widest">{t("legal")}</p>
             <nav className="flex flex-col gap-2 text-sm">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">{t("privacyPolicy")}</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">{t("termsOfService")}</Link>
             </nav>
           </div>
         </div>
@@ -40,10 +43,10 @@ export default function Footer() {
         {/* Affiliate disclosure */}
         <div className="border-t border-gray-700 pt-6 space-y-2">
           <p className="text-xs text-gray-500">
-            <strong className="text-gray-400">Affiliate Disclosure:</strong> TravelPlanInfo participates in affiliate programs including CJ Affiliate and Travelpayouts. When you click links to Hotels.com, Vrbo, CruiseDirect, Aviasales, or other partner sites and make a purchase, we may earn a commission at no extra cost to you. This helps us keep the site free and our recommendations honest.
+            <strong className="text-gray-400">{t("affiliateDisclosure")}</strong> {t("affiliateDisclosureText")}
           </p>
           <p className="text-xs text-gray-600">
-            © {year} TravelPlanInfo. All rights reserved.
+            © {year} TravelPlanInfo. {t("allRightsReserved")}
           </p>
         </div>
       </div>

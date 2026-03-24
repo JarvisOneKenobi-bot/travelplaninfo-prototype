@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface FlightData {
   airline: string;
   route: string;
@@ -13,6 +15,7 @@ interface FlightData {
 }
 
 export default function FlightCard({ flight }: { flight: FlightData }) {
+  const t = useTranslations("atlas");
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start gap-2">
@@ -47,7 +50,7 @@ export default function FlightCard({ flight }: { flight: FlightData }) {
         rel="noopener noreferrer"
         className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-full px-3 py-1.5 transition-colors"
       >
-        Book on Aviasales
+        {t("bookOnAviasales")}
         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>

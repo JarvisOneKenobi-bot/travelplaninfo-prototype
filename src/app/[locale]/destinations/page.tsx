@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import { CJ_LINKS, TP_CONFIG } from "@/config/affiliates";
 const carsUrl = CJ_LINKS.cars();
@@ -141,6 +142,7 @@ const destinations = [
 ];
 
 export default function Destinations() {
+  const t = useTranslations("destinations");
   const [query, setQuery] = useState("");
   const [checkin, setCheckin] = useState("");
   const [checkout, setCheckout] = useState("");
@@ -182,13 +184,13 @@ export default function Destinations() {
         {/* Hero */}
         <div className="text-center mb-12">
           <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">
-            Popular Destinations
+            {t("title")}
           </p>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Where do you want to go?
+            {t("heading")}
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Find the best flights and hotels to top destinations. We compare prices across major booking sites to get you the best deal.
+            {t("subheading")}
           </p>
         </div>
 
@@ -199,7 +201,7 @@ export default function Destinations() {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Where are you going?"
+              placeholder={t("searchPlaceholder")}
               className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <input
@@ -218,7 +220,7 @@ export default function Destinations() {
               type="submit"
               className="bg-teal-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-teal-800 transition-colors"
             >
-              Search
+              {t("searchButton")}
             </button>
             {submitted && (
               <button
@@ -226,7 +228,7 @@ export default function Destinations() {
                 onClick={handleClear}
                 className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
-                Clear
+                {t("clearButton")}
               </button>
             )}
           </form>
@@ -236,13 +238,13 @@ export default function Destinations() {
         {filtered.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-lg text-gray-600 mb-4">
-              No destinations found for &ldquo;{query}&rdquo;. Try a different search or browse all destinations below.
+              {t("noDestinationsFound")} &ldquo;{query}&rdquo;. {t("tryDifferentSearch")}
             </p>
             <button
               onClick={handleClear}
               className="bg-teal-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-800 transition-colors"
             >
-              Show all destinations
+              {t("showAllDestinations")}
             </button>
           </div>
         ) : (
@@ -284,7 +286,7 @@ export default function Destinations() {
                       rel="noopener noreferrer"
                       className="flex-1 text-center bg-orange-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-orange-700 transition-colors"
                     >
-                      Find Flights
+                      {t("findFlights")}
                     </a>
                     <a
                       href={CJ_LINKS.hotelsCity(dest.name)}
@@ -292,7 +294,7 @@ export default function Destinations() {
                       rel="noopener noreferrer sponsored"
                       className="flex-1 text-center border border-teal-600 text-teal-700 text-sm font-medium py-2.5 rounded-lg hover:bg-teal-50 transition-colors"
                     >
-                      Find Hotels
+                      {t("findHotels")}
                     </a>
                   </div>
                   <a
@@ -301,7 +303,7 @@ export default function Destinations() {
                     rel="noopener noreferrer sponsored"
                     className="block w-full text-center border border-emerald-600 text-emerald-700 text-sm font-medium py-2 rounded-lg hover:bg-emerald-50 transition-colors"
                   >
-                    🚗 Rent a Car
+                    {t("rentACar")}
                   </a>
                 </div>
               </div>
@@ -312,10 +314,10 @@ export default function Destinations() {
         {/* CTA Section */}
         <div className="mt-16 bg-teal-800 rounded-2xl p-8 text-center">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Don&apos;t see your destination?
+            {t("dontSeeDestination")}
           </h2>
           <p className="text-teal-100 mb-6 max-w-xl mx-auto">
-            We search hundreds of airlines and hotel booking sites to find you the best prices anywhere in the world.
+            {t("dontSeeDesc")}
           </p>
           <div className="flex justify-center gap-4">
             <a
@@ -324,7 +326,7 @@ export default function Destinations() {
               rel="noopener noreferrer"
               className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors inline-block"
             >
-              Search All Flights
+              {t("searchAllFlights")}
             </a>
             <a
               href={CJ_LINKS.hotels()}
@@ -332,7 +334,7 @@ export default function Destinations() {
               rel="noopener noreferrer sponsored"
               className="bg-white text-teal-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors inline-block"
             >
-              Search All Hotels
+              {t("searchAllHotels")}
             </a>
           </div>
         </div>

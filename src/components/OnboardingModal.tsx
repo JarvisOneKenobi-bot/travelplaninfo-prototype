@@ -2,20 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { PREF_ENUMS } from "@/lib/preferences";
 import type { UserPreferences } from "@/lib/preferences";
 
 const LS_KEY = "tpi_onboarding_complete";
 
 /** Icons for budget tier cards (no dollar amounts — just labels + icons) */
-const BUDGET_ICONS: Record<(typeof PREF_ENUMS.budget_tier)[number], { icon: string; label: string }> = {
-  budget: { icon: "🎒", label: "Budget" },
-  mid: { icon: "🏖️", label: "Mid-range" },
-  luxury: { icon: "✨", label: "Luxury" },
+const BUDGET_ICONS: Record<(typeof PREF_ENUMS.budget_tier)[number], { icon: string }> = {
+  budget: { icon: "🎒" },
+  mid: { icon: "🏖️" },
+  luxury: { icon: "✨" },
 };
 
 export default function OnboardingModal() {
   const { data: session, status } = useSession();
+  const t = useTranslations("onboarding");
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(1);
   const [airport, setAirport] = useState("");
@@ -135,20 +137,20 @@ export default function OnboardingModal() {
         {/* Step 1: Airport */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 text-center">Welcome to TravelPlanInfo!</h2>
+            <h2 className="text-xl font-bold text-gray-900 text-center">{t("welcomeTitle")}</h2>
             <p className="text-sm text-gray-600 text-center">
-              Let&apos;s personalize your experience. Where do you fly from?
+              {t("welcomeSubtitle")}
             </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Home Airport (IATA code)
+                {t("homeAirportLabel")}
               </label>
               <input
                 type="text"
                 maxLength={4}
                 value={airport}
                 onChange={(e) => setAirport(e.target.value.toUpperCase())}
-                placeholder="e.g. MIA, JFK, LAX"
+                placeholder={t("homeAirportPlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 autoFocus
               />
@@ -158,7 +160,7 @@ export default function OnboardingModal() {
               disabled={!airport.trim()}
               className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next
+              {t("next")}
             </button>
           </div>
         )}
@@ -166,13 +168,14 @@ export default function OnboardingModal() {
         {/* Step 2: Budget — icons only, no dollar amounts (thresholds live on full preferences page) */}
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 text-center">What&apos;s your budget style?</h2>
+            <h2 className="text-xl font-bold text-gray-900 text-center">{t("budgetStyleTitle")}</h2>
             <p className="text-sm text-gray-600 text-center">
-              This helps us find the best deals for you.
+              {t("budgetStyleSubtitle")}
             </p>
             <div className="flex gap-3">
               {PREF_ENUMS.budget_tier.map((tier) => {
                 const meta = BUDGET_ICONS[tier];
+                const labelKey = tier === "mid" ? "midrange" : tier;
                 return (
                   <button
                     key={tier}
@@ -185,7 +188,7 @@ export default function OnboardingModal() {
                     }`}
                   >
                     <span className="text-xl">{meta.icon}</span>
-                    <span>{meta.label}</span>
+                    <span>{t(labelKey as "budget" | "midrange" | "luxury")}</span>
                   </button>
                 );
               })}
@@ -195,13 +198,13 @@ export default function OnboardingModal() {
                 onClick={() => setStep(1)}
                 className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                Back
+                {t("back")}
               </button>
               <button
                 onClick={() => setStep(3)}
                 className="flex-1 bg-orange-600 text-white py-2.5 rounded-lg font-medium hover:bg-orange-700 transition-colors"
               >
-                Next
+                {t("next")}
               </button>
             </div>
           </div>
@@ -210,9 +213,9 @@ export default function OnboardingModal() {
         {/* Step 3: Interests */}
         {step === 3 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 text-center">Pick your interests</h2>
+            <h2 className="text-xl font-bold text-gray-900 text-center">{t("interestsTitle")}</h2>
             <p className="text-sm text-gray-600 text-center">
-              Select at least 3 to get personalized recommendations, or let Atlas decide.
+              {t("interestsSubtitle")}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {/* AI Assisted chip — special styling with sparkle icon */}
@@ -228,7 +231,7 @@ export default function OnboardingModal() {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 2a1 1 0 011 1v1.323l1.954.674a1 1 0 01.07 1.846L11 7.692V9h1.308l.849-2.024a1 1 0 011.846.07L14.329 9H16a1 1 0 110 2h-1.671l-.674 1.954a1 1 0 01-1.846.07L11 11.308V13a1 1 0 11-2 0v-1.692l-2.024.849a1 1 0 01-.07-1.846L9 9.308V8H7.692l-.849 2.024a1 1 0 01-1.846-.07L5.671 8H4a1 1 0 110-2h1.671l.674-1.954a1 1 0 011.846-.07L9 5.692V4a1 1 0 011-1z" />
                 </svg>
-                Let Atlas decide
+                {t("letAtlasDecide")}
               </button>
               {/* Regular interest chips (excluding ai_assisted — it's handled above) */}
               {PREF_ENUMS.interests.filter((i) => i !== "ai_assisted").map((interest) => {
@@ -254,14 +257,14 @@ export default function OnboardingModal() {
                 onClick={() => setStep(2)}
                 className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                Back
+                {t("back")}
               </button>
               <button
                 onClick={finish}
                 disabled={(!aiAssisted && interests.length < 3) || saving}
                 className="flex-1 bg-orange-600 text-white py-2.5 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? "Saving..." : "Done"}
+                {saving ? t("saving") : t("done")}
               </button>
             </div>
           </div>

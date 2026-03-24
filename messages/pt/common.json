@@ -291,5 +291,68 @@
   },
   "languageSwitcher": {
     "label": "Idioma"
+  },
+  "budgetBar": {
+    "of": "de",
+    "budget": "orçamento",
+    "breakdown": "Detalhamento",
+    "byDay": "Por Dia",
+    "byCategory": "Por Categoria",
+    "noCostsYet": "Sem custos ainda",
+    "total": "Total",
+    "day": "Dia",
+    "overBudget": "Acima do orçamento",
+    "clickToSetBudget": "Clique para definir orçamento personalizado"
+  },
+  "mapDrawer": {
+    "tripMap": "Mapa da Viagem",
+    "all": "Todos",
+    "day": "Dia",
+    "mapUnavailable": "Mapa indisponível. Mostrando lista de pinos:",
+    "noLocations": "Sem locais para mostrar.",
+    "noMappedLocations": "Sem locais mapeados ainda.",
+    "addItems": "Adicione itens ao seu itinerário para vê-los aqui.",
+    "loadingMap": "Carregando mapa…"
+  },
+  "itineraryBuilder": {
+    "itinerary": "Itinerário",
+    "hideMap": "Ocultar Mapa",
+    "showMap": "Mostrar Mapa",
+    "addDay": "+ Adicionar Dia",
+    "day": "Dia",
+    "addItem": "+ Adicionar item",
+    "backToCategories": "Voltar às categorias",
+    "yourInterests": "Seus Interesses",
+    "otherActivity": "Outra atividade...",
+    "editing": "Editando",
+    "saving": "Salvando…",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "adding": "Adicionando…",
+    "addItemButton": "Adicionar Item",
+    "markBooked": "Marcar como reservado",
+    "booked": "✓ Reservado",
+    "budget": "Econômico",
+    "mid": "Médio",
+    "luxury": "Luxo",
+    "noItemsForDay": "Sem itens para este dia ainda.",
+    "titlePlaceholder": "Título *",
+    "notesPlaceholder": "Notas (opcional)",
+    "selectInterests": "Selecione Seus Interesses",
+    "pickAtLeastOne": "Escolha pelo menos um para que Atlas sugira atividades para sua viagem.",
+    "saveContinue": "Salvar e Continuar",
+    "selectInterestsTip": "Selecione seus interesses para que Atlas possa sugerir atividades diárias para sua viagem",
+    "chooseInterestsNow": "Escolher interesses agora"
+  },
+  "affiliateRecommendations": {
+    "recommendedBookings": "Reservas Recomendadas",
+    "matchedToTrip": "Adaptado ao seu destino e interesses. Clique em \"Adicionar\" para adicionar ao seu itinerário com um link direto de reserva.",
+    "adding": "Adicionando…",
+    "addToItinerary": "+ Adicionar ao Itinerário"
+  },
+  "atlas": {
+    "bookOnAviasales": "Reservar no Aviasales",
+    "findOnHotels": "Encontrar no Hotels.com",
+    "perNight": "/noite"
   }
 }
