@@ -18,7 +18,8 @@ interface Recommendation {
 function buildRecommendations(
   destination: string,
   budget: string | null,
-  interests: string[]
+  interests: string[],
+  t: (key: string, values?: Record<string, string>) => string
 ): Recommendation[] {
   const recs: Recommendation[] = [];
   const isLuxury = budget === "luxury";
@@ -33,10 +34,10 @@ function buildRecommendations(
   if (isLuxury) {
     recs.push({
       id: "hotels-luxury",
-      label: "🏨 Hotels",
-      title: `Luxury Hotels in ${destination}`,
-      description: "Hand-picked 4★ & 5★ hotels. Hotels.com Price Match Guarantee.",
-      cta: "Search Luxury Hotels",
+      label: t("labelHotels"),
+      title: t("luxuryHotelsIn", { destination }),
+      description: t("luxuryHotelsDesc"),
+      cta: t("searchLuxuryHotels"),
       url: CJ_LINKS.hotelsCity(destination),
       category: "hotel",
       affiliate_program: "Hotels.com",
@@ -44,10 +45,10 @@ function buildRecommendations(
   } else {
     recs.push({
       id: "hotels-city",
-      label: "🏨 Hotels",
-      title: `Hotels in ${destination}`,
-      description: isBudget ? "Best value hotels with free cancellation." : "Top-rated hotels at the best price.",
-      cta: "Find Hotels",
+      label: t("labelHotels"),
+      title: t("hotelsIn", { destination }),
+      description: isBudget ? t("budgetHotelsDesc") : t("hotelsDesc"),
+      cta: t("findHotels"),
       url: CJ_LINKS.hotelsCity(destination),
       category: "hotel",
       affiliate_program: "Hotels.com",
@@ -57,22 +58,22 @@ function buildRecommendations(
   // Vrbo — vacation rentals
   recs.push({
     id: "vrbo",
-    label: "🏠 Vacation Rentals",
-    title: `Vacation Rentals in ${destination}`,
-    description: "Entire homes & condos — more space, more privacy.",
-    cta: "Browse Rentals",
+    label: t("labelVacationRentals"),
+    title: t("vacationRentalsIn", { destination }),
+    description: t("vrboDesc"),
+    cta: t("browseRentals"),
     url: CJ_LINKS.vrbo(),
     category: "hotel",
     affiliate_program: "Vrbo",
   });
 
-  // Flights — use generic TP search (no reliable city→IATA mapping available client-side)
+  // Flights — use generic TP search
   recs.push({
     id: "flights",
-    label: "✈️ Flights",
-    title: `Flights to ${destination}`,
-    description: "Compare hundreds of airlines for the best fare.",
-    cta: "Search Flights",
+    label: t("labelFlights"),
+    title: t("flightsTo", { destination }),
+    description: t("flightsDesc"),
+    cta: t("searchFlights"),
     url: `https://www.aviasales.com/?marker=${TP_CONFIG.marker}`,
     category: "flight",
     affiliate_program: "Aviasales/Travelpayouts",
@@ -82,10 +83,10 @@ function buildRecommendations(
   if (isBudget) {
     recs.push({
       id: "cars-compare",
-      label: "🚗 Car Rental",
-      title: "Compare 500+ Car Rental Suppliers",
-      description: "EconomyBookings finds the cheapest available rate.",
-      cta: "Compare Cars",
+      label: t("labelCarRental"),
+      title: t("compareCarsTitle"),
+      description: t("compareCarsDesc"),
+      cta: t("compareCars"),
       url: CJ_LINKS.carsCompare(),
       category: "car_rental",
       affiliate_program: "EconomyBookings",
@@ -93,10 +94,10 @@ function buildRecommendations(
   } else {
     recs.push({
       id: "cars",
-      label: "🚗 Car Rental",
-      title: `Car Rentals in ${destination}`,
-      description: "Compare top brands — Hertz, Enterprise, Sixt & more.",
-      cta: "Find Cars",
+      label: t("labelCarRental"),
+      title: t("carRentalsIn", { destination }),
+      description: t("carsDesc"),
+      cta: t("findCars"),
       url: CJ_LINKS.cars(),
       category: "car_rental",
       affiliate_program: "EconomyBookings",
@@ -107,10 +108,10 @@ function buildRecommendations(
   if (wantsCruise) {
     recs.push({
       id: "cruise",
-      label: "🚢 Cruises",
-      title: "Caribbean & Bahamas Cruises",
-      description: "Up to 75% off cruise fares. Last-minute deals available.",
-      cta: "View Cruises",
+      label: t("labelCruises"),
+      title: t("cruisesTitle"),
+      description: t("cruisesDesc"),
+      cta: t("viewCruises"),
       url: CJ_LINKS.cruisesLastMinute(),
       category: "cruise",
       affiliate_program: "CruiseDirect",
@@ -134,7 +135,7 @@ export default function AffiliateRecommendations({
   const t = useTranslations("affiliateRecommendations");
   const [adding, setAdding] = useState<string | null>(null);
 
-  const recs = buildRecommendations(destination, budget, interests);
+  const recs = buildRecommendations(destination, budget, interests, t);
 
   async function addToItinerary(rec: Recommendation) {
     setAdding(rec.id);

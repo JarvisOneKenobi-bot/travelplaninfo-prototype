@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { setRequestLocale } from "next-intl/server";
+import { setRequestLocale, getTranslations } from "next-intl/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
@@ -41,6 +41,8 @@ export default async function TripDetail({ params }: Props) {
     .all(tripId) as any[];
 
   const interests: string[] = JSON.parse(trip.interests || "[]");
+  const t = await getTranslations("tripDetail");
+  const dateFmt = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,16 +55,16 @@ export default async function TripDetail({ params }: Props) {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">{trip.name}</h1>
               <p className="text-gray-500">📍 {trip.destination}
-                {trip.start_date && ` · ${new Date(trip.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                {trip.end_date && ` → ${new Date(trip.end_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                {trip.start_date && ` · ${dateFmt.format(new Date(trip.start_date))}`}
+                {trip.end_date && ` → ${dateFmt.format(new Date(trip.end_date))}`}
               </p>
               <div className="flex gap-3 mt-2 text-sm text-gray-500">
-                <span>👥 {trip.travelers_adults} adult{trip.travelers_adults !== 1 ? "s" : ""}{trip.travelers_children > 0 ? `, ${trip.travelers_children} child${trip.travelers_children !== 1 ? "ren" : ""}` : ""}</span>
-                <span>🛏️ {trip.rooms} room{trip.rooms !== 1 ? "s" : ""}</span>
-                {trip.budget && <span className="capitalize">💰 {trip.budget === "midrange" ? "Mid-range" : trip.budget}</span>}
+                <span>👥 {trip.travelers_adults} {t("adults", { count: trip.travelers_adults })}{trip.travelers_children > 0 ? `, ${trip.travelers_children} ${t("children", { count: trip.travelers_children })}` : ""}</span>
+                <span>🛏️ {trip.rooms} {t("rooms", { count: trip.rooms })}</span>
+                {trip.budget && <span className="capitalize">💰 {trip.budget === "midrange" ? t("midrange") : trip.budget}</span>}
               </div>
             </div>
-            <Link href="/planner" className="text-sm text-teal-700 hover:text-teal-800 font-medium">← All trips</Link>
+            <Link href="/planner" className="text-sm text-teal-700 hover:text-teal-800 font-medium">← {t("allTrips")}</Link>
           </div>
         </div>
 

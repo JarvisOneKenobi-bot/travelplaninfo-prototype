@@ -82,7 +82,7 @@ export default async function LocaleArticlePage({ params }: Props) {
   const post = getArticle(slug);
   if (!post) notFound();
 
-  const formattedDate = new Date(post.date).toLocaleDateString("en-US", {
+  const formattedDate = new Date(post.date).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",

@@ -157,20 +157,20 @@ export default function ItineraryBuilder({
     if (tripDestination) {
       placeholders.push({
         category: "flight",
-        title: `Flight to ${tripDestination}`,
-        description: "Search and compare flights for the best fare.",
+        title: t("placeholderFlight", { destination: tripDestination }),
+        description: t("placeholderFlightDesc"),
       });
       placeholders.push({
         category: "hotel",
-        title: `Hotel in ${tripDestination}`,
+        title: t("placeholderHotel", { destination: tripDestination }),
         description: tripBudget
-          ? `${tripBudget === "midrange" ? "Mid-range" : tripBudget.charAt(0).toUpperCase() + tripBudget.slice(1)} accommodation options.`
-          : "Find the best available accommodation.",
+          ? t("placeholderHotelDescBudget", { tier: tripBudget === "midrange" ? t("mid") : tripBudget === "luxury" ? t("luxury") : t("budget") })
+          : t("placeholderHotelDesc"),
       });
       placeholders.push({
         category: "car_rental",
-        title: `Car Rental in ${tripDestination}`,
-        description: "Compare rental options from top providers.",
+        title: t("placeholderCar", { destination: tripDestination }),
+        description: t("placeholderCarDesc"),
       });
     }
 
@@ -611,7 +611,7 @@ export default function ItineraryBuilder({
                         <a href={item.affiliate_url} target="_blank" rel="noopener noreferrer sponsored"
                           onClick={e => e.stopPropagation()}
                           className="text-xs text-orange-600 hover:text-orange-700 font-medium">
-                          Book Now &rarr;
+                          {t("bookNow")} →
                         </a>
                       )}
                     </div>

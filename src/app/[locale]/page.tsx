@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { setRequestLocale, getTranslations } from "next-intl/server";
+import { setRequestLocale, getTranslations, getLocale } from "next-intl/server";
 
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -16,9 +16,9 @@ function getPlainText(html: string, maxLength: number): string {
   return text.length > maxLength ? text.slice(0, maxLength).trim() + '...' : text;
 }
 
-// Format date for display
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+// Format date for display using locale from context
+function formatDate(dateStr: string, locale: string = 'en'): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
@@ -27,6 +27,7 @@ function formatDate(dateStr: string): string {
 
 async function LatestArticles() {
   const t = await getTranslations("home");
+  const currentLocale = await getLocale();
   return (
     <section>
       <div className="flex items-center justify-between mb-5">
@@ -74,7 +75,7 @@ async function LatestArticles() {
 
             {/* Date */}
             <p className="text-xs text-gray-400">
-              {formatDate(post.date)}
+              {formatDate(post.date, currentLocale)}
             </p>
           </a>
         ))}

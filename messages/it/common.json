@@ -342,17 +342,59 @@
     "pickAtLeastOne": "Scegli almeno uno in modo che Atlas possa suggerire attività per il tuo viaggio.",
     "saveContinue": "Salva e Continua",
     "selectInterestsTip": "Seleziona i tuoi interessi in modo che Atlas possa suggerire attività quotidiane per il tuo viaggio",
-    "chooseInterestsNow": "Scegli interessi ora"
+    "chooseInterestsNow": "Scegli interessi ora",
+    "placeholderFlight": "Volo per {destination}",
+    "placeholderFlightDesc": "Cerca e confronta i voli per la tariffa migliore.",
+    "placeholderHotel": "Hotel a {destination}",
+    "placeholderHotelDesc": "Trova il miglior alloggio disponibile.",
+    "placeholderHotelDescBudget": "Opzioni di alloggio {tier}.",
+    "placeholderCar": "Noleggio auto a {destination}",
+    "placeholderCarDesc": "Confronta le opzioni di noleggio dai migliori fornitori.",
+    "bookNow": "Prenota ora"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Prenotazioni Consigliate",
     "matchedToTrip": "Adattato alla tua destinazione e interessi. Clicca su \"Aggiungi\" per aggiungerlo al tuo itinerario con un link di prenotazione diretto.",
     "adding": "Aggiungendo…",
-    "addToItinerary": "+ Aggiungi all'Itinerario"
+    "addToItinerary": "+ Aggiungi all'Itinerario",
+    "labelHotels": "Hotel",
+    "luxuryHotelsIn": "Hotel di lusso a {destination}",
+    "luxuryHotelsDesc": "Hotel 4★ e 5★ selezionati. Garanzia di corrispondenza prezzi.",
+    "searchLuxuryHotels": "Cerca hotel di lusso",
+    "hotelsIn": "Hotel a {destination}",
+    "budgetHotelsDesc": "I migliori hotel con cancellazione gratuita.",
+    "hotelsDesc": "Hotel più votati al miglior prezzo.",
+    "findHotels": "Trova hotel",
+    "labelVacationRentals": "Case vacanza",
+    "vacationRentalsIn": "Case vacanza a {destination}",
+    "vrboDesc": "Case e appartamenti interi — più spazio, più privacy.",
+    "browseRentals": "Sfoglia gli affitti",
+    "labelFlights": "Voli",
+    "flightsTo": "Voli per {destination}",
+    "flightsDesc": "Confronta centinaia di compagnie aeree per la tariffa migliore.",
+    "searchFlights": "Cerca voli",
+    "labelCarRental": "Noleggio auto",
+    "compareCarsTitle": "Confronta 500+ fornitori di noleggio",
+    "compareCarsDesc": "EconomyBookings trova la tariffa più economica disponibile.",
+    "compareCars": "Confronta auto",
+    "carRentalsIn": "Noleggio auto a {destination}",
+    "carsDesc": "Confronta i migliori marchi — Hertz, Enterprise, Sixt e altri.",
+    "findCars": "Trova auto",
+    "labelCruises": "Crociere",
+    "cruisesTitle": "Crociere Caraibi e Bahamas",
+    "cruisesDesc": "Fino al 75% di sconto. Offerte last minute disponibili.",
+    "viewCruises": "Vedi crociere"
   },
   "atlas": {
     "bookOnAviasales": "Prenota su Aviasales",
     "findOnHotels": "Trova su Hotels.com",
     "perNight": "/notte"
+  },
+  "tripDetail": {
+    "adults": "{count, plural, one {adulto} other {adulti}}",
+    "children": "{count, plural, one {bambino} other {bambini}}",
+    "rooms": "{count, plural, one {camera} other {camere}}",
+    "midrange": "Fascia media",
+    "allTrips": "Tutti i viaggi"
   }
 }
