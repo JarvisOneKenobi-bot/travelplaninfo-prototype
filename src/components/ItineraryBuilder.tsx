@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PREF_ENUMS } from "@/lib/preferences";
 import MapDrawer from "@/components/MapDrawer";
+import BudgetBar from "@/components/BudgetBar";
 
 /* ── Item categories (multi-layer dropdown per product spec) ── */
 const CATEGORIES = [
@@ -41,6 +42,7 @@ interface Item {
   affiliate_url: string | null;
   affiliate_program: string | null;
   price_estimate: string | null;
+  estimated_cost: number | null;
   booked: number;
   latitude?: number | null;
   longitude?: number | null;
@@ -63,6 +65,8 @@ interface Props {
   tripInterests?: string[];
   tripStartDate?: string | null;
   tripEndDate?: string | null;
+  tripAdults?: number;
+  initialBudgetOverride?: number | null;
 }
 
 export default function ItineraryBuilder({
@@ -73,6 +77,8 @@ export default function ItineraryBuilder({
   tripInterests = [],
   tripStartDate = null,
   tripEndDate = null,
+  tripAdults = 1,
+  initialBudgetOverride = null,
 }: Props) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [addingDay, setAddingDay] = useState<number | null>(null);
@@ -89,6 +95,9 @@ export default function ItineraryBuilder({
     }
     return Math.max(fromItems, 1);
   });
+
+  /* ── Budget override state ── */
+  const [budgetOverride, setBudgetOverride] = useState<number | null>(initialBudgetOverride);
 
   /* ── Map drawer state ── */
   const [showMap, setShowMap] = useState(false);
@@ -177,6 +186,7 @@ export default function ItineraryBuilder({
             title: placeholders[i].title,
             description: placeholders[i].description,
             sort_order: i,
+            is_placeholder: 1,
           }),
         });
         if (res.ok) {
@@ -380,6 +390,17 @@ export default function ItineraryBuilder({
 
   return (
     <div className="space-y-6">
+      {/* Budget Bar */}
+      <BudgetBar
+        items={items}
+        budgetTier={tripBudget}
+        budgetOverride={budgetOverride}
+        totalDays={dayCount}
+        adults={tripAdults}
+        tripId={tripId}
+        onBudgetOverrideChange={setBudgetOverride}
+      />
+
       {/* Header with Add Day + Show Map buttons */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Itinerary</h2>

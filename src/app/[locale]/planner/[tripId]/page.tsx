@@ -76,6 +76,8 @@ export default async function TripDetail({ params }: Props) {
             tripInterests={interests}
             tripStartDate={trip.start_date}
             tripEndDate={trip.end_date}
+            tripAdults={trip.travelers_adults ?? 1}
+            initialBudgetOverride={trip.budget_override ?? null}
           />
           <AffiliateRecommendations
             tripId={trip.id}
