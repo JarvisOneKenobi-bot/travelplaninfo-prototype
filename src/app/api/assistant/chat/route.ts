@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
@@ -31,11 +31,11 @@ setInterval(() => {
 
 export async function POST(req: NextRequest) {
   // 1. Authenticate
-  const session = await auth();
-  if (!session?.user) {
+  const ctx = await getUserId();
+  if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
 
   // 2. Parse body
   let body: { message: string; session_id: string; page_context?: string };
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     | { id: string; session_date: string; msg_count: number }
     | undefined;
 
-  if (unsummarizedSession) {
+  if (unsummarizedSession && !ctx.isGuest) {
     // Fire-and-forget: summarize in background (don't block the chat response)
     const cookieHeader = req.headers.get("cookie") || "";
     fetch("http://localhost:3000/api/assistant/summarize", {

@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getUserId();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   const { sessionId } = await params;
 
   const db = getDb();

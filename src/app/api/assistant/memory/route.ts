@@ -45,6 +45,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "entries array is required" }, { status: 400 });
   }
 
+  // Validate key/value lengths
+  for (const entry of entries) {
+    if (!entry.key || entry.key.length > 100) {
+      return NextResponse.json({ error: "key must be 1-100 characters" }, { status: 400 });
+    }
+    if (typeof entry.value !== "string" || entry.value.length > 1000) {
+      return NextResponse.json({ error: "value must be a string of max 1000 characters" }, { status: 400 });
+    }
+  }
+
   const db = getDb();
   const upsert = db.prepare(
     `INSERT INTO user_memory (user_id, key, value, source)

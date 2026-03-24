@@ -6,6 +6,7 @@ interface HotelData {
   rating: number;
   tier: string;
   book_url: string;
+  is_mock?: boolean;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -36,6 +37,9 @@ export default function HotelCard({ hotel }: { hotel: HotelData }) {
         <div className="text-right">
           <p className="font-bold text-lg text-orange-600">{hotel.price_night}</p>
           <p className="text-xs text-gray-400">/night</p>
+          {hotel.is_mock && (
+            <span className="text-xs text-amber-600 bg-amber-50 rounded px-1 py-0.5">(estimated)</span>
+          )}
         </div>
       </div>
       <a

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -23,15 +23,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function TripDetail({ params }: Props) {
-  const session = await auth();
-  if (!session?.user) redirect("/signin?callbackUrl=/planner");
+  const ctx = await getUserId();
+  if (!ctx) redirect("/signin?callbackUrl=/planner");
 
   const { tripId } = await params;
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   const db = getDb();
 
   const trip = db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ?").get(tripId, userId) as any;
   if (!trip) notFound();
+  const isGuest = ctx.isGuest;
 
   const items = db
     .prepare("SELECT * FROM trip_items WHERE trip_id = ? ORDER BY day_number, sort_order")
@@ -89,7 +90,9 @@ export default async function TripDetail({ params }: Props) {
         type="application/json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
           tripId: trip.id,
+          isGuest,
           destination: trip.destination,
+          origin: trip.origin,
           startDate: trip.start_date,
           endDate: trip.end_date,
           budget: trip.budget,
@@ -97,6 +100,8 @@ export default async function TripDetail({ params }: Props) {
           children: trip.travelers_children,
           rooms: trip.rooms,
           interests,
+          flexibleWindow: trip.flexible_window,
+          tripLength: trip.trip_length,
           items: items.map((item) => ({
             day: item.day_number,
             category: item.category,

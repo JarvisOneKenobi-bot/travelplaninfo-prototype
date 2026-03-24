@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getUserId, getOrCreateGuest } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getUserId();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   const db = getDb();
   const trips = db
     .prepare("SELECT * FROM trips WHERE user_id = ? ORDER BY created_at DESC")
@@ -16,10 +16,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const ctx = await getOrCreateGuest();
+  const userId = ctx.userId;
   const body = await req.json();
   const {
     name,
@@ -31,6 +29,10 @@ export async function POST(req: NextRequest) {
     travelers_children = 0,
     rooms = 1,
     interests = [],
+    flexible_window,
+    trip_length,
+    origin,
+    nearby_airports,
   } = body;
 
   if (!name || !destination) {
@@ -41,14 +43,17 @@ export async function POST(req: NextRequest) {
   const result = db
     .prepare(
       `INSERT INTO trips (user_id, name, destination, start_date, end_date, budget,
-        travelers_adults, travelers_children, rooms, interests)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        travelers_adults, travelers_children, rooms, interests, flexible_window, trip_length,
+        origin, nearby_airports)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId, name, destination,
       start_date || null, end_date || null, budget || null,
       travelers_adults, travelers_children, rooms,
-      JSON.stringify(interests)
+      JSON.stringify(interests),
+      flexible_window || null, trip_length || null,
+      origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null
     ) as any;
 
   const trip = db.prepare("SELECT * FROM trips WHERE id = ?").get(result.lastInsertRowid);

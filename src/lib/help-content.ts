@@ -20,23 +20,28 @@ export const HELP_CONTENT: Record<string, HelpPageContent> = {
   },
   "planner-new": {
     title: "Plan a New Trip",
-    intro: "Tell us where, when, and how you want to travel.",
+    intro: "Tell us where, when, and how you want to travel. No account needed — you can plan as a guest and save later.",
     sections: [
       { heading: "Where are you going?", text: "Enter your destination, or click 'Surprise Me' to let Atlas suggest destinations based on your interests and budget." },
-      { heading: "When are you traveling?", text: "Set your travel dates, or check 'I'm flexible' to let Atlas find the cheapest dates for your trip." },
+      { heading: "When are you traveling?", text: "Set your travel dates, or check 'I'm flexible' to let Atlas find the cheapest dates. When flexible, choose a travel window (next month, 2-3 months, etc.) and trip length (weekend, week, 2+ weeks). Or click 'Let Atlas find the cheapest dates' to let Atlas pick the absolute best deal regardless of timing." },
       { heading: "What's your budget?", text: "Choose Budget, Mid-range, or Luxury. These labels map to your custom dollar thresholds set in Preferences. You can customize what each tier means to you." },
-      { heading: "What interests you?", text: "Pick activities you enjoy. Atlas uses these to suggest daily itinerary activities. You can also select 'Let Atlas decide' to get surprise suggestions — this works alongside your manual picks, not instead of them." },
-      { heading: "AI Assisted", text: "Selecting 'Let Atlas decide' doesn't replace your interests — it tells Atlas to also suggest activities outside your picks if they're a great fit for your destination." },
+      { heading: "What interests you?", text: "Pick activities you enjoy — Atlas uses these to suggest daily itinerary activities. New: Romance and Family Travel are now available as presets. Click 'Add your own' to type custom interests (comma-separated or press Enter for each). Custom interests are saved to your profile if you're registered." },
+      { heading: "Let Atlas decide", text: "Selecting 'Let Atlas decide' doesn't replace your interests — it tells Atlas to also suggest activities outside your picks if they're a great fit for your destination." },
+      { heading: "Guest planning", text: "You can plan a full trip without signing in. Your trip is saved temporarily (7 days). Atlas will suggest creating a free account after you've built up your itinerary so you can keep it forever." },
     ]
   },
   "planner-itinerary": {
     title: "Your Trip Itinerary",
-    intro: "Build your day-by-day travel plan.",
+    intro: "Build your day-by-day travel plan with Atlas, your AI travel concierge.",
     sections: [
-      { heading: "Adding items", text: "Click '+ Add Item' on any day to add flights, hotels, activities, dining, or transportation. Choose a category from the dropdown." },
+      { heading: "Auto-search", text: "When you first create a trip, Atlas automatically searches for flights, hotels, and activities. Results appear in a modal where you can compare, select, and add items to your itinerary in bulk." },
+      { heading: "Adding items", text: "Click '+ Add Item' on any day to add flights, hotels, activities, dining, restaurants, or transportation. You can also use Atlas to search and add items via the chat." },
+      { heading: "Trip Results Modal", text: "The results modal has tabs for Flights, Hotels, Activities, Restaurants, and a Summary. Each tab lets you sort, select items with checkboxes, and pick which day to assign them to. Click 'Add All to Itinerary' to batch-add your selections." },
+      { heading: "Day assignment", text: "Every item in the results modal has a 'Day' dropdown — flights, hotels, activities, and restaurants can all be assigned to specific days before adding to the itinerary." },
       { heading: "Activities & Interests", text: "When you select 'Activity', you'll see your interests as sub-categories. Atlas uses these to suggest relevant activities. If you haven't set interests yet, you'll be prompted to choose some." },
       { heading: "Editing items", text: "Click on any item to edit its title, description, or budget tier. Changes save instantly." },
-      { heading: "Budget tiers", text: "Each item can be tagged as Budget, Mid-range, or Luxury. These map to the dollar thresholds you set in your Preferences. If an Atlas suggestion exceeds your budget, you'll see a notice but can still add it." },
+      { heading: "Estimated prices", text: "When live pricing isn't available, Atlas shows estimated prices marked with '(estimated)'. These are ballpark figures to help you plan — actual prices may vary." },
+      { heading: "Atlas chat", text: "Ask Atlas anything — search for more options, get recommendations, or ask about your destination. Atlas knows what's already in your itinerary and suggests complementary activities." },
       { heading: "Recommended Bookings", text: "The right sidebar shows affiliate booking links matched to your destination. Click 'Find Hotels' or 'Search Flights' to compare prices, or '+ Add to Itinerary' to add directly to your plan." },
       { heading: "Days", text: "Click the day header to collapse/expand. Click '+ Add Day' to extend your trip. Days are auto-calculated from your travel dates." },
     ]

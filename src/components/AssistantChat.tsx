@@ -39,12 +39,16 @@ interface TripContext {
   budgetTier: BudgetTier;
   tripId?: number;
   items?: TripContextItem[];
+  isGuest?: boolean;
+  flexibleWindow?: string;
+  tripLength?: string;
 }
 
 interface ModalData {
   flights: FlightResult[];
   hotels: HotelResult[];
   activities: ActivityResult[];
+  restaurants: RestaurantResult[];
   tripContext: TripContext;
 }
 
@@ -53,6 +57,8 @@ interface ModalData {
 const QUICK_ACTIONS = [
   { label: "Search flights", emoji: "\u2708\uFE0F", message: "Search flights for me" },
   { label: "Find hotels", emoji: "\uD83C\uDFE8", message: "Find me hotels" },
+  { label: "Find restaurants", emoji: "\uD83C\uDF7D\uFE0F", message: "Find restaurants near my destination" },
+  { label: "Search activities", emoji: "\uD83C\uDFAF", message: "Search activities and things to do" },
   { label: "Surprise me", emoji: "\uD83C\uDFB2", message: "Surprise me with 3 destination ideas" },
   { label: "Recommend an article", emoji: "\uD83D\uDCD6", message: "Recommend a travel guide article" },
 ];
@@ -174,6 +180,7 @@ function extractTripData(parts: ToolResult[]): {
           depart_date: f.depart_date ? String(f.depart_date) : undefined,
           return_date: f.return_date ? String(f.return_date) : undefined,
           book_url: String(f.book_url || ""),
+          is_mock: f.is_mock === true,
         });
       }
     }
@@ -189,6 +196,9 @@ function extractTripData(parts: ToolResult[]): {
           rating: typeof h.rating === "number" ? h.rating : 0,
           tier: (["budget", "mid", "luxury"].includes(String(h.tier)) ? String(h.tier) : "mid") as "budget" | "mid" | "luxury",
           book_url: String(h.book_url || ""),
+          neighborhood: h.neighborhood ? String(h.neighborhood) : undefined,
+          highlights: Array.isArray(h.highlights) ? (h.highlights as unknown[]).map(String) : undefined,
+          is_mock: h.is_mock === true,
         });
       }
     }
@@ -203,6 +213,7 @@ function extractTripData(parts: ToolResult[]): {
           tier: (["budget", "mid", "luxury"].includes(String(a.tier)) ? String(a.tier) : "mid") as "budget" | "mid" | "luxury",
           interest: String(a.interest || "other"),
           duration: a.duration ? String(a.duration) : undefined,
+          is_mock: a.is_mock === true,
         });
       }
     }
@@ -217,6 +228,7 @@ function extractTripData(parts: ToolResult[]): {
           rating: typeof r.rating === "number" ? r.rating : undefined,
           highlights: Array.isArray(r.highlights) ? (r.highlights as unknown[]).map(String) : [],
           budget_tier: (["budget", "mid", "luxury"].includes(String(r.budget_tier)) ? String(r.budget_tier) : "mid") as BudgetTier,
+          is_mock: r.is_mock === true,
         });
       }
     }
@@ -248,6 +260,9 @@ function readTripContext(): TripContext {
       budgetTier,
       tripId: data.tripId || data.trip_id || data.id,
       items: Array.isArray(data.items) ? data.items : undefined,
+      isGuest: data.isGuest === true,
+      flexibleWindow: data.flexibleWindow || data.flexible_window || undefined,
+      tripLength: data.tripLength || data.trip_length || undefined,
     };
   } catch {
     return defaults;
@@ -401,6 +416,9 @@ export default function AssistantChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const msgIdCounter = useRef(0);
+  const hasAutoTriggered = useRef(false);
+  const messagesLenRef = useRef(0);
+  const sendMessageRef = useRef<(msg: string) => void>(() => {});
 
   // ── Session management ──────────────────────────────────────────────────
 
@@ -450,6 +468,9 @@ export default function AssistantChat() {
     }
   }, [loadHistory]);
 
+  // Keep messagesLenRef in sync for auto-trigger closure
+  messagesLenRef.current = messages.length;
+
   // ── Auto-scroll ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -469,7 +490,7 @@ export default function AssistantChat() {
       if (!sid) {
         sid = await createSession();
         if (!sid) {
-          setError("Could not create chat session. Please sign in.");
+          setError("Could not start chat. Please refresh and try again.");
           return;
         }
       }
@@ -495,7 +516,27 @@ export default function AssistantChat() {
         if (tripContextEl) {
           try {
             const tripData = JSON.parse(tripContextEl.textContent || "{}");
-            pageContext += "\n\nActive trip: " + JSON.stringify(tripData);
+            // Build a concise trip summary instead of dumping raw JSON
+            const dest = tripData.destination || "";
+            const start = tripData.startDate || tripData.start_date || "";
+            const end = tripData.endDate || tripData.end_date || "";
+            const budget = tripData.budget || "";
+            const adults = tripData.adults || 1;
+            pageContext += `\n\nActive trip: ${dest}, ${start || "flexible"} to ${end || "flexible"}, ${adults} adults, budget: ${budget}`;
+
+            // Format existing itinerary items so Atlas can suggest complementary activities
+            const items = tripData.items as Array<{ day: number; category: string; title: string; price_estimate: number | null }> | undefined;
+            if (items && items.length > 0) {
+              const byDay: Record<number, string[]> = {};
+              for (const item of items) {
+                if (!byDay[item.day]) byDay[item.day] = [];
+                byDay[item.day].push(`${item.category}: ${item.title}${item.price_estimate != null ? ` ($${item.price_estimate})` : ""}`);
+              }
+              pageContext += "\nCurrent itinerary:";
+              for (const [day, dayItems] of Object.entries(byDay).sort(([a], [b]) => Number(a) - Number(b))) {
+                pageContext += `\n  Day ${day}: ${dayItems.join(", ")}`;
+              }
+            }
           } catch { /* ignore parse errors */ }
         }
 
@@ -595,8 +636,11 @@ export default function AssistantChat() {
         // Voice output (TTS)
         if (voiceEnabled && fullText && !fullText.startsWith("[TOOL:")) {
           try {
-            const cleanText = fullText
-              .replace(/\[TOOL:\w+\]\{[\s\S]*?\}/g, "")
+            // Strip tool JSON using brace-counting (handles nested objects)
+            const cleanText = parseMessageContent(fullText)
+              .filter((p) => p.type === "text")
+              .map((p) => p.text || "")
+              .join(" ")
               .replace(/\*\*/g, "")
               .trim();
             if (cleanText && "speechSynthesis" in window) {
@@ -625,6 +669,109 @@ export default function AssistantChat() {
     [sessionId, isLoading, createSession, voiceEnabled]
   );
 
+  // ── Auto-trigger searches on first itinerary visit ─────────────────────
+
+  // Keep sendMessageRef always pointing to the latest sendMessage
+  sendMessageRef.current = sendMessage;
+
+  useEffect(() => {
+    if (hasAutoTriggered.current) return;
+
+    const timer = setTimeout(() => {
+      if (hasAutoTriggered.current) return;
+
+      const ctx = readTripContext();
+
+      // Only trigger if we have a real trip with a destination
+      if (!ctx.tripId || !ctx.destination || ctx.destination === "your destination") return;
+
+      // Don't trigger if user already has real items (returning to existing trip)
+      // Real items = items with a non-null price_estimate AND category !== "note"
+      const hasRealItems = ctx.items && ctx.items.some(
+        (item) => item.price_estimate !== null && item.category !== "note"
+      );
+      if (hasRealItems) return;
+
+      // Don't trigger if there are already messages (history was loaded)
+      if (messagesLenRef.current > 0) return;
+
+      hasAutoTriggered.current = true;
+
+      // Build the auto-search prompt with date context
+      const windowLabels: Record<string, string> = {
+        next_2_weeks: "in the next 2 weeks",
+        next_month: "next month",
+        "2_3_months": "in 2-3 months",
+        "6_months": "in about 6 months",
+        this_year: "sometime this year",
+        any: "whenever it's cheapest",
+      };
+      const lengthLabels: Record<string, string> = {
+        weekend: "a weekend (2-3 days)",
+        week: "about a week",
+        "10_14_days": "10-14 days",
+        "2_plus_weeks": "2+ weeks",
+        any: "however long gives the best deal",
+      };
+
+      let prompt = `I just created a trip to ${ctx.destination}`;
+      if (ctx.dates) {
+        prompt += ` from ${ctx.dates.start} to ${ctx.dates.end}`;
+      } else if (ctx.flexibleWindow || ctx.tripLength) {
+        const when = ctx.flexibleWindow ? windowLabels[ctx.flexibleWindow] || ctx.flexibleWindow : "flexible dates";
+        const howLong = ctx.tripLength ? lengthLabels[ctx.tripLength] || ctx.tripLength : "flexible duration";
+        prompt += `. I'm flexible on dates — thinking ${when}, for ${howLong}`;
+      }
+      prompt += ". Search flights, hotels, and activities for me.";
+
+      // Open the chat panel and fire the search
+      setIsOpen(true);
+      sendMessageRef.current(prompt);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Guest save nudge — suggest registration after meaningful engagement ────
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem("tpi_guest_nudge_shown")) return;
+
+    const timer = setTimeout(async () => {
+      const ctx = readTripContext();
+      if (!ctx.isGuest || !ctx.tripId) return;
+      if (sessionStorage.getItem("tpi_guest_nudge_shown")) return;
+
+      // Fetch current item count from API (script tag is stale for new trips)
+      try {
+        const res = await fetch(`/api/trips/${ctx.tripId}/items`);
+        if (!res.ok) return;
+        const items = await res.json();
+        if (!Array.isArray(items) || items.length < 3) return;
+      } catch {
+        return;
+      }
+
+      sessionStorage.setItem("tpi_guest_nudge_shown", "1");
+
+      const nudgeId = msgIdCounter.current++;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nudgeId,
+          role: "assistant" as const,
+          content: `I see you've put together a solid trip plan! Would you like to **save your itinerary** so you can access it later from any device?\n\n[Create a free account](/register?callbackUrl=/planner) — it takes 30 seconds, and all your trip data will be waiting for you.`,
+        },
+      ]);
+      setIsOpen(true);
+    }, 60_000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── New chat ──────────────────────────────────────────────────────────────
 
   const handleNewChat = useCallback(async () => {
@@ -646,19 +793,13 @@ export default function AssistantChat() {
         <button
           onClick={() => setIsOpen(true)}
           className={[
-            "fixed bottom-6 right-6 z-[90] w-14 h-14 rounded-full",
-            "bg-orange-500 hover:bg-orange-600 text-white shadow-lg",
-            "flex items-center justify-center transition-all",
-            hasBouncedOnce ? "animate-bounce" : "",
+            "fixed bottom-6 right-6 z-[90] w-16 h-16",
+            "flex items-center justify-center",
+            "animate-atlas-float",
           ].join(" ")}
           title="Ask Atlas"
-          onAnimationEnd={() => setHasBouncedOnce(false)}
         >
-          {/* Compass icon */}
-          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88" fill="currentColor" stroke="none" />
-          </svg>
+          <img src="/images/atlas-avatar.png" alt="Atlas" className="w-full h-full object-contain" />
         </button>
       )}
 
@@ -668,10 +809,7 @@ export default function AssistantChat() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-orange-500 text-white">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88" fill="currentColor" stroke="none" />
-              </svg>
+              <img src="/images/atlas-avatar.png" alt="Atlas" className="w-7 h-7 rounded-full ring-1 ring-white/30" />
               <span className="font-semibold">Atlas</span>
             </div>
             <div className="flex items-center gap-1">
@@ -745,8 +883,11 @@ export default function AssistantChat() {
               return (
                 <div
                   key={msg.id}
-                  className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
+                  className={msg.role === "user" ? "flex justify-end" : "flex justify-start items-start gap-2"}
                 >
+                  {msg.role === "assistant" && (
+                    <img src="/images/atlas-avatar.png" alt="" className="w-6 h-6 rounded-full shrink-0 mt-1" />
+                  )}
                   <div
                     className={[
                       "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
@@ -796,6 +937,7 @@ export default function AssistantChat() {
                                     flights: tripData.flights,
                                     hotels: tripData.hotels,
                                     activities: tripData.activities,
+                                    restaurants: tripData.restaurants,
                                     tripContext: ctx,
                                   });
                                   setModalOpen(true);
@@ -924,6 +1066,7 @@ export default function AssistantChat() {
           flights={modalData.flights}
           hotels={modalData.hotels}
           activities={modalData.activities}
+          restaurants={modalData?.restaurants || []}
           budgetTier={modalData.tripContext.budgetTier}
           tripId={modalData.tripContext.tripId}
         />

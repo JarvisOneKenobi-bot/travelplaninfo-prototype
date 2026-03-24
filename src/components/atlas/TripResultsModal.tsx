@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import type { FlightResult, HotelResult, ActivityResult, BudgetTier } from "./types";
+import type { FlightResult, HotelResult, ActivityResult, RestaurantResult, BudgetTier } from "./types";
 
 // ── Budget tier badge colors (consistent with ItineraryBuilder) ─────────────
 
@@ -25,7 +25,7 @@ const BUDGET_DAILY_RANGES: Record<BudgetTier, string> = {
 
 // ── Tab definitions ─────────────────────────────────────────────────────────
 
-const TABS = ["Flights", "Hotels", "Activities", "Summary"] as const;
+const TABS = ["Flights", "Hotels", "Activities", "Restaurants", "Summary"] as const;
 type TabId = (typeof TABS)[number];
 
 // ── Props ───────────────────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ interface TripResultsModalProps {
   flights: FlightResult[];
   hotels: HotelResult[];
   activities: ActivityResult[];
+  restaurants: RestaurantResult[];
   budgetTier: BudgetTier;
   tripId?: number;
 }
@@ -54,6 +55,7 @@ export default function TripResultsModal({
   flights,
   hotels,
   activities,
+  restaurants,
   budgetTier,
   tripId,
 }: TripResultsModalProps) {
@@ -63,12 +65,16 @@ export default function TripResultsModal({
   const [selectedFlights, setSelectedFlights] = useState<Set<number>>(new Set());
   const [selectedHotels, setSelectedHotels] = useState<Set<number>>(new Set());
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
+  const [selectedRestaurants, setSelectedRestaurants] = useState<Set<number>>(new Set());
   const [addingAll, setAddingAll] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
-  // Per-activity selected day (keyed by global activity index)
+  // Per-item selected day (keyed by global index within each category)
+  const [flightDays, setFlightDays] = useState<Record<number, number>>({});
+  const [hotelDays, setHotelDays] = useState<Record<number, number>>({});
   const [activityDays, setActivityDays] = useState<Record<number, number>>({});
+  const [restaurantDays, setRestaurantDays] = useState<Record<number, number>>({});
 
-  const totalSelected = selectedFlights.size + selectedHotels.size + selectedActivities.size;
+  const totalSelected = selectedFlights.size + selectedHotels.size + selectedActivities.size + selectedRestaurants.size;
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -172,14 +178,19 @@ export default function TripResultsModal({
     };
   }, [isOpen, onClose]);
 
-  // ── Default day for a new activity (day with fewest activities assigned) ──
+  // ── Default day for a new item (day with fewest assignments across activities + restaurants) ──
 
   const getDefaultDay = useCallback((): number => {
     if (dayCount <= 1) return 1;
-    // Count how many activities are currently assigned to each day
+    // Count how many items are currently assigned to each day
     const counts: Record<number, number> = {};
     for (let d = 1; d <= dayCount; d++) counts[d] = 0;
     for (const day of Object.values(activityDays)) {
+      if (day >= 1 && day <= dayCount) {
+        counts[day] = (counts[day] ?? 0) + 1;
+      }
+    }
+    for (const day of Object.values(restaurantDays)) {
       if (day >= 1 && day <= dayCount) {
         counts[day] = (counts[day] ?? 0) + 1;
       }
@@ -190,7 +201,7 @@ export default function TripResultsModal({
       if ((counts[d] ?? 0) < (counts[best] ?? 0)) best = d;
     }
     return best;
-  }, [dayCount, activityDays]);
+  }, [dayCount, activityDays, restaurantDays]);
 
   // ── Activity selection toggle ──────────────────────────────────────────
 
@@ -206,6 +217,7 @@ export default function TripResultsModal({
   const toggleFlight = useCallback((idx: number) => toggleSelection(setSelectedFlights, idx), [toggleSelection]);
   const toggleHotel = useCallback((idx: number) => toggleSelection(setSelectedHotels, idx), [toggleSelection]);
   const toggleActivity = useCallback((idx: number) => toggleSelection(setSelectedActivities, idx), [toggleSelection]);
+  const toggleRestaurant = useCallback((idx: number) => toggleSelection(setSelectedRestaurants, idx), [toggleSelection]);
 
   // ── Summary calculations ───────────────────────────────────────────────
 
@@ -218,10 +230,25 @@ export default function TripResultsModal({
     );
     const allActivityCost = activities.reduce((sum, a) => sum + a.price_value, 0);
 
+    // Estimate dining cost from price_range symbols: $ ~$15, $$ ~$35, $$$ ~$65, $$$$ ~$100
+    const priceRangeToValue = (pr: string): number => {
+      const dollars = (pr.match(/\$/g) || []).length;
+      if (dollars <= 1) return 15;
+      if (dollars === 2) return 35;
+      if (dollars === 3) return 65;
+      return 100;
+    };
+    const selectedDiningCost = restaurants.reduce(
+      (sum, r, i) => (selectedRestaurants.has(i) ? sum + priceRangeToValue(r.price_range) : sum),
+      0
+    );
+    const allDiningCost = restaurants.reduce((sum, r) => sum + priceRangeToValue(r.price_range), 0);
+
     const flightTotal = cheapestFlight * adults;
     const hotelTotal = cheapestHotel * nights;
-    const minTotal = flightTotal + hotelTotal + selectedActivityCost;
-    const maxTotal = flightTotal + hotelTotal + allActivityCost;
+    const diningTotal = selectedRestaurants.size > 0 ? selectedDiningCost : allDiningCost;
+    const minTotal = flightTotal + hotelTotal + selectedActivityCost + (selectedRestaurants.size > 0 ? selectedDiningCost : 0);
+    const maxTotal = flightTotal + hotelTotal + allActivityCost + allDiningCost;
     const totalDays = nights > 0 ? nights : 1;
     const avgPerDay = Math.round(minTotal / totalDays);
 
@@ -230,11 +257,12 @@ export default function TripResultsModal({
       hotelTotal,
       selectedActivityCost,
       allActivityCost,
+      diningTotal,
       minTotal,
       maxTotal,
       avgPerDay,
     };
-  }, [flights, hotels, activities, selectedActivities, adults, nights]);
+  }, [flights, hotels, activities, selectedActivities, restaurants, selectedRestaurants, adults, nights]);
 
   // ── Add All to Itinerary ───────────────────────────────────────────────
 
@@ -259,14 +287,25 @@ export default function TripResultsModal({
     const items: BatchItem[] = [];
 
     // Add selected flights (or cheapest if none selected)
-    const flightIndices = selectedFlights.size > 0
-      ? Array.from(selectedFlights)
-      : sortedFlights.length > 0 ? [0] : [];
-    for (const idx of flightIndices) {
-      const f = flights[idx];
-      if (!f) continue;
+    if (selectedFlights.size > 0) {
+      for (const idx of selectedFlights) {
+        const f = flights[idx];
+        if (!f) continue;
+        items.push({
+          day_number: flightDays[idx] || 1,
+          category: "flight",
+          title: `${f.airline} ${f.route}`,
+          description: `${f.duration} - ${f.stops} - ${f.price}`,
+          price_estimate: f.price,
+          affiliate_url: f.book_url,
+        });
+      }
+    } else if (sortedFlights.length > 0) {
+      // Default: add cheapest flight (first in sorted list)
+      const f = sortedFlights[0];
+      const realIdx = flights.indexOf(f);
       items.push({
-        day_number: 1,
+        day_number: flightDays[realIdx] || 1,
         category: "flight",
         title: `${f.airline} ${f.route}`,
         description: `${f.duration} - ${f.stops} - ${f.price}`,
@@ -276,14 +315,25 @@ export default function TripResultsModal({
     }
 
     // Add selected hotels (or cheapest if none selected)
-    const hotelIndices = selectedHotels.size > 0
-      ? Array.from(selectedHotels)
-      : sortedHotels.length > 0 ? [0] : [];
-    for (const idx of hotelIndices) {
-      const h = hotels[idx];
-      if (!h) continue;
+    if (selectedHotels.size > 0) {
+      for (const idx of selectedHotels) {
+        const h = hotels[idx];
+        if (!h) continue;
+        items.push({
+          day_number: hotelDays[idx] || 1,
+          category: "hotel",
+          title: h.name,
+          description: `${h.price_night}/night × ${nights} nights - ${h.rating} stars`,
+          price_estimate: `$${h.price_night_value * nights}`,
+          affiliate_url: h.book_url,
+        });
+      }
+    } else if (sortedHotels.length > 0) {
+      // Default: add cheapest hotel (first in sorted list)
+      const h = sortedHotels[0];
+      const realIdx = hotels.indexOf(h);
       items.push({
-        day_number: 1,
+        day_number: hotelDays[realIdx] || 1,
         category: "hotel",
         title: h.name,
         description: `${h.price_night}/night × ${nights} nights - ${h.rating} stars`,
@@ -304,6 +354,22 @@ export default function TripResultsModal({
         title: a.name,
         description: `${a.duration || ""} - ${a.interest}`.trim(),
         price_estimate: a.price,
+        affiliate_url: "",
+      });
+    }
+
+    // Add selected restaurants (or all if none selected)
+    const restaurantIndices =
+      selectedRestaurants.size > 0 ? Array.from(selectedRestaurants) : restaurants.map((_, i) => i);
+    for (const idx of restaurantIndices) {
+      const r = restaurants[idx];
+      if (!r) continue;
+      items.push({
+        day_number: restaurantDays[idx] ?? getDefaultDay(),
+        category: "restaurant",
+        title: r.name,
+        description: `${r.cuisine} · ${r.neighborhood} · ${r.price_range}`,
+        price_estimate: r.price_range,
         affiliate_url: "",
       });
     }
@@ -335,7 +401,7 @@ export default function TripResultsModal({
     }
 
     setAddingAll(false);
-  }, [tripId, sortedFlights, sortedHotels, activities, selectedActivities, activityDays]);
+  }, [tripId, flights, hotels, sortedFlights, sortedHotels, activities, nights, selectedFlights, selectedHotels, selectedActivities, activityDays, flightDays, hotelDays, selectedRestaurants, restaurants, restaurantDays, getDefaultDay]);
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -397,6 +463,8 @@ export default function TripResultsModal({
                   ? hotels.length
                   : tab === "Activities"
                   ? activities.length
+                  : tab === "Restaurants"
+                  ? restaurants.length
                   : null;
               return (
                 <button
@@ -525,6 +593,18 @@ export default function TripResultsModal({
                               <path d="M5 12h14M12 5l7 7-7 7" />
                             </svg>
                           </a>
+                          {dayCount > 1 && (
+                            <select
+                              value={flightDays[realIdx] || 1}
+                              onChange={(e) => { e.stopPropagation(); setFlightDays((prev) => ({ ...prev, [realIdx]: Number(e.target.value) })); }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-600"
+                            >
+                              {Array.from({ length: dayCount }, (_, d) => (
+                                <option key={d + 1} value={d + 1}>Day {d + 1}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     );
@@ -625,6 +705,18 @@ export default function TripResultsModal({
                               <path d="M5 12h14M12 5l7 7-7 7" />
                             </svg>
                           </a>
+                          {dayCount > 1 && (
+                            <select
+                              value={hotelDays[realIdx] || 1}
+                              onChange={(e) => { e.stopPropagation(); setHotelDays((prev) => ({ ...prev, [realIdx]: Number(e.target.value) })); }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs border border-gray-200 rounded px-2 py-1.5 text-gray-600"
+                            >
+                              {Array.from({ length: dayCount }, (_, d) => (
+                                <option key={d + 1} value={d + 1}>Day {d + 1}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     );
@@ -744,6 +836,109 @@ export default function TripResultsModal({
             )}
           </div>
 
+          {/* Restaurants Tab */}
+          <div
+            role="tabpanel"
+            id="panel-Restaurants"
+            aria-labelledby="tab-Restaurants"
+            className={activeTab === "Restaurants" ? "" : "hidden"}
+          >
+            {restaurants.length === 0 ? (
+              <p className="text-sm text-gray-400 py-8 text-center">No restaurant results available.</p>
+            ) : (
+              <div className="space-y-3">
+                {restaurants.map((r, idx) => {
+                  const isSelected = selectedRestaurants.has(idx);
+                  return (
+                    <div
+                      key={idx}
+                      className={[
+                        "bg-white rounded-lg border p-3 transition-shadow hover:shadow-md",
+                        isSelected ? "border-orange-300 ring-1 ring-orange-200" : "border-gray-200",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRestaurant(idx)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 shrink-0 mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-gray-900">{r.name}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="text-xs rounded px-1.5 py-0.5 font-medium bg-orange-100 text-orange-700">
+                                {r.cuisine}
+                              </span>
+                              <span className="text-xs text-gray-500">{r.neighborhood}</span>
+                              <span className="text-xs font-medium text-gray-700">{r.price_range}</span>
+                              {r.rating && (
+                                <span className="text-xs text-yellow-500">
+                                  {"★".repeat(Math.round(r.rating))}
+                                  {"☆".repeat(Math.max(0, 5 - Math.round(r.rating)))}
+                                </span>
+                              )}
+                            </div>
+                            {r.highlights.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {r.highlights.map((h, hIdx) => (
+                                  <span
+                                    key={hIdx}
+                                    className="text-[10px] bg-gray-100 text-gray-500 rounded px-1.5 py-0.5"
+                                  >
+                                    {h}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {/* Day selector dropdown */}
+                        <select
+                          value={restaurantDays[idx] ?? getDefaultDay()}
+                          onChange={(e) => {
+                            const day = Number(e.target.value);
+                            setRestaurantDays((prev) => ({ ...prev, [idx]: day }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select day for ${r.name}`}
+                          className="text-xs border border-gray-300 rounded-full px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 cursor-pointer"
+                        >
+                          {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={d}>
+                              Day {d}
+                            </option>
+                          ))}
+                        </select>
+                        {/* Add / Selected toggle button */}
+                        <button
+                          onClick={() => {
+                            if (restaurantDays[idx] === undefined) {
+                              setRestaurantDays((prev) => ({ ...prev, [idx]: getDefaultDay() }));
+                            }
+                            toggleRestaurant(idx);
+                          }}
+                          className={[
+                            "text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+                            isSelected
+                              ? "bg-orange-500 text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600",
+                          ].join(" ")}
+                        >
+                          {isSelected ? "Selected" : "Add"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Summary Tab */}
           <div
             role="tabpanel"
@@ -784,6 +979,16 @@ export default function TripResultsModal({
                       ).toLocaleString()}
                     </span>
                   </div>
+                  {restaurants.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">
+                        Dining (estimated)
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        ~${summary.diningTotal.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                   <div className="border-t border-gray-200 pt-3 flex justify-between text-sm">
                     <span className="font-semibold text-gray-900">Estimated Total</span>
                     <span className="font-bold text-lg text-orange-600">

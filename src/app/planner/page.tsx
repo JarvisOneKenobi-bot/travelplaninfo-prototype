@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/guest";
 import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
-import Link from "next/link";
 import PlannerDashboard from "@/components/PlannerDashboard";
 import TripForm from "@/components/TripForm";
 
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Planner() {
-  const session = await auth();
+  const ctx = await getUserId();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,23 +27,10 @@ export default async function Planner() {
           </p>
         </div>
 
-        {session?.user ? (
-          <PlannerDashboard />
+        {ctx ? (
+          <PlannerDashboard isGuest={ctx.isGuest} />
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-            {/* Show form preview (non-interactive) with sign-in CTA */}
-            <div className="mb-8 p-4 bg-teal-50 border border-teal-200 rounded-xl flex items-center justify-between gap-4">
-              <div>
-                <p className="font-medium text-teal-900">Sign in to save your trips</p>
-                <p className="text-sm text-teal-700">Your itinerary will be saved and accessible from any device.</p>
-              </div>
-              <Link
-                href="/signin?callbackUrl=/planner"
-                className="shrink-0 bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-teal-800 transition-colors text-sm"
-              >
-                Sign in to start planning
-              </Link>
-            </div>
             <TripForm />
           </div>
         )}

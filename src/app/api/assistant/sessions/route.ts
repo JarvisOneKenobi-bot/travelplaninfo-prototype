@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { auth } from "@/lib/auth";
+import { getUserId, getOrCreateGuest } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getUserId();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   const db = getDb();
   const sessions = db
     .prepare(
@@ -19,10 +19,8 @@ export async function GET() {
 }
 
 export async function POST() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const ctx = await getOrCreateGuest();
+  const userId = ctx.userId;
   const id = randomUUID();
   const db = getDb();
 

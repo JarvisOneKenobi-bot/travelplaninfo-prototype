@@ -6,6 +6,7 @@ interface ActivityData {
   tier: string;
   interest: string;
   duration?: string;
+  is_mock?: boolean;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -32,7 +33,12 @@ export default function ActivityCard({ activity }: { activity: ActivityData }) {
           </div>
         </div>
         <div className="text-right">
-          <p className="font-bold text-sm text-gray-900">{activity.price}</p>
+          <p className="font-bold text-sm text-gray-900">
+            {activity.price}
+            {activity.is_mock && (
+              <span className="ml-1 text-xs text-amber-600 bg-amber-50 rounded px-1 py-0.5 font-normal">(est.)</span>
+            )}
+          </p>
           <span className={["text-xs rounded px-1.5 py-0.5 font-medium capitalize", tierClass].join(" ")}>
             {activity.tier}
           </span>

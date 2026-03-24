@@ -15,7 +15,7 @@ interface Trip {
   created_at: string;
 }
 
-export default function PlannerDashboard() {
+export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolean }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -26,6 +26,18 @@ export default function PlannerDashboard() {
       .then(data => { setTrips(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  // Merge guest trips into real account after login
+  useEffect(() => {
+    if (isGuest) return;
+    if (!document.cookie.includes("tpi_guest_hint")) return;
+    fetch("/api/auth/merge-guest", { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.merged > 0) window.location.reload();
+      })
+      .catch(() => {});
+  }, [isGuest]);
 
   if (showForm) {
     return (
@@ -38,6 +50,11 @@ export default function PlannerDashboard() {
 
   return (
     <div className="space-y-6">
+      {isGuest && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+          <p className="text-sm text-amber-800">Your trips are saved temporarily. <Link href="/register?callbackUrl=/planner" className="font-medium underline hover:text-amber-900">Create a free account</Link> to keep them forever.</p>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">My Trips</h2>
         <button

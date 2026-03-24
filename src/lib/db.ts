@@ -21,6 +21,7 @@ export function getDb(): Database.Database {
       name          TEXT,
       password_hash TEXT,
       provider      TEXT NOT NULL DEFAULT 'credentials',
+      guest_token   TEXT,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -100,6 +101,24 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
     CREATE INDEX IF NOT EXISTS idx_user_memory_user ON user_memory(user_id);
   `);
+
+  // Migration: add guest_token column to existing DBs
+  const userCols = _db.pragma("table_info(users)") as { name: string }[];
+  if (!userCols.some((c) => c.name === "guest_token")) {
+    _db.exec("ALTER TABLE users ADD COLUMN guest_token TEXT");
+  }
+  _db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_guest_token ON users(guest_token) WHERE guest_token IS NOT NULL");
+
+  // Migration: add flexible date + origin fields to trips
+  const tripCols = _db.pragma("table_info(trips)") as { name: string }[];
+  if (!tripCols.some((c) => c.name === "flexible_window")) {
+    _db.exec("ALTER TABLE trips ADD COLUMN flexible_window TEXT");
+    _db.exec("ALTER TABLE trips ADD COLUMN trip_length TEXT");
+  }
+  if (!tripCols.some((c) => c.name === "origin")) {
+    _db.exec("ALTER TABLE trips ADD COLUMN origin TEXT");
+    _db.exec("ALTER TABLE trips ADD COLUMN nearby_airports TEXT");
+  }
 
   return _db;
 }

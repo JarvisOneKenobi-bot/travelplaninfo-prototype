@@ -18,6 +18,8 @@ const INTERESTS = [
   { value: "budget", label: "Budget Travel", icon: "\uD83D\uDCF8" },
   { value: "backpacking", label: "Backpacking", icon: "\uD83C\uDFD5\uFE0F" },
   { value: "business", label: "Business Travel", icon: "\uD83D\uDCBC" },
+  { value: "romance", label: "Romance", icon: "\uD83D\uDC95" },
+  { value: "family_travel", label: "Family Travel", icon: "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66" },
 ];
 
 const AI_ASSISTED_CHIP = { value: "ai_assisted", label: "Let Atlas decide", icon: "\u2728" };
@@ -69,12 +71,18 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
+  const [flexibleWindow, setFlexibleWindow] = useState("next_month");
+  const [tripLength, setTripLength] = useState("week");
+  const [atlasDecidesDates, setAtlasDecidesDates] = useState(false);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [rooms, setRooms] = useState(1);
   const [budget, setBudget] = useState("midrange");
   const [interests, setInterests] = useState<string[]>([]);
   const [surpriseMe, setSurpriseMe] = useState(false);
+  const [showCustomInterests, setShowCustomInterests] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [customInterests, setCustomInterests] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -82,6 +90,17 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     setInterests(prev =>
       prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
     );
+  }
+
+  function addCustomInterests(raw: string) {
+    const items = raw.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+    const newOnes = items.filter(i => !customInterests.includes(i) && !INTERESTS.some(p => p.value === i));
+    if (newOnes.length > 0) setCustomInterests(prev => [...prev, ...newOnes]);
+    setCustomInput("");
+  }
+
+  function removeCustomInterest(item: string) {
+    setCustomInterests(prev => prev.filter(i => i !== item));
   }
 
   function handleSurpriseMe() {
@@ -112,11 +131,13 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         destination: destination.trim(),
         start_date: flexibleDates ? null : (startDate || null),
         end_date: flexibleDates ? null : (endDate || null),
+        flexible_window: flexibleDates ? (atlasDecidesDates ? "any" : flexibleWindow) : null,
+        trip_length: flexibleDates ? (atlasDecidesDates ? "any" : tripLength) : null,
         budget,
         travelers_adults: adults,
         travelers_children: children,
         rooms,
-        interests,
+        interests: [...interests, ...customInterests.map(c => `custom:${c}`)],
         origin: origin.trim().toUpperCase(),
         include_nearby_airports: includeNearby,
         nearby_airports: includeNearby && NEARBY_AIRPORTS[origin.trim().toUpperCase()]
@@ -126,10 +147,6 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     });
 
     if (!res.ok) {
-      if (res.status === 401) {
-        router.push("/signin?callbackUrl=/planner");
-        return;
-      }
       setError("Failed to create trip. Please try again.");
       setLoading(false);
       return;
@@ -238,7 +255,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           <h2 className="text-xl font-bold text-gray-900">When are you traveling?</h2>
         </div>
 
-        {!flexibleDates && (
+        {!flexibleDates ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Check-in</label>
@@ -251,13 +268,53 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
             </div>
           </div>
+        ) : (
+          <>
+            {!atlasDecidesDates && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">When are you thinking?</label>
+                  <select value={flexibleWindow} onChange={e => setFlexibleWindow(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                    <option value="next_2_weeks">Next 2 weeks</option>
+                    <option value="next_month">Next month</option>
+                    <option value="2_3_months">In 2-3 months</option>
+                    <option value="6_months">In about 6 months</option>
+                    <option value="this_year">Anytime this year</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">How long?</label>
+                  <select value={tripLength} onChange={e => setTripLength(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                    <option value="weekend">Weekend (2-3 days)</option>
+                    <option value="week">About a week</option>
+                    <option value="10_14_days">10-14 days</option>
+                    <option value="2_plus_weeks">2+ weeks</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setAtlasDecidesDates(!atlasDecidesDates)}
+              className={[
+                "w-full text-sm rounded-lg py-2.5 font-medium transition-colors",
+                atlasDecidesDates
+                  ? "bg-orange-50 border-2 border-orange-500 text-orange-700"
+                  : "border border-dashed border-orange-300 text-orange-700 hover:bg-orange-50",
+              ].join(" ")}
+            >
+              {"\u2728"} Let Atlas find the cheapest dates for me
+            </button>
+          </>
         )}
 
         <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 hover:border-orange-300 transition-colors">
           <input
             type="checkbox"
             checked={flexibleDates}
-            onChange={e => setFlexibleDates(e.target.checked)}
+            onChange={e => { setFlexibleDates(e.target.checked); if (!e.target.checked) setAtlasDecidesDates(false); }}
             className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
           />
           <div>
@@ -347,7 +404,60 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               {AI_ASSISTED_CHIP.icon} {AI_ASSISTED_CHIP.label}
             </div>
           </label>
+
+          {/* "Add your own" chip */}
+          <button
+            type="button"
+            onClick={() => setShowCustomInterests(!showCustomInterests)}
+            className={`px-4 py-2.5 rounded-lg border-2 text-center transition-colors text-sm ${
+              showCustomInterests || customInterests.length > 0
+                ? "border-orange-500 bg-orange-50"
+                : "border-dashed border-gray-300 hover:border-orange-300"
+            }`}
+          >
+            {"\u270F\uFE0F"} Add your own
+          </button>
         </div>
+
+        {/* Custom interests input */}
+        {showCustomInterests && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customInput}
+                onChange={e => setCustomInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { e.preventDefault(); addCustomInterests(customInput); }
+                }}
+                placeholder="Type interests (comma-separated or press Enter)"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => addCustomInterests(customInput)}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">e.g., scuba diving, wine tasting, street art</p>
+          </div>
+        )}
+
+        {/* Custom interest tags */}
+        {customInterests.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {customInterests.map(item => (
+              <span key={item} className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-full text-sm">
+                {item}
+                <button type="button" onClick={() => removeCustomInterest(item)}
+                  className="ml-0.5 text-orange-500 hover:text-orange-700 font-bold">&times;</button>
+              </span>
+            ))}
+          </div>
+        )}
+
         {interests.includes("ai_assisted") && (
           <p className="text-xs text-orange-600 pl-1">
             Atlas will chat with you after planning to refine your itinerary with personalized suggestions.

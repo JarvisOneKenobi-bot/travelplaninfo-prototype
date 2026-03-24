@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,11 +11,11 @@ async function verifyTripOwnership(userId: string, tripId: string) {
 }
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getUserId();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   if (!await verifyTripOwnership(userId, id)) {
     return NextResponse.json({ error: "Trip not found" }, { status: 404 });
   }
@@ -28,11 +28,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getUserId();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const userId = (session.user as any).id;
+  const userId = ctx.userId;
   if (!await verifyTripOwnership(userId, id)) {
     return NextResponse.json({ error: "Trip not found" }, { status: 404 });
   }
