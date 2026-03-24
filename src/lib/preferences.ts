@@ -5,6 +5,7 @@ export const PREF_ENUMS = {
   trip_length_pref: ["day_trip", "weekend", "week", "two_weeks", "month_plus"] as const,
   assistant_style: ["concise", "detailed", "friendly"] as const,
   interests: ["beach", "adventure", "culture", "food", "nightlife", "nature", "wellness", "family", "luxury", "budget", "cruise", "city", "backpacking", "business", "ai_assisted"] as const,
+  language: ["en", "es", "pt", "fr", "de", "it"] as const,
 } as const;
 
 export interface UserPreferences {
@@ -36,6 +37,7 @@ export interface UserPreferences {
     mid_max: number;      // default 250 — between budget_max and this is "mid", above is "luxury"
   };
   ai_assisted: boolean;   // default false — user wants Atlas to pick interests
+  language: (typeof PREF_ENUMS.language)[number]; // preferred UI language
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -59,6 +61,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   deal_alert_threshold_pct: 20,
   budget_ranges: { budget_max: 100, mid_max: 250 },
   ai_assisted: false,
+  language: "en" as const,
 };
 
 export function mergePreferences(saved: Partial<UserPreferences>): UserPreferences {

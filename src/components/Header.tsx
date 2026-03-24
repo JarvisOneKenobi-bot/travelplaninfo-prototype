@@ -4,10 +4,58 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { useLocale } from "next-intl";
+import { usePathname } from "next/navigation";
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "pt", label: "Português" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "it", label: "Italiano" },
+] as const;
+
+const LOCALES = ["en", "es", "pt", "fr", "de", "it"] as const;
+
+/**
+ * Strips locale prefix from a pathname so it can be re-prefixed with a new locale.
+ * e.g. "/es/planner" -> "/planner", "/planner" -> "/planner"
+ */
+function stripLocalePrefix(pathname: string): string {
+  for (const loc of LOCALES) {
+    if (loc === "en") continue;
+    if (pathname === `/${loc}` || pathname.startsWith(`/${loc}/`)) {
+      return pathname.slice(loc.length + 1) || "/";
+    }
+  }
+  return pathname;
+}
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: session } = useSession();
+  // useLocale() requires NextIntlClientProvider — fall back to "en" when outside locale context
+  // (e.g. root-level article pages that don't use the [locale] layout)
+  let locale = "en";
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    locale = useLocale();
+  } catch {
+    // Not inside NextIntlClientProvider — default to English
+  }
+  // usePathname from next/navigation always works without a provider
+  const pathname = usePathname();
+
+  function handleLanguageChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newLocale = e.target.value;
+    const basePath = stripLocalePrefix(pathname ?? "/");
+    if (newLocale === "en") {
+      window.location.href = basePath;
+    } else {
+      window.location.href = `/${newLocale}${basePath === "/" ? "/" : basePath}`;
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur border-b border-gray-100" style={{ backgroundColor: "rgba(178, 107, 32, 0.7)" }}>
@@ -33,8 +81,19 @@ export default function Header() {
           <Link href="/guides" className="hover:text-gray-900 transition-colors">Guides</Link>
         </nav>
 
-        {/* Auth buttons + hamburger */}
+        {/* Auth buttons + language switcher + hamburger */}
         <div className="flex items-center gap-3">
+          {/* Language switcher */}
+          <select
+            value={locale}
+            onChange={handleLanguageChange}
+            className="hidden md:block text-xs text-gray-700 border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+            aria-label="Select language"
+          >
+            {LANGUAGES.map(lang => (
+              <option key={lang.code} value={lang.code}>{lang.label}</option>
+            ))}
+          </select>
           {session ? (
             <>
               <span className="hidden md:block text-sm text-gray-700">
