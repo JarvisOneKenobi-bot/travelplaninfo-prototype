@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import { geocodeItem } from "@/lib/geocode";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -97,6 +98,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       }
     }
 
+    // Normalize legacy 'car' category
+    if (item.category === "car") item.category = "car_rental";
+
     if (item.category !== undefined && !VALID_CATEGORIES.has(item.category)) {
       errors.push(
         `Item ${i}: category must be one of: ${Array.from(VALID_CATEGORIES).join(", ")}`
@@ -138,6 +142,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   );
 
+  // Get trip destination for geocoding
+  const tripRow = db.prepare("SELECT destination FROM trips WHERE id = ?").get(id) as { destination: string } | undefined;
+  const destination = tripRow?.destination || "";
+
   try {
     const rows = items.map((item, i) => ({
       day_number: Math.max(1, Math.floor(Number(item.day_number) || 1)),
@@ -155,7 +163,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     const placeholders = ids.map(() => "?").join(",");
     const createdItems = db
       .prepare(`SELECT * FROM trip_items WHERE id IN (${placeholders})`)
-      .all(...ids);
+      .all(...ids) as { id: number; title: string }[];
+
+    // Fire-and-forget geocoding in chunks of 5 (rate limit protection)
+    const geocodeAsync = async () => {
+      for (let i = 0; i < createdItems.length; i += 5) {
+        const chunk = createdItems.slice(i, i + 5);
+        await Promise.allSettled(
+          chunk.map(item => geocodeItem(item.id, item.title, destination))
+        );
+      }
+    };
+    geocodeAsync().catch(() => {});
 
     return NextResponse.json({ items: createdItems }, { status: 201 });
   } catch (err) {

@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import { geocodeItem } from "@/lib/geocode";
+
+const VALID_CATEGORIES = new Set([
+  "flight",
+  "hotel",
+  "car_rental",
+  "activity",
+  "restaurant",
+  "transportation",
+  "note",
+]);
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,7 +49,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const body = await req.json();
-  const {
+  let {
     day_number = 1,
     category = "note",
     title,
@@ -53,7 +64,20 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
 
+  // Normalize legacy 'car' category
+  if (category === "car") category = "car_rental";
+
+  // Validate category
+  if (!VALID_CATEGORIES.has(category)) {
+    category = "note";
+  }
+
   const db = getDb();
+
+  // Get trip destination for geocoding
+  const trip = db.prepare("SELECT destination FROM trips WHERE id = ?").get(id) as { destination: string } | undefined;
+  const destination = trip?.destination || "";
+
   const result = db
     .prepare(
       `INSERT INTO trip_items
@@ -63,5 +87,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     .run(id, day_number, category, title, description || null, affiliate_program || null, affiliate_url || null, price_estimate || null, sort_order) as any;
 
   const item = db.prepare("SELECT * FROM trip_items WHERE id = ?").get(result.lastInsertRowid);
+
+  // Fire-and-forget geocoding (do not await — respond immediately)
+  const itemId = Number(result.lastInsertRowid);
+  geocodeItem(itemId, title, destination).catch(() => {});
+
   return NextResponse.json(item, { status: 201 });
 }

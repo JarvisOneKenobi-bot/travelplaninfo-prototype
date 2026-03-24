@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PREF_ENUMS } from "@/lib/preferences";
+import MapDrawer from "@/components/MapDrawer";
 
 /* ── Item categories (multi-layer dropdown per product spec) ── */
 const CATEGORIES = [
   { value: "flight", label: "Flight", icon: "\u2708\uFE0F", color: "bg-orange-100 text-orange-700" },
   { value: "hotel", label: "Hotel / Accommodation", icon: "\uD83C\uDFE8", color: "bg-blue-100 text-blue-700" },
-  { value: "car", label: "Car Rental", icon: "\uD83D\uDE97", color: "bg-green-100 text-green-700" },
+  { value: "car_rental", label: "Car Rental", icon: "\uD83D\uDE97", color: "bg-teal-100 text-teal-700" },
   { value: "activity", label: "Activity", icon: "\uD83C\uDFAF", color: "bg-purple-100 text-purple-700" },
   { value: "restaurant", label: "Restaurant / Dining", icon: "\uD83C\uDF7D\uFE0F", color: "bg-yellow-100 text-yellow-700" },
   { value: "transportation", label: "Transportation", icon: "\uD83D\uDE95", color: "bg-cyan-100 text-cyan-700" },
@@ -41,6 +42,9 @@ interface Item {
   affiliate_program: string | null;
   price_estimate: string | null;
   booked: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 interface AddItemFormState {
@@ -85,6 +89,10 @@ export default function ItineraryBuilder({
     }
     return Math.max(fromItems, 1);
   });
+
+  /* ── Map drawer state ── */
+  const [showMap, setShowMap] = useState(false);
+  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
 
   /* ── Collapsed/expanded day state — all days expanded by default ── */
   const [collapsedDays, setCollapsedDays] = useState<Set<number>>(new Set());
@@ -149,7 +157,7 @@ export default function ItineraryBuilder({
           : "Find the best available accommodation.",
       });
       placeholders.push({
-        category: "car",
+        category: "car_rental",
         title: `Car Rental in ${tripDestination}`,
         description: "Compare rental options from top providers.",
       });
@@ -372,15 +380,30 @@ export default function ItineraryBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Header with Add Day button */}
+      {/* Header with Add Day + Show Map buttons */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Itinerary</h2>
-        <button
-          onClick={addDay}
-          className="text-sm text-orange-700 hover:text-orange-800 font-medium border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
-        >
-          + Add Day {dayCount + 1}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMap(v => !v)}
+            className={`text-sm font-medium border px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+              showMap
+                ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700"
+                : "text-orange-700 border-orange-300 hover:bg-orange-50"
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            {showMap ? "Hide Map" : "Show Map"}
+          </button>
+          <button
+            onClick={addDay}
+            className="text-sm text-orange-700 hover:text-orange-800 font-medium border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
+          >
+            + Add Day {dayCount + 1}
+          </button>
+        </div>
       </div>
 
       {/* Interests prompt (if no interests selected) */}
@@ -533,8 +556,14 @@ export default function ItineraryBuilder({
               }
 
               return (
-                <div key={item.id} className={`flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${item.booked ? "opacity-60" : ""}`}
-                  onClick={() => startEdit(item)}>
+                <div
+                  key={item.id}
+                  id={`item-${item.id}`}
+                  className={`flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${item.booked ? "opacity-60" : ""} ${hoveredItemId === item.id ? "bg-orange-50" : ""}`}
+                  onClick={() => startEdit(item)}
+                  onMouseEnter={() => setHoveredItemId(item.id)}
+                  onMouseLeave={() => setHoveredItemId(null)}
+                >
                   <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 mt-0.5 ${cat.color}`}>
                     {cat.icon} {cat.label}
                   </span>
@@ -631,6 +660,30 @@ export default function ItineraryBuilder({
       {dropdownDay !== null && (
         <div className="fixed inset-0 z-40" onClick={closeDropdown} />
       )}
+
+      {/* ── Map Drawer ── */}
+      <MapDrawer
+        isOpen={showMap}
+        onClose={() => setShowMap(false)}
+        items={items.map(i => ({
+          id: i.id,
+          day_number: i.day_number,
+          category: i.category,
+          title: i.title,
+          latitude: i.latitude ?? null,
+          longitude: i.longitude ?? null,
+        }))}
+        destination={tripDestination}
+        totalDays={dayCount}
+        hoveredItemId={hoveredItemId}
+        onPinClick={(itemId) => {
+          setShowMap(false);
+          setTimeout(() => {
+            const el = document.getElementById(`item-${itemId}`);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 150);
+        }}
+      />
 
       {/* ── Interests selection modal ── */}
       {showInterestsModal && (

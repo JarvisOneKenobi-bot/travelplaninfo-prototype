@@ -10,7 +10,7 @@ interface Recommendation {
   description: string;
   cta: string;
   url: string;
-  category: "hotel" | "flight" | "car" | "cruise";
+  category: "hotel" | "flight" | "car_rental" | "cruise";
   affiliate_program: string;
 }
 
@@ -86,7 +86,7 @@ function buildRecommendations(
       description: "EconomyBookings finds the cheapest available rate.",
       cta: "Compare Cars",
       url: CJ_LINKS.carsCompare(),
-      category: "car",
+      category: "car_rental",
       affiliate_program: "EconomyBookings",
     });
   } else {
@@ -97,7 +97,7 @@ function buildRecommendations(
       description: "Compare top brands — Hertz, Enterprise, Sixt & more.",
       cta: "Find Cars",
       url: CJ_LINKS.cars(),
-      category: "car",
+      category: "car_rental",
       affiliate_program: "EconomyBookings",
     });
   }

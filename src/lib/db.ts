@@ -102,6 +102,35 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_user_memory_user ON user_memory(user_id);
   `);
 
+  // Migration: geocoding_cache table
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS geocoding_cache (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT UNIQUE NOT NULL,
+      latitude REAL, longitude REAL, place_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_geocoding_cache_query ON geocoding_cache(query);
+  `);
+
+  // Migration: map feature columns on trip_items
+  const mapMigrations = [
+    "ALTER TABLE trip_items ADD COLUMN latitude REAL",
+    "ALTER TABLE trip_items ADD COLUMN longitude REAL",
+    "ALTER TABLE trip_items ADD COLUMN place_id TEXT",
+    "ALTER TABLE trip_items ADD COLUMN is_placeholder INTEGER NOT NULL DEFAULT 0",
+  ];
+  for (const sql of mapMigrations) {
+    try {
+      _db.exec(sql);
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+    }
+  }
+
+  // Data migration: normalize 'car' category to 'car_rental'
+  _db.exec("UPDATE trip_items SET category = 'car_rental' WHERE category = 'car'");
+
   // Migration: add guest_token column to existing DBs
   const userCols = _db.pragma("table_info(users)") as { name: string }[];
   if (!userCols.some((c) => c.name === "guest_token")) {
