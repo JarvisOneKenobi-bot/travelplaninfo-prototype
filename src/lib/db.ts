@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { parseCost } from './cost-utils';
 
 const DB_PATH = path.join(process.cwd(), "data", "tpi.db");
 
@@ -126,6 +127,29 @@ export function getDb(): Database.Database {
     } catch (e: unknown) {
       if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
     }
+  }
+
+  // Migration: budget feature columns
+  const budgetMigrations = [
+    "ALTER TABLE trip_items ADD COLUMN estimated_cost REAL",
+    "ALTER TABLE trips ADD COLUMN budget_override REAL",
+  ];
+  for (const sql of budgetMigrations) {
+    try {
+      _db.exec(sql);
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+    }
+  }
+
+  // Backfill: parse existing price_estimate into estimated_cost
+  const itemsToBackfill = _db.prepare(
+    "SELECT id, price_estimate FROM trip_items WHERE estimated_cost IS NULL AND price_estimate IS NOT NULL"
+  ).all() as { id: number; price_estimate: string }[];
+  const updateCostStmt = _db.prepare("UPDATE trip_items SET estimated_cost = ? WHERE id = ?");
+  for (const item of itemsToBackfill) {
+    const cost = parseCost(item.price_estimate);
+    if (cost !== null) updateCostStmt.run(cost, item.id);
   }
 
   // Data migration: normalize 'car' category to 'car_rental'
