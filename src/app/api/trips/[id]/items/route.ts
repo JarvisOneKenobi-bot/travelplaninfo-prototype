@@ -92,7 +92,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const item = db.prepare("SELECT * FROM trip_items WHERE id = ?").get(result.lastInsertRowid);
 
-  // Fire-and-forget geocoding (do not await — respond immediately)
+  // Fire-and-forget geocoding (do not await — respond immediately).
+  // Note: response will have null lat/lng. Frontend should refetch trip data
+  // after a short delay if map pins are needed for newly added items.
   const itemId = Number(result.lastInsertRowid);
   geocodeItem(itemId, title, destination).catch(() => {});
 

@@ -351,7 +351,7 @@ export default function MapDrawer({
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-xs text-gray-600 capitalize">
-                    {key === "car_rental" ? "Car Rental" : key}
+                    {t(`category_${key}`, { defaultValue: key })}
                   </span>
                 </div>
               ))}

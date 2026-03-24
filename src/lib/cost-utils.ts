@@ -1,15 +1,25 @@
 /**
  * Extract numeric cost from price string.
  * Prefers $-prefixed numbers: "2 adults x $289" → 289
- * Known limits: ranges return lower bound, "$1.5k" returns 1.5
+ * Handles k/K suffix: "$1.5k" → 1500
+ * Known limits: ranges return lower bound
  */
 export function parseCost(priceEstimate: string | null | undefined): number | null {
   if (!priceEstimate) return null;
   const cleaned = priceEstimate.replace(/,/g, '');
-  const dollarMatch = cleaned.match(/\$\s*([\d.]+)/);
-  if (dollarMatch) return parseFloat(dollarMatch[1]);
-  const numMatch = cleaned.match(/[\d.]+/);
-  return numMatch ? parseFloat(numMatch[0]) : null;
+  // Prefer $-prefixed numbers
+  const dollarMatch = cleaned.match(/\$\s*([\d.]+)\s*(k)?/i);
+  if (dollarMatch) {
+    let val = parseFloat(dollarMatch[1]);
+    if (dollarMatch[2]) val *= 1000;
+    return val;
+  }
+  // Fallback: first numeric sequence with optional k suffix
+  const numMatch = cleaned.match(/([\d.]+)\s*(k)?/i);
+  if (!numMatch) return null;
+  let val = parseFloat(numMatch[1]);
+  if (numMatch[2]) val *= 1000;
+  return val;
 }
 
 /**

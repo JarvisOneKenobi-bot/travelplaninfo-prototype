@@ -302,7 +302,14 @@
     "total": "Gesamt",
     "day": "Tag",
     "overBudget": "Über Budget",
-    "clickToSetBudget": "Klicken um benutzerdefiniertes Budget festzulegen"
+    "clickToSetBudget": "Klicken um benutzerdefiniertes Budget festzulegen",
+    "category_flight": "Flug",
+    "category_hotel": "Hotel",
+    "category_car_rental": "Mietwagen",
+    "category_activity": "Aktivitäten",
+    "category_restaurant": "Gastronomie",
+    "category_transportation": "Transport",
+    "category_note": "Notizen"
   },
   "mapDrawer": {
     "tripMap": "Reisekarte",
@@ -312,7 +319,14 @@
     "noLocations": "Keine Standorte zum Anzeigen.",
     "noMappedLocations": "Noch keine kartierten Standorte.",
     "addItems": "Fügen Sie Elemente zu Ihrem Reiseplan hinzu, um sie hier zu sehen.",
-    "loadingMap": "Karte wird geladen…"
+    "loadingMap": "Karte wird geladen…",
+    "category_flight": "Flug",
+    "category_hotel": "Hotel",
+    "category_car_rental": "Mietwagen",
+    "category_activity": "Aktivität",
+    "category_restaurant": "Restaurant",
+    "category_transportation": "Transport",
+    "category_note": "Notiz"
   },
   "itineraryBuilder": {
     "itinerary": "Reiseplan",
@@ -350,7 +364,14 @@
     "placeholderHotelDescBudget": "{tier} Unterkunftsmöglichkeiten.",
     "placeholderCar": "Mietwagen in {destination}",
     "placeholderCarDesc": "Mietoptionen der besten Anbieter vergleichen.",
-    "bookNow": "Jetzt buchen"
+    "bookNow": "Jetzt buchen",
+    "category_flight": "Flug",
+    "category_hotel": "Hotel / Unterkunft",
+    "category_car_rental": "Mietwagen",
+    "category_activity": "Aktivität",
+    "category_restaurant": "Restaurant / Gastronomie",
+    "category_transportation": "Transport",
+    "category_note": "Notiz / Erinnerung"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Empfohlene Buchungen",

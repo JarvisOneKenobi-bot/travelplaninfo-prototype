@@ -302,7 +302,14 @@
     "total": "Total",
     "day": "Dia",
     "overBudget": "Acima do orçamento",
-    "clickToSetBudget": "Clique para definir orçamento personalizado"
+    "clickToSetBudget": "Clique para definir orçamento personalizado",
+    "category_flight": "Voo",
+    "category_hotel": "Hotel",
+    "category_car_rental": "Aluguel de carro",
+    "category_activity": "Atividades",
+    "category_restaurant": "Gastronomia",
+    "category_transportation": "Transporte",
+    "category_note": "Notas"
   },
   "mapDrawer": {
     "tripMap": "Mapa da Viagem",
@@ -312,7 +319,14 @@
     "noLocations": "Sem locais para mostrar.",
     "noMappedLocations": "Sem locais mapeados ainda.",
     "addItems": "Adicione itens ao seu itinerário para vê-los aqui.",
-    "loadingMap": "Carregando mapa…"
+    "loadingMap": "Carregando mapa…",
+    "category_flight": "Voo",
+    "category_hotel": "Hotel",
+    "category_car_rental": "Aluguel de carro",
+    "category_activity": "Atividade",
+    "category_restaurant": "Restaurante",
+    "category_transportation": "Transporte",
+    "category_note": "Nota"
   },
   "itineraryBuilder": {
     "itinerary": "Itinerário",
@@ -350,7 +364,14 @@
     "placeholderHotelDescBudget": "Opções de acomodação {tier}.",
     "placeholderCar": "Aluguel de carro em {destination}",
     "placeholderCarDesc": "Compare opções de aluguel dos melhores fornecedores.",
-    "bookNow": "Reservar agora"
+    "bookNow": "Reservar agora",
+    "category_flight": "Voo",
+    "category_hotel": "Hotel / Acomodação",
+    "category_car_rental": "Aluguel de carro",
+    "category_activity": "Atividade",
+    "category_restaurant": "Restaurante / Gastronomia",
+    "category_transportation": "Transporte",
+    "category_note": "Nota / Lembrete"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Reservas Recomendadas",

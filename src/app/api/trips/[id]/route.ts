@@ -64,10 +64,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
   );
 
   // budget_override is nullable-as-feature: null means "use auto", so COALESCE won't work
+  // Client sends null to clear override, positive number to set custom budget
   if ('budget_override' in body) {
     const val = body.budget_override;
     db.prepare('UPDATE trips SET budget_override = ? WHERE id = ?')
-      .run(val === 0 ? null : val, id);
+      .run(val == null ? null : val, id);
   }
 
   const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id);

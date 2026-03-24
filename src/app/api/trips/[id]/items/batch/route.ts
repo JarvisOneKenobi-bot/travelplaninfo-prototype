@@ -120,12 +120,12 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const insertStmt = db.prepare(
     `INSERT INTO trip_items
-      (trip_id, day_number, category, title, description, affiliate_url, price_estimate, estimated_cost, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (trip_id, day_number, category, title, description, affiliate_url, price_estimate, estimated_cost, is_placeholder, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const insertMany = db.transaction(
-    (rows: { day_number: number; category: string; title: string; description: string | null; affiliate_url: string | null; price_estimate: string | null; estimated_cost: number | null; sort_order: number }[]) => {
+    (rows: { day_number: number; category: string; title: string; description: string | null; affiliate_url: string | null; price_estimate: string | null; estimated_cost: number | null; is_placeholder: number; sort_order: number }[]) => {
       const ids: number[] = [];
       for (const row of rows) {
         const result = insertStmt.run(
@@ -137,6 +137,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           row.affiliate_url,
           row.price_estimate,
           row.estimated_cost,
+          row.is_placeholder,
           row.sort_order
         ) as { lastInsertRowid: number };
         ids.push(Number(result.lastInsertRowid));
@@ -169,6 +170,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         affiliate_url: item.affiliate_url?.trim() || null,
         price_estimate: priceEstimate,
         estimated_cost: parseCost(priceEstimate),
+        is_placeholder: item.is_placeholder ?? 0,
         sort_order: i,
       };
     });

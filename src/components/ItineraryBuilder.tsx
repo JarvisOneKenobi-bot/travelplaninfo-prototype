@@ -7,14 +7,15 @@ import BudgetBar from "@/components/BudgetBar";
 import { useTranslations } from "next-intl";
 
 /* ── Item categories (multi-layer dropdown per product spec) ── */
+/* Labels are translation keys resolved via t(`category_${value}`) at render time */
 const CATEGORIES = [
-  { value: "flight", label: "Flight", icon: "\u2708\uFE0F", color: "bg-orange-100 text-orange-700" },
-  { value: "hotel", label: "Hotel / Accommodation", icon: "\uD83C\uDFE8", color: "bg-blue-100 text-blue-700" },
-  { value: "car_rental", label: "Car Rental", icon: "\uD83D\uDE97", color: "bg-teal-100 text-teal-700" },
-  { value: "activity", label: "Activity", icon: "\uD83C\uDFAF", color: "bg-purple-100 text-purple-700" },
-  { value: "restaurant", label: "Restaurant / Dining", icon: "\uD83C\uDF7D\uFE0F", color: "bg-yellow-100 text-yellow-700" },
-  { value: "transportation", label: "Transportation", icon: "\uD83D\uDE95", color: "bg-cyan-100 text-cyan-700" },
-  { value: "note", label: "Note / Reminder", icon: "\uD83D\uDCDD", color: "bg-gray-100 text-gray-700" },
+  { value: "flight", labelKey: "category_flight", icon: "\u2708\uFE0F", color: "bg-orange-100 text-orange-700" },
+  { value: "hotel", labelKey: "category_hotel", icon: "\uD83C\uDFE8", color: "bg-blue-100 text-blue-700" },
+  { value: "car_rental", labelKey: "category_car_rental", icon: "\uD83D\uDE97", color: "bg-teal-100 text-teal-700" },
+  { value: "activity", labelKey: "category_activity", icon: "\uD83C\uDFAF", color: "bg-purple-100 text-purple-700" },
+  { value: "restaurant", labelKey: "category_restaurant", icon: "\uD83C\uDF7D\uFE0F", color: "bg-yellow-100 text-yellow-700" },
+  { value: "transportation", labelKey: "category_transportation", icon: "\uD83D\uDE95", color: "bg-cyan-100 text-cyan-700" },
+  { value: "note", labelKey: "category_note", icon: "\uD83D\uDCDD", color: "bg-gray-100 text-gray-700" },
 ];
 
 /* Human-readable labels for interest keys */
@@ -481,7 +482,7 @@ export default function ItineraryBuilder({
                       className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
                     >
                       <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
+                      <span>{t(cat.labelKey)}</span>
                       {cat.value === "activity" && (
                         <svg className="w-3.5 h-3.5 ml-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -542,7 +543,7 @@ export default function ItineraryBuilder({
                 return (
                   <div key={item.id} className="px-5 py-4 bg-orange-50 border-t border-orange-100 space-y-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${cat.color}`}>{cat.icon} {cat.label}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${cat.color}`}>{cat.icon} {t(cat.labelKey)}</span>
                       <span className="text-xs text-gray-400">{t("editing")}</span>
                     </div>
                     <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
@@ -588,7 +589,7 @@ export default function ItineraryBuilder({
                   onMouseLeave={() => setHoveredItemId(null)}
                 >
                   <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 mt-0.5 ${cat.color}`}>
-                    {cat.icon} {cat.label}
+                    {cat.icon} {t(cat.labelKey)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className={`font-medium text-gray-900 text-sm ${item.booked ? "line-through" : ""}`}>{item.title}</p>
@@ -638,7 +639,7 @@ export default function ItineraryBuilder({
                 <div className="grid grid-cols-2 gap-3">
                   <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                     className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {t(c.labelKey)}</option>)}
                   </select>
                   <div className="flex gap-1">
                     {(["budget", "mid", "luxury"] as const).map(tier => (

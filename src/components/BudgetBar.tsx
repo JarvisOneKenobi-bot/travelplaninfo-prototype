@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { calculateBudgetLimit } from "@/lib/cost-utils";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 interface ItemWithCost {
   id: number;
@@ -21,16 +21,6 @@ interface Props {
   onBudgetOverrideChange: (value: number | null) => void;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  flight: "Flights",
-  hotel: "Hotel",
-  car_rental: "Car Rental",
-  activity: "Activities",
-  restaurant: "Dining",
-  transportation: "Transport",
-  note: "Notes",
-};
-
 export default function BudgetBar({
   items,
   budgetTier,
@@ -41,6 +31,7 @@ export default function BudgetBar({
   onBudgetOverrideChange,
 }: Props) {
   const t = useTranslations("budgetBar");
+  const locale = useLocale();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [editingBudget, setEditingBudget] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -87,7 +78,7 @@ export default function BudgetBar({
     pct >= 90 ? "text-red-600" : pct >= 70 ? "text-amber-600" : "text-green-600";
 
   function fmt(n: number) {
-    return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+    return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
   }
 
   function startEditBudget() {
@@ -103,7 +94,7 @@ export default function BudgetBar({
       await fetch(`/api/trips/${tripId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ budget_override: newVal ?? 0 }),
+        body: JSON.stringify({ budget_override: newVal }),
       });
       onBudgetOverrideChange(newVal);
     } catch {
@@ -246,7 +237,7 @@ export default function BudgetBar({
                       {catKeys.map(cat => (
                         <li key={cat} className="flex justify-between text-xs">
                           <span className="text-gray-600">
-                            {CATEGORY_LABELS[cat] ?? cat}
+                            {t(`category_${cat}`, { defaultValue: cat })}
                           </span>
                           <span className="font-medium text-gray-800">{fmt(byCategory[cat])}</span>
                         </li>
