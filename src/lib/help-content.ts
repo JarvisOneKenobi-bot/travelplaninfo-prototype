@@ -22,11 +22,11 @@ export const HELP_CONTENT: Record<string, HelpPageContent> = {
     title: "Plan a New Trip",
     intro: "Tell us where, when, and how you want to travel. No account needed — you can plan as a guest and save later.",
     sections: [
-      { heading: "Where are you going?", text: "Enter your destination, or click 'Surprise Me' to let Atlas suggest destinations based on your interests and budget." },
+      { heading: "Where are you going?", text: "Enter your destination, or click 'Surprise Me' to let Atlas suggest destinations based on your interests and budget. In Surprise Me mode, pick a vibe (Tropical, Mountains, Beach, etc.) and optionally type a region hint. At least 2 interests are required so Atlas knows what to recommend." },
       { heading: "When are you traveling?", text: "Set your travel dates, or check 'I'm flexible' to let Atlas find the cheapest dates. When flexible, choose a travel window (next month, 2-3 months, etc.) and trip length (weekend, week, 2+ weeks). Or click 'Let Atlas find the cheapest dates' to let Atlas pick the absolute best deal regardless of timing." },
       { heading: "What's your budget?", text: "Choose Budget, Mid-range, or Luxury. These labels map to your custom dollar thresholds set in Preferences. You can customize what each tier means to you." },
       { heading: "What interests you?", text: "Pick activities you enjoy — Atlas uses these to suggest daily itinerary activities. New: Romance and Family Travel are now available as presets. Click 'Add your own' to type custom interests (comma-separated or press Enter for each). Custom interests are saved to your profile if you're registered." },
-      { heading: "Let Atlas decide", text: "Selecting 'Let Atlas decide' doesn't replace your interests — it tells Atlas to also suggest activities outside your picks if they're a great fit for your destination." },
+      { heading: "Atlas Recommends", text: "Selecting 'Atlas Recommends' (formerly 'Let Atlas decide') doesn't replace your interests — it tells Atlas to also suggest activities outside your picks if they're a great fit for your destination." },
       { heading: "Guest planning", text: "You can plan a full trip without signing in. Your trip is saved temporarily (7 days). Atlas will suggest creating a free account after you've built up your itinerary so you can keep it forever." },
     ]
   },

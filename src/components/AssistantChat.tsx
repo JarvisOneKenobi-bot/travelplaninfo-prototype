@@ -547,6 +547,24 @@ export default function AssistantChat() {
           } catch { /* ignore parse errors */ }
         }
 
+        // Check for pre-submit form context (TripForm exposes this via window.__atlasFormContext)
+        const formContext = (window as any).__atlasFormContext;
+        if (formContext) {
+          const dest = formContext.destination || "";
+          const isSurprise = formContext.surpriseMe;
+          const vibes = (formContext.vibes || []).join(", ");
+          const allInterests = (formContext.interests || []).join(", ");
+          const budget = formContext.budget || "";
+          const origin = formContext.origin || "";
+          pageContext += `\n\nForm context (user is filling out TripForm):`;
+          pageContext += `\n  Destination: ${isSurprise ? `Surprise Me (hint: ${dest})` : dest}`;
+          if (isSurprise && vibes) pageContext += `\n  Vibes: ${vibes}`;
+          if (allInterests) pageContext += `\n  Interests: ${allInterests}`;
+          if (budget) pageContext += `\n  Budget: ${budget}`;
+          if (origin) pageContext += `\n  Flying from: ${origin}`;
+          if (formContext.adults) pageContext += `\n  Travelers: ${formContext.adults} adults, ${formContext.children || 0} children`;
+        }
+
         const res = await fetch("/api/assistant/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
