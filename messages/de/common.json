@@ -272,7 +272,12 @@
     "send": "Senden",
     "thinking": "Denke nach...",
     "close": "Schließen",
-    "open": "Atlas Öffnen"
+    "open": "Atlas Öffnen",
+    "bubblePlannerIntro": "Hallo! Ich bin Atlas, Ihr Reiseconcierge. Brauchen Sie Hilfe beim Planen?",
+    "bubblePlannerDestination": "Können Sie sich nicht entscheiden? Sagen Sie mir, welches Flair Sie suchen",
+    "bubbleItineraryEmpty": "Ihr Reiseplan sieht leer aus — soll ich einige Aktivitäten vorschlagen?",
+    "bubbleItineraryIdle": "Brauchen Sie Hilfe? Ich kann Flüge, Hotels oder Aktivitäten für Sie suchen",
+    "bubbleItineraryInterests": "Tippen Sie auf das Mikrofon und sagen Sie mir, was Sie mögen — das geht schneller!"
   },
   "help": {
     "closePanel": "Hilfefeld schließen"

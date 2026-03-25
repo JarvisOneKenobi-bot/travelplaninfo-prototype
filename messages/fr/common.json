@@ -272,7 +272,12 @@
     "send": "Envoyer",
     "thinking": "Réflexion...",
     "close": "Fermer",
-    "open": "Ouvrir Atlas"
+    "open": "Ouvrir Atlas",
+    "bubblePlannerIntro": "Bonjour ! Je suis Atlas, votre concierge voyage. Besoin d'aide pour planifier ?",
+    "bubblePlannerDestination": "Vous ne savez pas où aller ? Dites-moi quelle ambiance vous recherchez",
+    "bubbleItineraryEmpty": "Votre itinéraire semble vide — voulez-vous que je suggère des activités ?",
+    "bubbleItineraryIdle": "Besoin d'aide ? Je peux chercher des vols, hôtels ou activités pour vous",
+    "bubbleItineraryInterests": "Appuyez sur le micro et dites-moi ce que vous aimez — c'est plus rapide !"
   },
   "help": {
     "closePanel": "Fermer le panneau d'aide"

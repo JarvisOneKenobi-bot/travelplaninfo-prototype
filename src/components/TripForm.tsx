@@ -90,6 +90,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const [loading, setLoading] = useState(false);
 
   function toggleInterest(interest: string) {
+    window.dispatchEvent(new Event('atlas-interaction'));
     setInterests(prev =>
       prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
     );
@@ -107,6 +108,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   }
 
   function handleSurpriseMe() {
+    window.dispatchEvent(new Event('atlas-interaction'));
     setSurpriseMe(true);
     setDestination("Surprise Me");
   }
@@ -228,7 +230,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               type="text"
               required
               value={destination}
-              onChange={e => setDestination(e.target.value)}
+              onChange={e => { setDestination(e.target.value); window.dispatchEvent(new Event('atlas-interaction')); }}
               placeholder={t("destinationPlaceholder")}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
@@ -368,7 +370,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           {BUDGET_VALUES.map(opt => (
             <label key={opt.value} className="cursor-pointer">
               <input type="radio" name="budget" value={opt.value} checked={budget === opt.value}
-                onChange={() => setBudget(opt.value)} className="sr-only" />
+                onChange={() => { setBudget(opt.value); window.dispatchEvent(new Event('atlas-interaction')); }} className="sr-only" />
               <div className={`px-4 py-4 rounded-lg border-2 text-center transition-colors ${budget === opt.value ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-gray-300"}`}>
                 <p className="text-2xl mb-1">{opt.icon}</p>
                 <p className="font-medium text-gray-900">{t(opt.value as "budget" | "midrange" | "luxury")}</p>

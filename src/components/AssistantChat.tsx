@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useAtlasBubble } from "@/hooks/useAtlasBubble";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
 import HotelCard from "./atlas/HotelCard";
@@ -404,6 +405,10 @@ function renderMarkdownLite(text: string) {
 export default function AssistantChat() {
   const t = useTranslations("assistant");
   const [isOpen, setIsOpen] = useState(false);
+
+  // ── Talk bubble ──────────────────────────────────────────────────────────
+  const { currentBubble, dismissBubble } = useAtlasBubble(isOpen);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -790,19 +795,32 @@ export default function AssistantChat() {
 
   return (
     <>
-      {/* Floating bubble */}
+      {/* Floating avatar + talk bubble */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className={[
-            "fixed bottom-6 right-6 z-[90] w-16 h-16",
-            "flex items-center justify-center",
-            "animate-atlas-float",
-          ].join(" ")}
-          title="Ask Atlas"
-        >
-          <img src="/images/atlas-avatar.png" alt="Atlas" className="w-full h-full object-contain" />
-        </button>
+        <div className="fixed bottom-6 right-6 z-[90]">
+          {/* Talk Bubble */}
+          {currentBubble && (
+            <div
+              data-atlas-bubble
+              onClick={() => { dismissBubble(); setIsOpen(true); }}
+              className="absolute bottom-20 right-0 w-64 bg-white rounded-xl shadow-lg border border-gray-200 p-3 cursor-pointer hover:shadow-xl transition-shadow animate-bubble-pop"
+              role="status"
+              aria-live="polite"
+            >
+              <p className="text-sm text-gray-700">{currentBubble.text}</p>
+              {/* Speech bubble tail */}
+              <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white border-r border-b border-gray-200 transform rotate-45" />
+            </div>
+          )}
+          {/* Avatar button */}
+          <button
+            onClick={() => setIsOpen(true)}
+            className="w-16 h-16 flex items-center justify-center animate-atlas-float"
+            title="Ask Atlas"
+          >
+            <img src="/images/atlas-avatar.png" alt="Atlas" className="w-full h-full object-contain" />
+          </button>
+        </div>
       )}
 
       {/* Chat panel */}

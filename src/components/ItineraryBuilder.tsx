@@ -246,6 +246,7 @@ export default function ItineraryBuilder({
   }
 
   function selectCategory(day: number, categoryValue: string) {
+    window.dispatchEvent(new Event('atlas-interaction'));
     if (categoryValue === "activity") {
       // Check if user has interests
       if (userInterests.length === 0 || userInterests.every(i => i === "ai_assisted")) {
@@ -320,6 +321,7 @@ export default function ItineraryBuilder({
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim()) return;
+    window.dispatchEvent(new Event('atlas-interaction'));
     setSaving(true);
 
     const res = await fetch(`/api/trips/${tripId}/items`, {
@@ -399,7 +401,7 @@ export default function ItineraryBuilder({
           {/* Left: action buttons */}
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setShowMap(v => !v)}
+              onClick={() => { setShowMap(v => !v); window.dispatchEvent(new Event('atlas-interaction')); }}
               className={`text-sm font-medium border px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
                 showMap
                   ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700"
