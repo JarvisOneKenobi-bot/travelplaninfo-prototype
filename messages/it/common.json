@@ -436,5 +436,12 @@
     "rooms": "{count, plural, one {camera} other {camere}}",
     "midrange": "Fascia media",
     "allTrips": "Tutti i viaggi"
+  },
+  "affiliatePreviewModal": {
+    "poweredBy": "Offerto da {partner}",
+    "trustedPartner": "Partner verificato — la tua prenotazione supporta TravelPlanInfo",
+    "continueToPartner": "Continua su {partner}",
+    "addToItinerary": "+ Aggiungi all'itinerario",
+    "adding": "Aggiunta in corso..."
   }
 }

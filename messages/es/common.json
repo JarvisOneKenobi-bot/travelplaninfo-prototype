@@ -436,5 +436,12 @@
     "rooms": "{count, plural, one {habitación} other {habitaciones}}",
     "midrange": "Rango medio",
     "allTrips": "Todos los viajes"
+  },
+  "affiliatePreviewModal": {
+    "poweredBy": "Con tecnología de {partner}",
+    "trustedPartner": "Socio verificado — tu reserva apoya a TravelPlanInfo",
+    "continueToPartner": "Continuar a {partner}",
+    "addToItinerary": "+ Agregar al itinerario",
+    "adding": "Agregando..."
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CJ_LINKS, TP_CONFIG } from "@/config/affiliates";
 import { useTranslations } from "next-intl";
+import AffiliatePreviewModal from "@/components/AffiliatePreviewModal";
 
 interface Recommendation {
   id: string;
@@ -134,6 +135,8 @@ export default function AffiliateRecommendations({
 }) {
   const t = useTranslations("affiliateRecommendations");
   const [adding, setAdding] = useState<string | null>(null);
+  const [previewRec, setPreviewRec] = useState<Recommendation | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const recs = buildRecommendations(destination, budget, interests, t);
 
@@ -152,8 +155,14 @@ export default function AffiliateRecommendations({
       }),
     });
     setAdding(null);
+    setPreviewOpen(false);
     // Reload to show the new item
     window.location.reload();
+  }
+
+  function openPreview(rec: Recommendation) {
+    setPreviewRec(rec);
+    setPreviewOpen(true);
   }
 
   return (
@@ -172,14 +181,12 @@ export default function AffiliateRecommendations({
             <p className="text-xs text-gray-500 mt-0.5">{rec.description}</p>
           </div>
           <div className="flex gap-2">
-            <a
-              href={rec.url}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
+            <button
+              onClick={() => openPreview(rec)}
               className="flex-1 text-center text-xs font-medium text-teal-700 border border-teal-300 py-2 rounded-lg hover:bg-teal-50 transition-colors"
             >
               {rec.cta}
-            </a>
+            </button>
             <button
               onClick={() => addToItinerary(rec)}
               disabled={adding === rec.id}
@@ -190,6 +197,14 @@ export default function AffiliateRecommendations({
           </div>
         </div>
       ))}
+
+      <AffiliatePreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        recommendation={previewRec}
+        onAddToItinerary={() => previewRec && addToItinerary(previewRec)}
+        addingToItinerary={previewRec !== null && adding === previewRec.id}
+      />
     </div>
   );
 }

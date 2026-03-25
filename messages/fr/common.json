@@ -436,5 +436,12 @@
     "rooms": "{count, plural, one {chambre} other {chambres}}",
     "midrange": "Milieu de gamme",
     "allTrips": "Tous les voyages"
+  },
+  "affiliatePreviewModal": {
+    "poweredBy": "Propulsé par {partner}",
+    "trustedPartner": "Partenaire vérifié — votre réservation soutient TravelPlanInfo",
+    "continueToPartner": "Continuer vers {partner}",
+    "addToItinerary": "+ Ajouter à l'itinéraire",
+    "adding": "Ajout en cours..."
   }
 }

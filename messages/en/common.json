@@ -436,5 +436,12 @@
     "bookOnAviasales": "Book on Aviasales",
     "findOnHotels": "Find on Hotels.com",
     "perNight": "/night"
+  },
+  "affiliatePreviewModal": {
+    "poweredBy": "Powered by {partner}",
+    "trustedPartner": "Verified partner — your booking supports TravelPlanInfo",
+    "continueToPartner": "Continue to {partner}",
+    "addToItinerary": "+ Add to Itinerary",
+    "adding": "Adding..."
   }
 }

@@ -430,6 +430,13 @@
     "findOnHotels": "Auf Hotels.com finden",
     "perNight": "/Nacht"
   },
+  "affiliatePreviewModal": {
+    "poweredBy": "Bereitgestellt von {partner}",
+    "trustedPartner": "Geprüfter Partner — Ihre Buchung unterstützt TravelPlanInfo",
+    "continueToPartner": "Weiter zu {partner}",
+    "addToItinerary": "+ Zum Reiseplan hinzufügen",
+    "adding": "Wird hinzugefügt..."
+  },
   "tripDetail": {
     "adults": "{count, plural, one {Erwachsener} other {Erwachsene}}",
     "children": "{count, plural, one {Kind} other {Kinder}}",
