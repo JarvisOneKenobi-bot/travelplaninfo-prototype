@@ -133,8 +133,8 @@ export default function BudgetBar({
   const catKeys = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]);
 
   return (
-    <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm px-4 py-2.5">
-      <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+      <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
         {/* Cost vs Budget label */}
         <div className="flex items-center gap-1 shrink-0">
           <span className={`font-semibold text-sm ${textColor}`}>{fmt(totalCost)}</span>

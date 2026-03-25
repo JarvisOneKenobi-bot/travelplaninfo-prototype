@@ -393,40 +393,42 @@ export default function ItineraryBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Budget Bar */}
-      <BudgetBar
-        items={items}
-        budgetTier={tripBudget}
-        budgetOverride={budgetOverride}
-        totalDays={dayCount}
-        adults={tripAdults}
-        tripId={tripId}
-        onBudgetOverrideChange={setBudgetOverride}
-      />
+      {/* Unified sticky toolbar: Map + Add Day + Budget Bar */}
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm px-4 py-2.5 -mx-4 mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Left: action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowMap(v => !v)}
+              className={`text-sm font-medium border px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                showMap
+                  ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700"
+                  : "text-orange-700 border-orange-300 hover:bg-orange-50"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              {showMap ? t("hideMap") : t("showMap")}
+            </button>
+            <button
+              onClick={addDay}
+              className="text-sm text-orange-700 hover:text-orange-800 font-medium border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
+            >
+              {t("addDay")} {dayCount + 1}
+            </button>
+          </div>
 
-      {/* Header with Add Day + Show Map buttons */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">{t("itinerary")}</h2>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowMap(v => !v)}
-            className={`text-sm font-medium border px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
-              showMap
-                ? "bg-orange-600 text-white border-orange-600 hover:bg-orange-700"
-                : "text-orange-700 border-orange-300 hover:bg-orange-50"
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            {showMap ? t("hideMap") : t("showMap")}
-          </button>
-          <button
-            onClick={addDay}
-            className="text-sm text-orange-700 hover:text-orange-800 font-medium border border-orange-300 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
-          >
-            {t("addDay")} {dayCount + 1}
-          </button>
+          {/* Right: inline budget bar */}
+          <BudgetBar
+            items={items}
+            budgetTier={tripBudget}
+            budgetOverride={budgetOverride}
+            totalDays={dayCount}
+            adults={tripAdults}
+            tripId={tripId}
+            onBudgetOverrideChange={setBudgetOverride}
+          />
         </div>
       </div>
 
