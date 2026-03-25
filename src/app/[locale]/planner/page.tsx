@@ -26,7 +26,7 @@ export default async function Planner({ params }: Props) {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-[90rem] mx-auto px-6 py-8">
         {/* Hero */}
         <div className="text-center mb-10">
           <p className="text-xs uppercase tracking-widest text-teal-800 font-medium mb-4">{t("title")}</p>
