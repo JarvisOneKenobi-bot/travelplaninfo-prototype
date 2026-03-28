@@ -21,6 +21,7 @@ export default function DestinationSuggestions({
 }: Props) {
   const router = useRouter();
   const [creating, setCreating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -76,6 +77,9 @@ export default function DestinationSuggestions({
       if (res.ok) {
         const trip = await res.json();
         router.push(`/planner/${trip.id}`);
+      } else {
+        console.error('Failed to create trip', res.status);
+        setError('Failed to create trip. Please try again.');
       }
     } finally {
       setCreating(null);
@@ -157,17 +161,24 @@ export default function DestinationSuggestions({
         })}
       </div>
 
+      {/* Error message */}
+      {error && (
+        <p className="text-sm text-red-600 text-center mb-4">{error}</p>
+      )}
+
       {/* Bottom actions */}
       <div className="flex justify-center gap-4">
         <button
           onClick={onRegenerate}
-          className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+          disabled={creating !== null}
+          className="text-sm text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Show me different options
         </button>
         <button
           onClick={onOpenChat}
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          disabled={creating !== null}
+          className="text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Tell Atlas what you want
         </button>
