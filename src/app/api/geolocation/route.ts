@@ -45,7 +45,7 @@ function matchAirport(city: string | null): { code: string; name: string } | nul
   if (!city) return null;
   const lower = city.toLowerCase();
   for (const [key, airport] of Object.entries(METRO_AIRPORTS)) {
-    if (lower.includes(key) || key.includes(lower)) {
+    if (lower.includes(key)) {
       return airport;
     }
   }
