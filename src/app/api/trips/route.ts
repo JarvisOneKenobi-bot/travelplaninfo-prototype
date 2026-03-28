@@ -33,6 +33,16 @@ export async function POST(req: NextRequest) {
     trip_length,
     origin,
     nearby_airports,
+    entry_mode,
+    quiz_budget,
+    quiz_vibes,
+    quiz_when,
+    quiz_who,
+    quiz_group_size,
+    group_share,
+    group_costsplit,
+    group_consensus,
+    origin_auto,
   } = body;
 
   if (!name || !destination) {
@@ -44,8 +54,9 @@ export async function POST(req: NextRequest) {
     .prepare(
       `INSERT INTO trips (user_id, name, destination, start_date, end_date, budget,
         travelers_adults, travelers_children, rooms, interests, flexible_window, trip_length,
-        origin, nearby_airports)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        origin, nearby_airports, entry_mode, quiz_budget, quiz_vibes, quiz_when, quiz_who,
+        quiz_group_size, group_share, group_costsplit, group_consensus, origin_auto)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId, name, destination,
@@ -53,7 +64,17 @@ export async function POST(req: NextRequest) {
       travelers_adults, travelers_children, rooms,
       JSON.stringify(interests),
       flexible_window || null, trip_length || null,
-      origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null
+      origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null,
+      entry_mode || 'direct',
+      quiz_budget || null,
+      JSON.stringify(quiz_vibes || []),
+      quiz_when || null,
+      quiz_who || null,
+      quiz_group_size || null,
+      group_share ? 1 : 0,
+      group_costsplit ? 1 : 0,
+      group_consensus ? 1 : 0,
+      origin_auto || null
     ) as any;
 
   const trip = db.prepare("SELECT * FROM trips WHERE id = ?").get(result.lastInsertRowid);
