@@ -2,14 +2,14 @@
 
 export type EntryMode = 'direct' | 'surprise';
 
-export type BudgetTier = 'budget' | 'mid_range' | 'premium' | 'luxury';
+export type QuizBudgetTier = 'budget' | 'mid_range' | 'premium' | 'luxury';
 
 export type QuizWhen = 'specific' | 'flexible' | 'no_idea';
 
 export type QuizWho = 'solo' | 'couple' | 'family' | 'friends';
 
 export interface QuizAnswers {
-  budget_tier: BudgetTier | null;
+  budget_tier: QuizBudgetTier | null;
   vibes: string[];
   when: QuizWhen | null;
   when_dates?: { start: string; end: string };
@@ -41,7 +41,7 @@ export interface DestinationSuggestion {
   image: string;
 }
 
-export const BUDGET_TIERS: { value: BudgetTier; label: string; range: string }[] = [
+export const BUDGET_TIERS: { value: QuizBudgetTier; label: string; range: string }[] = [
   { value: 'budget', label: 'Budget', range: 'Under $1K' },
   { value: 'mid_range', label: 'Mid-Range', range: '$1K-$3K' },
   { value: 'premium', label: 'Premium', range: '$3K-$5K' },

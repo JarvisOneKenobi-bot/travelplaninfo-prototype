@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null,
       entry_mode || 'direct',
       quiz_budget || null,
-      JSON.stringify(quiz_vibes || []),
+      quiz_vibes ? JSON.stringify(quiz_vibes) : null,
       quiz_when || null,
       quiz_who || null,
       quiz_group_size || null,
