@@ -1,45 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-
-const INTERESTS = [
-  { value: "beach", icon: "🏖️" },
-  { value: "culture", icon: "🏛️" },
-  { value: "food", icon: "🍜" },
-  { value: "nightlife", icon: "🎭" },
-  { value: "nature", icon: "🚶" },
-  { value: "city", icon: "🛍️" },
-  { value: "family", icon: "🎡" },
-  { value: "adventure", icon: "🏔️" },
-  { value: "wellness", icon: "🌅" },
-  { value: "cruise", icon: "🚢" },
-  { value: "luxury", icon: "🍷" },
-  { value: "budget", icon: "📸" },
-  { value: "backpacking", icon: "🏕️" },
-  { value: "business", icon: "💼" },
-  { value: "romance", icon: "💕" },
-  { value: "family_travel", icon: "👨‍👩‍👧‍👦" },
-];
-
-const AI_ASSISTED_VALUE = "ai_assisted";
-
-const VIBES = [
-  { value: "tropical", icon: "🌴", label: "Tropical" },
-  { value: "mountains", icon: "🏔️", label: "Mountains" },
-  { value: "big_city", icon: "🏙️", label: "Big City" },
-  { value: "beach", icon: "🌊", label: "Beach" },
-  { value: "winter", icon: "❄️", label: "Winter Escape" },
-  { value: "cultural", icon: "🏛️", label: "Cultural" },
-  { value: "adventure", icon: "🏕️", label: "Adventure" },
-];
-
-const BUDGET_VALUES = [
-  { value: "budget", icon: "💰" },
-  { value: "midrange", icon: "💵" },
-  { value: "luxury", icon: "💎" },
-];
+import { useGeolocateOrigin } from "@/hooks/useGeolocateOrigin";
 
 // Nearby airport groups — Atlas will search all airports in the group for best fares
 const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
@@ -66,21 +30,34 @@ const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
 export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter();
   const t = useTranslations("tripForm");
-  const tInterests = useTranslations("tripForm.interests");
+  const { origin: geoOrigin } = useGeolocateOrigin();
+  const prefFetched = useRef(false);
+
   const [origin, setOrigin] = useState("");
   const [includeNearby, setIncludeNearby] = useState(true);
   const [destination, setDestination] = useState("");
   const [tripName, setTripName] = useState("");
 
-  // Pre-fill origin from user preferences on mount
+  // Pre-fill origin from user preferences on mount (takes priority over geo)
   useEffect(() => {
     fetch("/api/user/preferences")
       .then(r => r.ok ? r.json() : null)
       .then(prefs => {
         if (prefs?.home_airport) setOrigin(prefs.home_airport.toUpperCase());
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        prefFetched.current = true;
+      });
   }, []);
+
+  // Auto-fill origin from IP geolocation only if prefs didn't set one
+  useEffect(() => {
+    if (prefFetched.current && !origin && geoOrigin.code) {
+      setOrigin(`${geoOrigin.name} (${geoOrigin.code})`);
+    }
+  }, [geoOrigin.code, origin]);
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
@@ -90,24 +67,25 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [rooms, setRooms] = useState(1);
-  const [budget, setBudget] = useState("midrange");
-  const [interests, setInterests] = useState<string[]>([]);
-  const [surpriseMe, setSurpriseMe] = useState(false);
-  const [vibes, setVibes] = useState<string[]>([]);
-  const [destinationHint, setDestinationHint] = useState("");
-  const [showCustomInterests, setShowCustomInterests] = useState(false);
-  const [customInput, setCustomInput] = useState("");
-  const [customInterests, setCustomInterests] = useState<string[]>([]);
+  const [budget] = useState("midrange");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Listen for prefill-destination events from other components
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail?.destination) {
+        setDestination(e.detail.destination);
+      }
+    };
+    window.addEventListener("prefill-destination", handler as EventListener);
+    return () => window.removeEventListener("prefill-destination", handler as EventListener);
+  }, []);
 
   // Expose form state to Atlas via window.__atlasFormContext
   useEffect(() => {
     (window as any).__atlasFormContext = {
-      destination: surpriseMe ? (destinationHint || "Surprise Me") : destination,
-      vibes: surpriseMe ? vibes : [],
-      interests: [...interests, ...customInterests],
-      budget,
+      destination,
       origin,
       adults,
       children,
@@ -115,85 +93,26 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
       flexibleDates,
       flexibleWindow: flexibleDates ? flexibleWindow : null,
       tripLength: flexibleDates ? tripLength : null,
-      surpriseMe,
     };
     return () => { delete (window as any).__atlasFormContext; };
-  }, [destination, vibes, interests, customInterests, budget, origin, adults, children, rooms, flexibleDates, flexibleWindow, tripLength, surpriseMe, destinationHint]);
-
-  function toggleInterest(interest: string) {
-    window.dispatchEvent(new Event("atlas-interaction"));
-    setInterests(prev =>
-      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
-    );
-  }
-
-  function toggleVibe(vibe: string) {
-    window.dispatchEvent(new Event("atlas-interaction"));
-    setVibes(prev =>
-      prev.includes(vibe) ? prev.filter(v => v !== vibe) : [...prev, vibe]
-    );
-  }
-
-  function addCustomInterests(raw: string) {
-    const items = raw.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-    const newOnes = items.filter(i => !customInterests.includes(i) && !INTERESTS.some(p => p.value === i));
-    if (newOnes.length > 0) setCustomInterests(prev => [...prev, ...newOnes]);
-    setCustomInput("");
-  }
-
-  function removeCustomInterest(item: string) {
-    setCustomInterests(prev => prev.filter(i => i !== item));
-  }
-
-  function handleSurpriseMe() {
-    window.dispatchEvent(new Event("atlas-interaction"));
-    setSurpriseMe(true);
-    setDestination("Surprise Me");
-  }
-
-  function clearSurpriseMe() {
-    setSurpriseMe(false);
-    setDestination("");
-    setVibes([]);
-    setDestinationHint("");
-  }
+  }, [destination, origin, adults, children, rooms, flexibleDates, flexibleWindow, tripLength]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!surpriseMe && !destination.trim()) {
+    if (!destination.trim()) {
       setError(t("pleaseEnterDestination"));
       return;
     }
-
-    if (surpriseMe) {
-      const totalInterests = interests.length + customInterests.length;
-      if (totalInterests < 2) {
-        setError(t("pickAtLeast2"));
-        return;
-      }
-    }
-
-    const finalDestination = surpriseMe
-      ? (destinationHint.trim() || "Surprise Me")
-      : destination.trim();
-
-    const finalInterests = surpriseMe
-      ? [
-          ...interests,
-          ...customInterests.map(c => `custom:${c}`),
-          ...vibes.map(v => `vibe:${v}`),
-        ]
-      : [...interests, ...customInterests.map(c => `custom:${c}`)];
 
     setLoading(true);
     const res = await fetch("/api/trips", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: tripName.trim() || `Trip to ${finalDestination}`,
-        destination: finalDestination,
+        name: tripName.trim() || `Trip to ${destination.trim()}`,
+        destination: destination.trim(),
         start_date: flexibleDates ? null : (startDate || null),
         end_date: flexibleDates ? null : (endDate || null),
         flexible_window: flexibleDates ? (atlasDecidesDates ? "any" : flexibleWindow) : null,
@@ -202,12 +121,13 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         travelers_adults: adults,
         travelers_children: children,
         rooms,
-        interests: finalInterests,
+        interests: [],
         origin: origin.trim().toUpperCase(),
         include_nearby_airports: includeNearby,
         nearby_airports: includeNearby && NEARBY_AIRPORTS[origin.trim().toUpperCase()]
           ? NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
           : [origin.trim().toUpperCase()],
+        origin_auto: geoOrigin.code || null,
       }),
     });
 
@@ -221,15 +141,13 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     router.push(`/planner/${trip.id}`);
   }
 
-  const totalInterestsSelected = interests.length + customInterests.length;
-
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
-      {/* Step 0: Departing from */}
+      {/* Row 1: Departing from */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
@@ -267,80 +185,21 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         )}
       </div>
 
-      {/* Step 2: Destination */}
+      {/* Row 2: Destination + Trip Name */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
           <h2 className="text-xl font-bold text-gray-900">{t("whereAreYouGoing")}</h2>
         </div>
 
-        {surpriseMe ? (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-4">
-            {/* Header row */}
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">✨</span>
-              <div className="flex-1">
-                <p className="font-medium text-orange-900">{t("surpriseMeTitle")}</p>
-                <p className="text-sm text-orange-700">{t("surpriseMeDesc")}</p>
-              </div>
-              <button type="button" onClick={clearSurpriseMe}
-                className="text-sm text-orange-600 hover:text-orange-800 font-medium underline">
-                {t("change")}
-              </button>
-            </div>
-
-            {/* Vibe picker */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-orange-900">{t("vibeLabel")}</p>
-              <div className="flex flex-wrap gap-2">
-                {VIBES.map(vibe => (
-                  <button
-                    key={vibe.value}
-                    type="button"
-                    onClick={() => toggleVibe(vibe.value)}
-                    className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                      vibes.includes(vibe.value)
-                        ? "border-orange-500 bg-orange-100 text-orange-900"
-                        : "border-gray-200 bg-white hover:border-orange-300 text-gray-700"
-                    }`}
-                  >
-                    <span>{vibe.icon}</span>
-                    <span>{t(`vibes.${vibe.value}` as any)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Optional destination hint */}
-            <div>
-              <input
-                type="text"
-                value={destinationHint}
-                onChange={e => setDestinationHint(e.target.value)}
-                placeholder={t("destinationHintPlaceholder")}
-                className="w-full px-3 py-2.5 rounded-lg border border-orange-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm placeholder-gray-400"
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <input
-              type="text"
-              required
-              value={destination}
-              onChange={e => { setDestination(e.target.value); window.dispatchEvent(new Event("atlas-interaction")); }}
-              placeholder={t("destinationPlaceholder")}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-            <button
-              type="button"
-              onClick={handleSurpriseMe}
-              className="w-full text-sm text-orange-700 border border-dashed border-orange-300 rounded-lg py-2.5 hover:bg-orange-50 transition-colors font-medium"
-            >
-              {t("surpriseMeButton")}
-            </button>
-          </>
-        )}
+        <input
+          type="text"
+          required
+          value={destination}
+          onChange={e => { setDestination(e.target.value); window.dispatchEvent(new Event("atlas-interaction")); }}
+          placeholder={t("destinationPlaceholder")}
+          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        />
 
         <input
           type="text"
@@ -351,7 +210,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         />
       </div>
 
-      {/* Step 3: Dates */}
+      {/* Row 3: Dates */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
@@ -427,7 +286,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </label>
       </div>
 
-      {/* Step 4: Travelers */}
+      {/* Row 4: Travelers */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
@@ -456,134 +315,6 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
             </select>
           </div>
         </div>
-      </div>
-
-      {/* Step 5: Budget (labels only, no dollar amounts per product spec) */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">5</span>
-          <h2 className="text-xl font-bold text-gray-900">{t("whatsYourBudget")}</h2>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {BUDGET_VALUES.map(opt => (
-            <label key={opt.value} className="cursor-pointer">
-              <input type="radio" name="budget" value={opt.value} checked={budget === opt.value}
-                onChange={() => { setBudget(opt.value); window.dispatchEvent(new Event("atlas-interaction")); }} className="sr-only" />
-              <div className={`px-4 py-4 rounded-lg border-2 text-center transition-colors ${budget === opt.value ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-gray-300"}`}>
-                <p className="text-2xl mb-1">{opt.icon}</p>
-                <p className="font-medium text-gray-900">{t(opt.value as "budget" | "midrange" | "luxury")}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Step 6: Interests (with "Atlas Recommends" chip) */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">6</span>
-          <div className="flex-1 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">{t("whatInterestsYou")}</h2>
-            {surpriseMe && (
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                totalInterestsSelected >= 2
-                  ? "bg-green-100 text-green-700"
-                  : "bg-orange-100 text-orange-700"
-              }`}>
-                {totalInterestsSelected} {t("interestsCount")}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {surpriseMe && (
-          <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-            {t("pickAtLeast2")}
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {INTERESTS.map(interest => (
-            <label key={interest.value} className="cursor-pointer">
-              <input type="checkbox" checked={interests.includes(interest.value)}
-                onChange={() => toggleInterest(interest.value)} className="sr-only" />
-              <div className={`px-4 py-2.5 rounded-lg border-2 text-center transition-colors text-sm ${interests.includes(interest.value) ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-gray-300"}`}>
-                {interest.icon} {tInterests(interest.value as keyof typeof tInterests)}
-              </div>
-            </label>
-          ))}
-
-          {/* "Atlas Recommends" chip (renamed from "Let Atlas decide") */}
-          <label className="cursor-pointer">
-            <input type="checkbox" checked={interests.includes(AI_ASSISTED_VALUE)}
-              onChange={() => toggleInterest(AI_ASSISTED_VALUE)} className="sr-only" />
-            <div className={`px-4 py-2.5 rounded-lg border-2 text-center transition-colors text-sm ${
-              interests.includes(AI_ASSISTED_VALUE)
-                ? "border-orange-500 bg-gradient-to-br from-orange-50 to-amber-50"
-                : "border-dashed border-orange-300 hover:border-orange-400 bg-gradient-to-br from-orange-50/50 to-amber-50/50"
-            }`}>
-              ✨ {t("atlasRecommends")}
-            </div>
-          </label>
-
-          {/* "Add your own" chip */}
-          <button
-            type="button"
-            onClick={() => setShowCustomInterests(!showCustomInterests)}
-            className={`px-4 py-2.5 rounded-lg border-2 text-center transition-colors text-sm ${
-              showCustomInterests || customInterests.length > 0
-                ? "border-orange-500 bg-orange-50"
-                : "border-dashed border-gray-300 hover:border-orange-300"
-            }`}
-          >
-            {t("addYourOwn")}
-          </button>
-        </div>
-
-        {/* Custom interests input */}
-        {showCustomInterests && (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customInput}
-                onChange={e => setCustomInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { e.preventDefault(); addCustomInterests(customInput); }
-                }}
-                placeholder={t("customInterestPlaceholder")}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => addCustomInterests(customInput)}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
-              >
-                {t("add")}
-              </button>
-            </div>
-            <p className="text-xs text-gray-400">{t("customInterestExample")}</p>
-          </div>
-        )}
-
-        {/* Custom interest tags */}
-        {customInterests.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {customInterests.map(item => (
-              <span key={item} className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-full text-sm">
-                {item}
-                <button type="button" onClick={() => removeCustomInterest(item)}
-                  className="ml-0.5 text-orange-500 hover:text-orange-700 font-bold">&times;</button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {interests.includes("ai_assisted") && (
-          <p className="text-xs text-orange-600 pl-1">
-            {t("atlasWillRefine")}
-          </p>
-        )}
       </div>
 
       {/* Submit */}
