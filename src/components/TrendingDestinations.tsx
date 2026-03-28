@@ -90,7 +90,7 @@ export default function TrendingDestinations() {
                   <p className="text-xs text-gray-500">from ${destPrices.flight}</p>
                 )}
                 {destPrices?.hotel != null && (
-                  <p className="text-xs text-gray-500">from ${destPrices.hotel}/n</p>
+                  <p className="text-xs text-gray-500">from ${destPrices.hotel}/night</p>
                 )}
 
                 <button
