@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useGeolocateOrigin } from "@/hooks/useGeolocateOrigin";
+import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
 
 // Nearby airport groups — Atlas will search all airports in the group for best fares
 const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
@@ -31,12 +32,29 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter();
   const t = useTranslations("tripForm");
   const { origin: geoOrigin } = useGeolocateOrigin();
-  const prefFetched = useRef(false);
+  const [prefFetched, setPrefFetched] = useState(false);
 
   const [origin, setOrigin] = useState("");
   const [includeNearby, setIncludeNearby] = useState(true);
   const [destination, setDestination] = useState("");
   const [tripName, setTripName] = useState("");
+  const [tripType, setTripType] = useState<"round_trip" | "one_way">("round_trip");
+  const [wantHotel, setWantHotel] = useState(true);
+  const [wantCar, setWantCar] = useState(false);
+  const [wantLimo, setWantLimo] = useState(false);
+
+  const originRef = useRef<HTMLInputElement>(null);
+  const destinationRef = useRef<HTMLInputElement>(null);
+
+  usePlacesAutocomplete(originRef, {
+    types: ["airport", "(cities)"],
+    onSelect: (place) => setOrigin(place.name + (place.iataCode ? ` (${place.iataCode})` : "")),
+  });
+
+  usePlacesAutocomplete(destinationRef, {
+    types: ["(cities)"],
+    onSelect: (place) => setDestination(place.name),
+  });
 
   // Pre-fill origin from user preferences on mount (takes priority over geo)
   useEffect(() => {
@@ -47,16 +65,16 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
       })
       .catch(() => {})
       .finally(() => {
-        prefFetched.current = true;
+        setPrefFetched(true);
       });
   }, []);
 
   // Auto-fill origin from IP geolocation only if prefs didn't set one
   useEffect(() => {
-    if (prefFetched.current && !origin && geoOrigin.code) {
+    if (prefFetched && !origin && geoOrigin.code) {
       setOrigin(`${geoOrigin.name} (${geoOrigin.code})`);
     }
-  }, [geoOrigin.code, origin]);
+  }, [prefFetched, geoOrigin.code, origin]);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -128,6 +146,10 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           ? NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
           : [origin.trim().toUpperCase()],
         origin_auto: geoOrigin.code || null,
+        trip_type: tripType,
+        want_hotel: wantHotel,
+        want_car: wantCar,
+        want_limo: wantLimo,
       }),
     });
 
@@ -155,6 +177,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </div>
         <div className="flex gap-3">
           <input
+            ref={originRef}
             type="text"
             required
             value={origin}
@@ -185,7 +208,76 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         )}
       </div>
 
-      {/* Row 2: Destination + Trip Name */}
+      {/* Trip type + services + trip name row */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Round trip / One way toggle */}
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm font-medium">
+          <button
+            type="button"
+            onClick={() => setTripType("round_trip")}
+            className={[
+              "px-4 py-2 transition-colors",
+              tripType === "round_trip"
+                ? "bg-orange-600 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50",
+            ].join(" ")}
+          >
+            {t("roundTrip")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTripType("one_way")}
+            className={[
+              "px-4 py-2 transition-colors border-l border-gray-300",
+              tripType === "one_way"
+                ? "bg-orange-600 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50",
+            ].join(" ")}
+          >
+            {t("oneWay")}
+          </button>
+        </div>
+
+        {/* Service checkboxes */}
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={wantHotel}
+            onChange={e => setWantHotel(e.target.checked)}
+            className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+          />
+          {t("hotel")}
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={wantCar}
+            onChange={e => setWantCar(e.target.checked)}
+            className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+          />
+          {t("carRental")}
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={wantLimo}
+            onChange={e => setWantLimo(e.target.checked)}
+            className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+          />
+          {t("limo")}
+        </label>
+
+        {/* Trip Name */}
+        <input
+          type="text"
+          value={tripName}
+          onChange={e => setTripName(e.target.value)}
+          placeholder={t("tripNamePlaceholder")}
+          className="flex-1 min-w-[180px] px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+        />
+      </div>
+
+      {/* Row 2: Destination */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
@@ -193,20 +285,13 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         </div>
 
         <input
+          ref={destinationRef}
           type="text"
           required
           value={destination}
           onChange={e => { setDestination(e.target.value); window.dispatchEvent(new Event("atlas-interaction")); }}
           placeholder={t("destinationPlaceholder")}
           className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-        />
-
-        <input
-          type="text"
-          value={tripName}
-          onChange={e => setTripName(e.target.value)}
-          placeholder={t("tripNamePlaceholder")}
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
         />
       </div>
 
@@ -292,7 +377,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           <span className="bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">4</span>
           <h2 className="text-xl font-bold text-gray-900">{t("whoIsTraveling")}</h2>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className={`grid gap-4 ${wantHotel ? "grid-cols-3" : "grid-cols-2"}`}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">{t("adults")}</label>
             <select value={adults} onChange={e => setAdults(Number(e.target.value))}
@@ -307,13 +392,15 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               {[0,1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t("rooms")}</label>
-            <select value={rooms} onChange={e => setRooms(Number(e.target.value))}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-              {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
+          {wantHotel && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("rooms")}</label>
+              <select value={rooms} onChange={e => setRooms(Number(e.target.value))}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
