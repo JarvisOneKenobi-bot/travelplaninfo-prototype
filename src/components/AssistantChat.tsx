@@ -427,6 +427,13 @@ export default function AssistantChat() {
   const messagesLenRef = useRef(0);
   const sendMessageRef = useRef<(msg: string) => void>(() => {});
 
+  // ── Quiz escape hatch — open chat via custom event ───────────────────────
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('open-atlas-chat', handler);
+    return () => window.removeEventListener('open-atlas-chat', handler);
+  }, []);
+
   // ── Session management ──────────────────────────────────────────────────
 
   const createSession = useCallback(async () => {
