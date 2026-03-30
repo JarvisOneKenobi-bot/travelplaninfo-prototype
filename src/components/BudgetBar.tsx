@@ -134,7 +134,6 @@ export default function BudgetBar({
 
   return (
     <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
-      <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
         {/* Cost vs Budget label */}
         <div className="flex items-center gap-1 shrink-0">
           <span className={`font-semibold text-sm ${textColor}`}>{fmt(totalCost)}</span>
@@ -255,7 +254,7 @@ export default function BudgetBar({
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
+

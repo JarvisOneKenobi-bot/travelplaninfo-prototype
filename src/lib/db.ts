@@ -129,10 +129,19 @@ export function getDb(): Database.Database {
     }
   }
 
-  // Migration: budget feature columns
+  // Migration: budget feature columns (each ALTER TABLE is idempotent via duplicate-column check)
   const budgetMigrations = [
     "ALTER TABLE trip_items ADD COLUMN estimated_cost REAL",
     "ALTER TABLE trips ADD COLUMN budget_override REAL",
+    // Trip type + service selections
+    "ALTER TABLE trips ADD COLUMN trip_type TEXT DEFAULT 'round_trip'",
+    "ALTER TABLE trips ADD COLUMN want_hotel INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE trips ADD COLUMN want_car INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE trips ADD COLUMN want_limo INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE trips ADD COLUMN want_activities INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE trips ADD COLUMN budget_mode TEXT DEFAULT 'preset'",
+    "ALTER TABLE trips ADD COLUMN budget_amount REAL",
+    "ALTER TABLE trips ADD COLUMN budget_categories TEXT",
   ];
   for (const sql of budgetMigrations) {
     try {

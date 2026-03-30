@@ -29,6 +29,26 @@ body {
   animation: atlas-float 3s ease-in-out infinite;
 }
 
+/* Google Places Autocomplete dropdown styling */
+.pac-container {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  font-family: inherit;
+  z-index: 9999 !important;
+}
+.pac-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.pac-item:hover {
+  background: #fff7ed;
+}
+.pac-icon { display: none; }
+.pac-item-query { font-weight: 600; }
+
 /* Atlas talk bubble pop-in animation */
 @keyframes bubble-pop {
   0% { opacity: 0; transform: scale(0.8) translateY(8px); }

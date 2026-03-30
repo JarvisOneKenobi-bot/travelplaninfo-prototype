@@ -7,7 +7,7 @@ export const CJ_LINKS = {
   hotels: () => "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo",        // evergreen $138.91 EPC
   hotelsMemberPrices: () => "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo", // member prices $154.50 EPC
   hotelsCity: (city: string) =>
-    `https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo&url=${encodeURIComponent(`https://www.hotels.com/Hotel-Search?destination=${city}`)}`,
+    `https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo&url=${encodeURIComponent(`https://www.hotels.com/Hotel-Search?destination=${encodeURIComponent(city)}`)}`,
 
   // Vrbo — property 101692716 (travelplaninfo)
   vrbo: () => "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo",          // top EPC $280.26
@@ -30,8 +30,10 @@ export const CJ_LINKS = {
 // Travelpayouts — flight search widget (free to integrate, earns on bookings)
 export const TP_CONFIG = {
   marker: "164743",
-  searchUrl: (origin: string, dest: string) =>
-    `https://www.aviasales.com/search/${origin}${dest}1?marker=${TP_CONFIG.marker}`,
+  searchUrl: (origin: string, dest: string) => {
+    const clean = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return `https://www.aviasales.com/search/${clean(origin)}${clean(dest)}1?marker=${TP_CONFIG.marker}`;
+  },
 };
 
 // Deal catalog — real affiliate offers mapped to programs
@@ -125,8 +127,12 @@ export const DEALS: AffiliateDeal[] = [
 
 export function getAffiliateUrl(deal: AffiliateDeal): string {
   if (deal.url) return deal.url;
-  if (deal.program === "cars") return CJ_LINKS.cars();
-  return CJ_LINKS[deal.program]();
+  switch (deal.program) {
+    case "hotels": return CJ_LINKS.hotels();
+    case "vrbo":   return CJ_LINKS.vrbo();
+    case "cruises": return CJ_LINKS.cruises();
+    case "cars":   return CJ_LINKS.cars();
+  }
 }
 
 // 300×60 sidebar strip banners (compact, sticky-friendly)

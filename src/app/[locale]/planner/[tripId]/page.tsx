@@ -89,6 +89,33 @@ export default async function TripDetail({ params }: Props) {
           />
         </div>
       </main>
+      {/* Atlas trip context — AssistantChat reads this for conversation awareness */}
+      <script
+        id="atlas-trip-context"
+        type="application/json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            destination: trip.destination,
+            dates: trip.start_date ? { start: trip.start_date, end: trip.end_date } : undefined,
+            adults: trip.travelers_adults ?? 1,
+            budgetTier: trip.budget === "midrange" ? "mid" : (trip.budget || "mid"),
+            tripId: trip.id,
+            isGuest,
+            flexibleWindow: trip.flexible_window,
+            tripLength: trip.trip_length,
+            tripType: trip.trip_type,
+            wantHotel: trip.want_hotel === 1,
+            wantCar: trip.want_car === 1,
+            wantLimo: trip.want_limo === 1,
+            items: items.map((i: any) => ({
+              day: i.day_number,
+              category: i.category,
+              title: i.title,
+              price_estimate: i.estimated_cost,
+            })),
+          }).replace(/<\//g, '<\\/'),
+        }}
+      />
       <HelpButton pageId="planner-itinerary" />
     </div>
   );

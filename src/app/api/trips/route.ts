@@ -33,10 +33,59 @@ export async function POST(req: NextRequest) {
     trip_length,
     origin,
     nearby_airports,
+    trip_type = 'round_trip',
+    want_hotel = true,
+    want_car = false,
+    want_limo = false,
+    want_activities = true,
+    budget_mode = 'preset',
+    budget_amount = null,
+    budget_categories = null,
   } = body;
 
   if (!name || !destination) {
     return NextResponse.json({ error: "name and destination are required" }, { status: 400 });
+  }
+
+  if (!['round_trip', 'one_way'].includes(trip_type)) {
+    return NextResponse.json({ error: "Invalid trip_type" }, { status: 400 });
+  }
+
+  if (!['preset', 'total', 'per_day', 'per_person'].includes(budget_mode)) {
+    return NextResponse.json({ error: "Invalid budget_mode" }, { status: 400 });
+  }
+
+  if (budget_mode !== 'preset') {
+    const amt = Number(budget_amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return NextResponse.json({ error: "budget_amount must be a positive number" }, { status: 400 });
+    }
+  }
+
+  const ALLOWED_BUDGET_CATS = ['flights', 'activities', 'food', 'accommodation', 'transport', 'cruise'];
+  if (budget_categories != null) {
+    if (typeof budget_categories !== 'object' || Array.isArray(budget_categories)) {
+      return NextResponse.json({ error: "Invalid budget_categories" }, { status: 400 });
+    }
+    for (const [k, v] of Object.entries(budget_categories)) {
+      if (!ALLOWED_BUDGET_CATS.includes(k) || !Number.isFinite(Number(v)) || Number(v) < 0) {
+        return NextResponse.json({ error: `Invalid budget category: ${k}` }, { status: 400 });
+      }
+    }
+  }
+
+  if (flexible_window?.startsWith('custom:')) {
+    const [, n, unit] = flexible_window.split(':');
+    if (!['days', 'weeks', 'months'].includes(unit) || !Number.isFinite(+n) || +n < 1 || +n > 365) {
+      return NextResponse.json({ error: "Invalid flexible_window" }, { status: 400 });
+    }
+  }
+
+  if (trip_length?.startsWith('custom:')) {
+    const [, n, unit] = trip_length.split(':');
+    if (!['days', 'weeks', 'months'].includes(unit) || !Number.isFinite(+n) || +n < 1 || +n > 365) {
+      return NextResponse.json({ error: "Invalid trip_length" }, { status: 400 });
+    }
   }
 
   const db = getDb();
@@ -44,8 +93,9 @@ export async function POST(req: NextRequest) {
     .prepare(
       `INSERT INTO trips (user_id, name, destination, start_date, end_date, budget,
         travelers_adults, travelers_children, rooms, interests, flexible_window, trip_length,
-        origin, nearby_airports)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        origin, nearby_airports, trip_type, want_hotel, want_car, want_limo,
+        want_activities, budget_mode, budget_amount, budget_categories)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       userId, name, destination,
@@ -53,7 +103,10 @@ export async function POST(req: NextRequest) {
       travelers_adults, travelers_children, rooms,
       JSON.stringify(interests),
       flexible_window || null, trip_length || null,
-      origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null
+      origin || null, nearby_airports ? JSON.stringify(nearby_airports) : null,
+      trip_type, want_hotel ? 1 : 0, want_car ? 1 : 0, want_limo ? 1 : 0,
+      want_activities ? 1 : 0, budget_mode, budget_amount || null,
+      budget_categories ? JSON.stringify(budget_categories) : null
     ) as any;
 
   const trip = db.prepare("SELECT * FROM trips WHERE id = ?").get(result.lastInsertRowid);
