@@ -107,6 +107,9 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const [showCustomInterests, setShowCustomInterests] = useState(false);
   const [customInput, setCustomInput] = useState("");
   const [customInterests, setCustomInterests] = useState<string[]>([]);
+  const [customAdultsMode, setCustomAdultsMode] = useState(false);
+  const [customChildrenMode, setCustomChildrenMode] = useState(false);
+  const [customRoomsMode, setCustomRoomsMode] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -373,6 +376,17 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
 
   const totalInterestsSelected = interests.length + customInterests.length;
 
+  // ── Explore mode section validation (green border when complete) ──
+  const vibesComplete = vibes.length + customVibes.length >= 1;
+  const interestsComplete = totalInterestsSelected >= 2;
+  const budgetComplete = budgetMode === 'preset' || (budgetAmount != null && budgetAmount > 0);
+  const travelDetailsComplete = origin.trim().length >= 3;
+
+  const sectionBorder = (complete: boolean) =>
+    `rounded-xl p-5 space-y-3 border-2 transition-colors ${complete ? 'border-green-400' : 'border-gray-200'}`;
+  const sectionBorder4 = (complete: boolean) =>
+    `rounded-xl p-5 space-y-4 border-2 transition-colors ${complete ? 'border-green-400' : 'border-gray-200'}`;
+
   // ── Shared sub-sections ──
   const nearbyAirportsHint = origin.trim().length >= 3 && NEARBY_AIRPORTS[origin.trim().toUpperCase()] ? (
     <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
@@ -391,12 +405,20 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
         {t("flexibleDates")}
       </label>
       {flexibleDates && (
-        <button type="button" onClick={() => setAtlasDecidesDates(!atlasDecidesDates)}
-          className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-            atlasDecidesDates ? 'bg-orange-100 border-orange-400 text-orange-800' : 'border-gray-300 text-gray-500 hover:border-orange-300'
-          }`}>
-          {t("atlasFindCheapestDates")}
-        </button>
+        <span className="inline-flex items-center gap-1">
+          <button type="button" onClick={() => setAtlasDecidesDates(!atlasDecidesDates)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              atlasDecidesDates ? 'bg-orange-100 border-orange-400 text-orange-800' : 'border-gray-300 text-gray-500 hover:border-orange-300'
+            }`}>
+            {t("atlasFindCheapestDates")}
+          </button>
+          <span className="relative group">
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold cursor-help leading-none">i</span>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-52 px-3 py-2 rounded-lg bg-gray-800 text-white text-xs leading-snug opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 text-center">
+              {t("atlasDecidesTooltip")}
+            </span>
+          </span>
+        </span>
       )}
     </div>
   );
@@ -430,37 +452,36 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     </div>
   );
 
-  const adultsRange = Array.from({ length: 20 }, (_, i) => i + 1);
-  const childrenRange = Array.from({ length: 16 }, (_, i) => i);
-  const roomsRange = Array.from({ length: 10 }, (_, i) => i + 1);
+  const selectCls = "w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm";
 
-  const travelersSection = (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1">{t("adults")}</label>
-        <select value={adults} onChange={e => setAdults(Number(e.target.value))}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-          {adultsRange.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1">{t("children")}</label>
-        <select value={children} onChange={e => setChildren(Number(e.target.value))}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-          {childrenRange.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
-      </div>
-      {wantHotel && (
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">{t("rooms")}</label>
-          <select value={rooms} onChange={e => setRooms(Number(e.target.value))}
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-            {roomsRange.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
+  function travelerField(
+    value: number, onChange: (n: number) => void, min: number,
+    isCustom: boolean, setCustom: (v: boolean) => void,
+  ) {
+    const cap = 6;
+    if (isCustom) {
+      return (
+        <div className="flex items-center gap-1">
+          <input type="number" min={min} value={value}
+            onChange={e => onChange(Math.max(min, Number(e.target.value) || min))}
+            className={selectCls} autoFocus />
+          <button type="button" onClick={() => { onChange(Math.min(value, cap)); setCustom(false); }}
+            className="text-xs text-gray-400 hover:text-orange-600 shrink-0">✕</button>
         </div>
-      )}
-    </div>
-  );
+      );
+    }
+    return (
+      <select value={value > cap ? 'custom' : value} onChange={e => {
+        if (e.target.value === 'custom') { onChange(cap + 1); setCustom(true); }
+        else onChange(Number(e.target.value));
+      }} className={selectCls}>
+        {Array.from({ length: cap - min + 1 }, (_, i) => i + min).map(n => (
+          <option key={n} value={n}>{n}</option>
+        ))}
+        <option value="custom">{t("customQuantity")}</option>
+      </select>
+    );
+  }
 
   const submitRow = (
     <div className="flex gap-3 pt-2">
@@ -684,25 +705,16 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("adults")}</label>
-                <select value={adults} onChange={e => setAdults(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                  {adultsRange.map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
+                {travelerField(adults, setAdults, 1, customAdultsMode, setCustomAdultsMode)}
               </div>
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("children")}</label>
-                <select value={children} onChange={e => setChildren(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                  {childrenRange.map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
+                {travelerField(children, setChildren, 0, customChildrenMode, setCustomChildrenMode)}
               </div>
               {wantHotel && (
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-500 mb-1">{t("rooms")}</label>
-                  <select value={rooms} onChange={e => setRooms(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                    {roomsRange.map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                  {travelerField(rooms, setRooms, 1, customRoomsMode, setCustomRoomsMode)}
                 </div>
               )}
             </div>
@@ -733,7 +745,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           </button>
 
           {/* ══ SECTION 1: Vibes ══ */}
-          <div className="rounded-xl border border-gray-200 p-5 space-y-3">
+          <div className={sectionBorder(vibesComplete)}>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("whatVibes")}</h3>
             <div className="flex flex-wrap gap-2">
               {VIBES.map(v => (
@@ -754,7 +766,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               ))}
               <button type="button" onClick={() => setShowCustomVibes(!showCustomVibes)}
                 className="px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-gray-400 text-gray-500 hover:border-pink-400 hover:text-pink-600 transition-colors">
-                + {t("add")}
+                + {t("addYourOwn")}
               </button>
             </div>
             {showCustomVibes && (
@@ -772,7 +784,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           </div>
 
           {/* ══ SECTION 2: Interests ══ */}
-          <div className="rounded-xl border border-gray-200 p-5 space-y-3">
+          <div className={sectionBorder(interestsComplete)}>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("interestsLabel")}</h3>
             <div className="flex flex-wrap gap-2">
               {INTERESTS.map(i => (
@@ -808,13 +820,16 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
                 </button>
               </div>
             )}
-            {totalInterestsSelected < 2 && (
+            {totalInterestsSelected === 0 && (
               <p className="text-xs text-pink-600">{t("pickAtLeast2")}</p>
+            )}
+            {totalInterestsSelected === 1 && (
+              <p className="text-xs text-pink-600">{t("pickAtLeast1More")}</p>
             )}
           </div>
 
           {/* ══ SECTION 3: Budget + Services ══ */}
-          <div className="rounded-xl border border-gray-200 p-5 space-y-4">
+          <div className={sectionBorder4(budgetComplete)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("budgetLabel")}</h3>
@@ -908,7 +923,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           </div>
 
           {/* ══ SECTION 4: Travel Details + CTA ══ */}
-          <div className="rounded-xl border border-gray-200 p-5 space-y-4">
+          <div className={sectionBorder4(travelDetailsComplete)}>
             {/* Row: Destination | Origin */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -1011,25 +1026,16 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               <div className="flex items-end gap-3">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-500 mb-1">{t("adults")}</label>
-                  <select value={adults} onChange={e => setAdults(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                    {adultsRange.map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                  {travelerField(adults, setAdults, 1, customAdultsMode, setCustomAdultsMode)}
                 </div>
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-500 mb-1">{t("children")}</label>
-                  <select value={children} onChange={e => setChildren(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                    {childrenRange.map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                  {travelerField(children, setChildren, 0, customChildrenMode, setCustomChildrenMode)}
                 </div>
                 {wantHotel && (
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-500 mb-1">{t("rooms")}</label>
-                    <select value={rooms} onChange={e => setRooms(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
-                      {roomsRange.map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
+                    {travelerField(rooms, setRooms, 1, customRoomsMode, setCustomRoomsMode)}
                   </div>
                 )}
               </div>

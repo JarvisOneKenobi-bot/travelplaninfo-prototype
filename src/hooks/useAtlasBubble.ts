@@ -12,6 +12,8 @@ const BUBBLE_MESSAGES: BubbleMessage[] = [
   // Planner landing
   { id: 'planner-intro', text: "Hey! I'm Atlas, your travel concierge. Need help planning?", context: 'planner' },
   { id: 'planner-destination', text: "Can't decide where to go? Tell me what vibe you're looking for", context: 'planner' },
+  { id: 'planner-explore', text: "Nice picks! When you're ready, hit the button and I'll craft your perfect trip", context: 'planner' },
+  { id: 'planner-budget', text: "Tip: toggle 'Let Atlas find the cheapest dates' and I'll do the date math for you", context: 'planner' },
   // Itinerary page
   { id: 'itinerary-empty', text: "Your itinerary looks empty — want me to suggest some activities?", context: 'itinerary' },
   { id: 'itinerary-idle', text: "Need a hand? I can search flights, hotels, or activities for you", context: 'itinerary' },
@@ -77,12 +79,12 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
   const tryShowBubble = useCallback(() => {
     if (isAtlasOpen || cooldownRef.current || currentBubble) return;
 
-    // Enforce 60s cooldown between bubbles
+    // Enforce 30s cooldown between bubbles
     const now = Date.now();
-    if (now - lastShownRef.current < 60000) return;
+    if (now - lastShownRef.current < 30000) return;
 
     // Determine threshold based on first-time vs returning
-    const threshold = isFirstTimeEver() ? 2 : 4;
+    const threshold = isFirstTimeEver() ? 2 : 3;
     if (interactionCount < threshold) return;
 
     // Find first unshown message for current context
@@ -111,7 +113,7 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
     markShown(msg.id);
     lastShownRef.current = now;
     cooldownRef.current = true;
-    setTimeout(() => { cooldownRef.current = false; }, 60000);
+    setTimeout(() => { cooldownRef.current = false; }, 30000);
     dismissTimerRef.current = setTimeout(() => setCurrentBubble(null), 8000);
   }, [isAtlasOpen, currentBubble, interactionCount, pageContext, wasShown, markShown, isFirstTimeEver, markIntroduced]);
 

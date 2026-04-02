@@ -8,6 +8,8 @@ import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
 import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
+import TripContextStrip from "@/components/TripContextStrip";
+import SurpriseMeSection from "@/components/SurpriseMeSection";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -41,46 +43,84 @@ export default async function TripDetail({ params }: Props) {
     .all(tripId) as any[];
 
   const interests: string[] = JSON.parse(trip.interests || "[]");
+  const nearbyAirports: string[] = JSON.parse(trip.nearby_airports || "[]");
   const t = await getTranslations("tripDetail");
   const dateFmt = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" });
+
+  // Parse vibes and pure interests from the combined interests array
+  const vibes = interests.filter(i => i.startsWith("vibe:")).map(i => i.replace(/^vibe:(custom:)?/, ""));
+  const pureInterests = interests.filter(i => !i.startsWith("vibe:")).map(i => i.replace(/^custom:/, ""));
+  const isSurpriseMe = trip.destination === "Surprise Me";
+
+  // V1 hardcoded destinations for Surprise Me — replaced by real API data in Phase 2
+  const v1Destinations = [
+    { name: "Cancún, Mexico", airline: "Spirit NK", flightPrice: "$127", hotelPrice: "$89/night", nonstop: true },
+    { name: "San Juan, Puerto Rico", airline: "JetBlue", flightPrice: "$159", hotelPrice: "$95/night", nonstop: true },
+    { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
+  ];
+
+  const budgetLabel = trip.budget === "midrange" ? t("midrange") : (trip.budget === "luxury" ? "Luxury" : (trip.budget || "Mid-range"));
+  const vibesSummary = vibes.length > 0 ? vibes.join(" + ") : "flexible";
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
       <main className="max-w-[90rem] mx-auto px-6 py-8">
-        {/* Trip header */}
-        <div className="mb-8">
+        {/* Trip header — compact */}
+        <div className="mb-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">{trip.name}</h1>
-              <p className="text-gray-500">📍 {trip.destination}
-                {trip.start_date && ` · ${dateFmt.format(new Date(trip.start_date))}`}
-                {trip.end_date && ` → ${dateFmt.format(new Date(trip.end_date))}`}
-              </p>
-              <div className="flex gap-3 mt-2 text-sm text-gray-500">
-                <span>👥 {trip.travelers_adults} {t("adults", { count: trip.travelers_adults })}{trip.travelers_children > 0 ? `, ${trip.travelers_children} ${t("children", { count: trip.travelers_children })}` : ""}</span>
-                <span>🛏️ {trip.rooms} {t("rooms", { count: trip.rooms })}</span>
-                {trip.budget && <span className="capitalize">💰 {trip.budget === "midrange" ? t("midrange") : trip.budget}</span>}
-              </div>
+              {!isSurpriseMe && (
+                <p className="text-gray-500">📍 {trip.destination}
+                  {trip.origin && ` · ✈️ from ${trip.origin}`}
+                  {trip.start_date && ` · ${dateFmt.format(new Date(trip.start_date))}`}
+                  {trip.end_date && ` → ${dateFmt.format(new Date(trip.end_date))}`}
+                </p>
+              )}
             </div>
             <Link href="/planner" className="text-sm text-teal-700 hover:text-teal-800 font-medium">← {t("allTrips")}</Link>
           </div>
         </div>
 
+        {/* Context strip — always visible */}
+        <div className="mb-6">
+          <TripContextStrip
+            origin={trip.origin || null}
+            nearbyAirports={nearbyAirports}
+            budget={trip.budget}
+            vibes={vibes}
+            interests={pureInterests}
+            adults={trip.travelers_adults ?? 1}
+            children={trip.travelers_children ?? 0}
+          />
+        </div>
+
         {/* Two-column layout: itinerary + sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-          <ItineraryBuilder
-            tripId={trip.id}
-            initialItems={items}
-            tripDestination={trip.destination}
-            tripBudget={trip.budget}
-            tripInterests={interests}
-            tripStartDate={trip.start_date}
-            tripEndDate={trip.end_date}
-            tripAdults={trip.travelers_adults ?? 1}
-            initialBudgetOverride={trip.budget_override ?? null}
-          />
+          {isSurpriseMe ? (
+            /* PATH B: Surprise Me — Atlas hero + dimmed planner */
+            <SurpriseMeSection
+              destinations={v1Destinations}
+              originCode={trip.origin || "???"}
+              vibesSummary={vibesSummary}
+              budgetLabel={budgetLabel}
+            />
+          ) : (
+            /* PATH A: Real destination — active planner */
+            <ItineraryBuilder
+              tripId={trip.id}
+              initialItems={items}
+              tripDestination={trip.destination}
+              tripBudget={trip.budget}
+              tripInterests={interests}
+              tripStartDate={trip.start_date}
+              tripEndDate={trip.end_date}
+              tripAdults={trip.travelers_adults ?? 1}
+              initialBudgetOverride={trip.budget_override ?? null}
+            />
+          )}
           <AffiliateRecommendations
             tripId={trip.id}
             destination={trip.destination}
@@ -101,12 +141,16 @@ export default async function TripDetail({ params }: Props) {
             budgetTier: trip.budget === "midrange" ? "mid" : (trip.budget || "mid"),
             tripId: trip.id,
             isGuest,
+            origin: trip.origin || undefined,
+            interests,
+            nearbyAirports: JSON.parse(trip.nearby_airports || "[]"),
             flexibleWindow: trip.flexible_window,
             tripLength: trip.trip_length,
             tripType: trip.trip_type,
             wantHotel: trip.want_hotel === 1,
             wantCar: trip.want_car === 1,
             wantLimo: trip.want_limo === 1,
+            wantActivities: trip.want_activities === 1,
             items: items.map((i: any) => ({
               day: i.day_number,
               category: i.category,

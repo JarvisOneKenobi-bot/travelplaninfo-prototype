@@ -53,6 +53,10 @@ export default function Header() {
 
   function handleLanguageChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newLocale = e.target.value;
+    // Set NEXT_LOCALE cookie so next-intl middleware respects the choice.
+    // Without this, switching to English fails because the middleware sees no
+    // locale prefix and falls back to the cookie (still set to the old locale).
+    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
     const basePath = stripLocalePrefix(pathname ?? "/");
     if (newLocale === "en") {
       window.location.href = basePath;

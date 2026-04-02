@@ -66,6 +66,7 @@
     "10To14Days": "10-14 giorni",
     "2PlusWeeks": "2+ settimane",
     "atlasFindCheapestDates": "✨ Lascia che Atlas trovi le date più economiche",
+    "atlasDecidesTooltip": "Atlas cercherà tra tutte le date per trovare il prezzo migliore. Non devi scegliere le date — imposta solo budget e preferenze.",
     "flexibleDates": "Sono flessibile se significa un buon affare",
     "flexibleDatesDesc": "Atlas cercherà le date di volo più economiche",
     "whoIsTraveling": "Chi viaggia?",
@@ -82,6 +83,7 @@
     "vibeLabel": "Che atmosfera cerchi?",
     "destinationHintPlaceholder": "Qualche posto specifico? (paese, regione o lascia vuoto)",
     "pickAtLeast2": "Scegli almeno 2 interessi per Sorprendimi",
+    "pickAtLeast1More": "Scegline almeno 1 in più",
     "interestsCount": "selezionati",
     "vibes": {
       "tropical": "Tropicale",
@@ -107,7 +109,7 @@
     "departureDate": "Data di partenza",
     "returnDate": "Data di ritorno",
     "clearSurprise": "Cancella",
-    "whatVibes": "Che atmosfera cerchi?",
+    "whatVibes": "Che atmosfere cerchi?",
     "budgetLabel": "Budget",
     "interestsLabel": "Interessi",
     "chooserTitle": "Come vuoi pianificare?",
@@ -143,6 +145,7 @@
     "budgetCat_transport": "Trasporto terrestre",
     "budgetCat_cruise": "Crociera",
     "customDateOption": "Personalizza...",
+    "customQuantity": "Altro",
     "customDateIn": "Tra",
     "customDateDays": "giorni",
     "customDateWeeks": "settimane",
@@ -200,7 +203,12 @@
     "loadingTrips": "Caricamento viaggi…",
     "noTrips": "Nessun viaggio ancora",
     "noTripsDesc": "Crea il tuo primo viaggio per iniziare a costruire un itinerario.",
-    "planFirstTrip": "Pianifica Il Mio Primo Viaggio"
+    "planFirstTrip": "Pianifica Il Mio Primo Viaggio",
+    "deleteTrip": "Elimina",
+    "confirmDeleteTitle": "Eliminare questo viaggio?",
+    "confirmDeleteMessage": "Questo eliminerà permanentemente il viaggio e tutti gli elementi dell'itinerario. Questa azione non può essere annullata.",
+    "confirmDeleteButton": "Sì, elimina",
+    "cancelDelete": "Annulla"
   },
   "auth": {
     "signIn": {
@@ -486,7 +494,31 @@
     "children": "{count, plural, one {bambino} other {bambini}}",
     "rooms": "{count, plural, one {camera} other {camere}}",
     "midrange": "Fascia media",
-    "allTrips": "Tutti i viaggi"
+    "allTrips": "Tutti i viaggi",
+    "fromAirport": "da {code}",
+    "editTrip": "Modifica"
+  },
+  "contextStrip": {
+    "departingFrom": "da {origin}",
+    "budget": "Economico",
+    "midrange": "Fascia Media",
+    "luxury": "Lusso",
+    "adults": "{count} adulti",
+    "children": "{count} bambini",
+    "rooms": "{count} camere"
+  },
+  "atlasHero": {
+    "title": "Atlas ha trovato {count} opzioni per te!",
+    "subtitle": "Atmosfere {vibes} da {origin} · budget {budget}",
+    "topPick": "SCELTA TOP",
+    "tellMeMore": "Dimmi di più →",
+    "showDifferent": "Mostrami altre opzioni",
+    "chatWithAtlas": "Chatta con Atlas",
+    "flightsFrom": "da {price}",
+    "hotelsFrom": "Hotel da {price}/notte",
+    "nonstop": "diretto",
+    "dimmedPlanner": "Scegli una destinazione sopra e il tuo itinerario apparirà qui",
+    "noDestYet": "Il tuo itinerario apparirà una volta scelta una destinazione"
   },
   "affiliatePreviewModal": {
     "poweredBy": "Offerto da {partner}",

@@ -44,6 +44,9 @@ interface TripContext {
   isGuest?: boolean;
   flexibleWindow?: string;
   tripLength?: string;
+  origin?: string;
+  interests?: string[];
+  nearbyAirports?: string[];
 }
 
 interface ModalData {
@@ -265,6 +268,9 @@ function readTripContext(): TripContext {
       isGuest: data.isGuest === true,
       flexibleWindow: data.flexibleWindow || data.flexible_window || undefined,
       tripLength: data.tripLength || data.trip_length || undefined,
+      origin: data.origin || undefined,
+      interests: Array.isArray(data.interests) ? data.interests : undefined,
+      nearbyAirports: Array.isArray(data.nearbyAirports) ? data.nearbyAirports : undefined,
     };
   } catch {
     return defaults;
@@ -529,7 +535,14 @@ export default function AssistantChat() {
             const end = tripData.endDate || tripData.end_date || "";
             const budget = tripData.budget || "";
             const adults = tripData.adults || 1;
+            const origin = tripData.origin || "";
+            const tripInterests = Array.isArray(tripData.interests) ? tripData.interests : [];
+            const vibes = tripInterests.filter((i: string) => i.startsWith("vibe:")).map((i: string) => i.replace(/^vibe:(custom:)?/, ""));
+            const pureInterests = tripInterests.filter((i: string) => !i.startsWith("vibe:")).map((i: string) => i.replace(/^custom:/, ""));
             pageContext += `\n\nActive trip: ${dest}, ${start || "flexible"} to ${end || "flexible"}, ${adults} adults, budget: ${budget}`;
+            if (origin) pageContext += `\nDeparting from: ${origin}`;
+            if (vibes.length) pageContext += `\nVibes: ${vibes.join(", ")}`;
+            if (pureInterests.length) pageContext += `\nInterests: ${pureInterests.join(", ")}`;
 
             // Format existing itinerary items so Atlas can suggest complementary activities
             const items = tripData.items as Array<{ day: number; category: string; title: string; price_estimate: number | null }> | undefined;
