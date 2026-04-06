@@ -26,6 +26,7 @@ export default function OnboardingModal() {
   const [aiAssisted, setAiAssisted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [customInterest, setCustomInterest] = useState("");
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) {
@@ -40,6 +41,7 @@ export default function OnboardingModal() {
     }
 
     // Step 2: fetch prefs to see if already completed
+    let timer: NodeJS.Timeout | null = null;
     fetch("/api/user/preferences")
       .then((r) => r.json())
       .then((data: UserPreferences) => {
@@ -48,14 +50,20 @@ export default function OnboardingModal() {
           localStorage.setItem(LS_KEY, "1");
           setChecking(false);
         } else {
-          // Show modal
-          setChecking(false);
-          setVisible(true);
+          // Show modal after 1.5s delay for new (non-registered) users
+          timer = setTimeout(() => {
+            setChecking(false);
+            setVisible(true);
+          }, 1500);
         }
       })
       .catch(() => {
         setChecking(false);
       });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [status, session]);
 
   function dismiss() {
@@ -75,6 +83,20 @@ export default function OnboardingModal() {
     );
   }
 
+  function addCustomInterest() {
+    const trimmed = customInterest.trim();
+    if (trimmed && !interests.includes(trimmed)) {
+      setInterests((prev) => [...prev, trimmed]);
+      setCustomInterest("");
+    }
+  }
+
+  function removeCustomInterest(interest: string) {
+    if (!PREF_ENUMS.interests.includes(interest as any)) {
+      setInterests((prev) => prev.filter((i) => i !== interest));
+    }
+  }
+
   async function finish() {
     setSaving(true);
     try {
@@ -91,6 +113,13 @@ export default function OnboardingModal() {
       if (res.ok) {
         localStorage.setItem(LS_KEY, "1");
         setVisible(false);
+
+        // Dispatch Atlas intro event after onboarding completes
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("atlas-onboarding-complete", {
+            detail: { interests, airport, budget, aiAssisted }
+          }));
+        }, 500);
       }
     } catch {
       // Silently fail — user can complete from preferences page
@@ -251,7 +280,48 @@ export default function OnboardingModal() {
                   </button>
                 );
               })}
+              {/* Custom interests */}
+              {interests.map((interest) => {
+                const isCustom = !PREF_ENUMS.interests.includes(interest as any);
+                if (!isCustom) return null;
+                return (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => removeCustomInterest(interest)}
+                    className="px-3 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    {interest}
+                    <span className="text-xs">✕</span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Add Your Own Interest */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customInterest}
+                onChange={(e) => setCustomInterest(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    addCustomInterest();
+                  }
+                }}
+                placeholder="+ Add your own interest"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+              <button
+                type="button"
+                onClick={addCustomInterest}
+                disabled={!customInterest.trim()}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(2)}
