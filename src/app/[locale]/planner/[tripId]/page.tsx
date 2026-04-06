@@ -93,7 +93,7 @@ export default async function TripDetail({ params }: Props) {
             vibes={vibes}
             interests={pureInterests}
             adults={trip.travelers_adults ?? 1}
-            children={trip.travelers_children ?? 0}
+            childrenCount={trip.travelers_children ?? 0}
           />
         </div>
 

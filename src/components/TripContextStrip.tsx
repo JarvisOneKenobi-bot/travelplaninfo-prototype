@@ -9,7 +9,7 @@ interface TripContextStripProps {
   vibes: string[];
   interests: string[];
   adults: number;
-  children: number;
+  childrenCount: number;
 }
 
 const VIBE_EMOJIS: Record<string, string> = {
@@ -47,7 +47,7 @@ export default function TripContextStrip({
   vibes,
   interests,
   adults,
-  children: childCount,
+  childrenCount: childCount,
 }: TripContextStripProps) {
   const t = useTranslations("contextStrip");
 
