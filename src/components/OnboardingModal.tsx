@@ -22,7 +22,7 @@ export default function OnboardingModal() {
   const [step, setStep] = useState(1);
   const [airport, setAirport] = useState("");
   const [budget, setBudget] = useState<(typeof PREF_ENUMS.budget_tier)[number]>("mid");
-  const [interests, setInterests] = useState<(typeof PREF_ENUMS.interests)[number][]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
   const [aiAssisted, setAiAssisted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
