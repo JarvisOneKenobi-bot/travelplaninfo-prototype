@@ -185,7 +185,6 @@ function extractTripData(parts: ToolResult[]): {
           depart_date: f.depart_date ? String(f.depart_date) : undefined,
           return_date: f.return_date ? String(f.return_date) : undefined,
           book_url: String(f.book_url || ""),
-          is_mock: f.is_mock === true,
         });
       }
     }
@@ -203,7 +202,6 @@ function extractTripData(parts: ToolResult[]): {
           book_url: String(h.book_url || ""),
           neighborhood: h.neighborhood ? String(h.neighborhood) : undefined,
           highlights: Array.isArray(h.highlights) ? (h.highlights as unknown[]).map(String) : undefined,
-          is_mock: h.is_mock === true,
         });
       }
     }
@@ -218,7 +216,6 @@ function extractTripData(parts: ToolResult[]): {
           tier: (["budget", "mid", "luxury"].includes(String(a.tier)) ? String(a.tier) : "mid") as "budget" | "mid" | "luxury",
           interest: String(a.interest || "other"),
           duration: a.duration ? String(a.duration) : undefined,
-          is_mock: a.is_mock === true,
         });
       }
     }
@@ -233,7 +230,6 @@ function extractTripData(parts: ToolResult[]): {
           rating: typeof r.rating === "number" ? r.rating : undefined,
           highlights: Array.isArray(r.highlights) ? (r.highlights as unknown[]).map(String) : [],
           budget_tier: (["budget", "mid", "luxury"].includes(String(r.budget_tier)) ? String(r.budget_tier) : "mid") as BudgetTier,
-          is_mock: r.is_mock === true,
         });
       }
     }
