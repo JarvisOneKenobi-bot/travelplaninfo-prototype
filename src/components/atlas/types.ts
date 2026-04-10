@@ -13,7 +13,6 @@ export interface FlightResult {
   depart_date?: string;
   return_date?: string;
   book_url: string;
-  is_mock?: boolean;
 }
 
 /** Extends HotelData from HotelCard with total cost + nights */
@@ -27,7 +26,6 @@ export interface HotelResult {
   book_url: string;
   neighborhood?: string;
   highlights?: string[];
-  is_mock?: boolean;
 }
 
 /** Extends ActivityData from ActivityCard with per-person price */
@@ -38,7 +36,6 @@ export interface ActivityResult {
   tier: "budget" | "mid" | "luxury";
   interest: string;        // category grouping key
   duration?: string;
-  is_mock?: boolean;
 }
 
 /** Extends RestaurantCard data with budget tier */
@@ -50,7 +47,6 @@ export interface RestaurantResult {
   rating?: number;           // 1-5
   highlights: string[];      // e.g. ["outdoor seating", "live music"]
   budget_tier: BudgetTier;
-  is_mock?: boolean;
 }
 
 /** Budget tier type reused across modal and chat */

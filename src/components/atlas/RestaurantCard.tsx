@@ -8,7 +8,6 @@ interface RestaurantData {
   rating?: number;           // 1-5
   highlights?: string[];
   budget_tier: string;
-  is_mock?: boolean;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -64,9 +63,6 @@ export default function RestaurantCard({ restaurant }: { restaurant: RestaurantD
         <div className="text-right shrink-0">
           <p className="font-bold text-sm text-gray-900">
             {restaurant.price_range}
-            {restaurant.is_mock && (
-              <span className="ml-1 text-xs text-amber-600 bg-amber-50 rounded px-1 py-0.5 font-normal">(est.)</span>
-            )}
           </p>
           {restaurant.rating != null && (
             <div className="flex items-center justify-end gap-1 mt-0.5">

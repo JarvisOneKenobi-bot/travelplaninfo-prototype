@@ -11,7 +11,6 @@ interface FlightData {
   depart_date?: string;
   return_date?: string;
   book_url: string;
-  is_mock?: boolean;
 }
 
 export default function FlightCard({ flight }: { flight: FlightData }) {
@@ -39,9 +38,6 @@ export default function FlightCard({ flight }: { flight: FlightData }) {
         </div>
         <div className="text-right">
           <p className="font-bold text-lg text-orange-600 whitespace-nowrap">{flight.price}</p>
-          {flight.is_mock && (
-            <span className="text-xs text-amber-600 bg-amber-50 rounded px-1 py-0.5">(estimated)</span>
-          )}
         </div>
       </div>
       <a
