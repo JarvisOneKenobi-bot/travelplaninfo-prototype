@@ -46,6 +46,7 @@ export function usePlacesAutocomplete(
         // Extract IATA code from airport results if available
         let iataCode: string | undefined;
         if (place.types?.includes('airport')) {
+          // Try to extract IATA from the name (e.g., "Miami International Airport (MIA)")
           const match = place.name.match(/\(([A-Z]{3})\)/);
           if (match) iataCode = match[1];
         }

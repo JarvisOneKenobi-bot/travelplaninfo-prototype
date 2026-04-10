@@ -153,6 +153,7 @@
     "dailyActivities": "Actividades diarias",
     "cancel": "Cancelar",
     "startPlanning": "Comenzar a Planificar",
+    "flexibleDatesLabel": "Flexible dates (±3 days)",
     "creatingTrip": "Creando viaje…",
     "pleaseEnterDestination": "Por favor ingresa un destino.",
     "failedToCreateTrip": "Error al crear el viaje. Por favor inténtalo de nuevo.",
@@ -526,5 +527,55 @@
     "continueToPartner": "Continuar a {partner}",
     "addToItinerary": "+ Agregar al itinerario",
     "adding": "Agregando..."
+  },
+  "entryTabs": {
+    "directTab": "I Know When & Where I'm Going",
+    "surpriseTab": "Surprise Me"
+  },
+  "quiz": {
+    "budgetTitle": "What's your budget per person?",
+    "vibesTitle": "What's your vibe?",
+    "vibesSubtitle": "Pick up to 5",
+    "whenTitle": "When are you thinking?",
+    "whoTitle": "Who's going?",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "findMyTrip": "Find My Trip",
+    "addYourOwn": "Add Your Own...",
+    "vibe_beach": "Beach",
+    "vibe_city": "City",
+    "vibe_adventure": "Adventure",
+    "vibe_food": "Food",
+    "vibe_culture": "Culture",
+    "vibe_nature": "Nature",
+    "vibe_nightlife": "Nightlife",
+    "vibe_wellness": "Wellness",
+    "groupFeatures": "Group Trip Features",
+    "howManyPeople": "How many people?",
+    "shareItinerary": "Share itinerary with group members",
+    "shareDescription": "Members can vote on activities and suggest changes",
+    "costSplitting": "Enable cost splitting",
+    "costDescription": "Track who owes what, send payment requests",
+    "atlasConsensus": "Let Atlas find group consensus",
+    "consensusDescription": "Atlas collects each member's vibes and balances the itinerary for everyone"
+  },
+  "trending": {
+    "title": "Trending Destinations",
+    "planTrip": "Plan trip",
+    "readGuide": "Read guide",
+    "pricesFrom": "Prices from your area ({area}) · Updated daily"
+  },
+  "generation": {
+    "building": "Atlas is building your itinerary...",
+    "searchingFlights": "Searching flights to {destination}",
+    "findingHotels": "Finding hotels in {destination}",
+    "discoveringActivities": "Discovering activities & restaurants",
+    "buildingSchedule": "Building day-by-day schedule",
+    "optimizingRoute": "Optimizing route between locations",
+    "found": "found {count}",
+    "searching": "searching...",
+    "complete": "Atlas found {count} results for your trip.",
+    "viewDetails": "View details"
   }
 }

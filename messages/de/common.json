@@ -153,6 +153,7 @@
     "dailyActivities": "Tagliche Aktivitaten",
     "cancel": "Abbrechen",
     "startPlanning": "Planung Starten",
+    "flexibleDatesLabel": "Flexible dates (±3 days)",
     "creatingTrip": "Reise wird erstellt…",
     "pleaseEnterDestination": "Bitte geben Sie ein Reiseziel ein.",
     "failedToCreateTrip": "Reise konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
@@ -505,26 +506,54 @@
     "fromAirport": "ab {code}",
     "editTrip": "Bearbeiten"
   },
-  "contextStrip": {
-    "departingFrom": "ab {origin}",
-    "budget": "Günstig",
-    "midrange": "Mittelklasse",
-    "luxury": "Luxus",
-    "adults": "{count} Erwachsene",
-    "children": "{count} Kinder",
-    "rooms": "{count} Zimmer"
+  "entryTabs": {
+    "directTab": "I Know When & Where I'm Going",
+    "surpriseTab": "Surprise Me"
   },
-  "atlasHero": {
-    "title": "Atlas hat {count} Optionen für Sie gefunden!",
-    "subtitle": "Stimmungen {vibes} ab {origin} · Budget {budget}",
-    "topPick": "TOP-WAHL",
-    "tellMeMore": "Erzähl mir mehr →",
-    "showDifferent": "Zeig mir andere Optionen",
-    "chatWithAtlas": "Mit Atlas chatten",
-    "flightsFrom": "ab {price}",
-    "hotelsFrom": "Hotels ab {price}/Nacht",
-    "nonstop": "Direktflug",
-    "dimmedPlanner": "Wählen Sie ein Reiseziel oben und Ihr Reiseplan erscheint hier",
-    "noDestYet": "Ihr Reiseplan erscheint, sobald Sie ein Reiseziel gewählt haben"
+  "quiz": {
+    "budgetTitle": "What's your budget per person?",
+    "vibesTitle": "What's your vibe?",
+    "vibesSubtitle": "Pick up to 5",
+    "whenTitle": "When are you thinking?",
+    "whoTitle": "Who's going?",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "findMyTrip": "Find My Trip",
+    "addYourOwn": "Add Your Own...",
+    "vibe_beach": "Beach",
+    "vibe_city": "City",
+    "vibe_adventure": "Adventure",
+    "vibe_food": "Food",
+    "vibe_culture": "Culture",
+    "vibe_nature": "Nature",
+    "vibe_nightlife": "Nightlife",
+    "vibe_wellness": "Wellness",
+    "groupFeatures": "Group Trip Features",
+    "howManyPeople": "How many people?",
+    "shareItinerary": "Share itinerary with group members",
+    "shareDescription": "Members can vote on activities and suggest changes",
+    "costSplitting": "Enable cost splitting",
+    "costDescription": "Track who owes what, send payment requests",
+    "atlasConsensus": "Let Atlas find group consensus",
+    "consensusDescription": "Atlas collects each member's vibes and balances the itinerary for everyone"
+  },
+  "trending": {
+    "title": "Trending Destinations",
+    "planTrip": "Plan trip",
+    "readGuide": "Read guide",
+    "pricesFrom": "Prices from your area ({area}) · Updated daily"
+  },
+  "generation": {
+    "building": "Atlas is building your itinerary...",
+    "searchingFlights": "Searching flights to {destination}",
+    "findingHotels": "Finding hotels in {destination}",
+    "discoveringActivities": "Discovering activities & restaurants",
+    "buildingSchedule": "Building day-by-day schedule",
+    "optimizingRoute": "Optimizing route between locations",
+    "found": "found {count}",
+    "searching": "searching...",
+    "complete": "Atlas found {count} results for your trip.",
+    "viewDetails": "View details"
   }
 }

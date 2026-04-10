@@ -182,5 +182,26 @@ export function getDb(): Database.Database {
     _db.exec("ALTER TABLE trips ADD COLUMN nearby_airports TEXT");
   }
 
+  // Migration: quiz / three-mode entry columns
+  const quizMigrations = [
+    "ALTER TABLE trips ADD COLUMN entry_mode TEXT DEFAULT 'direct'",
+    "ALTER TABLE trips ADD COLUMN quiz_budget TEXT",
+    "ALTER TABLE trips ADD COLUMN quiz_vibes TEXT",
+    "ALTER TABLE trips ADD COLUMN quiz_when TEXT",
+    "ALTER TABLE trips ADD COLUMN quiz_who TEXT",
+    "ALTER TABLE trips ADD COLUMN quiz_group_size INTEGER",
+    "ALTER TABLE trips ADD COLUMN group_share INTEGER DEFAULT 0",
+    "ALTER TABLE trips ADD COLUMN group_costsplit INTEGER DEFAULT 0",
+    "ALTER TABLE trips ADD COLUMN group_consensus INTEGER DEFAULT 0",
+    "ALTER TABLE trips ADD COLUMN origin_auto TEXT",
+  ];
+  for (const sql of quizMigrations) {
+    try {
+      _db.exec(sql);
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+    }
+  }
+
   return _db;
 }
