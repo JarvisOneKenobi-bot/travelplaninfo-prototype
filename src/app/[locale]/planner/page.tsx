@@ -4,7 +4,7 @@ import { getUserId } from "@/lib/guest";
 import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
 import PlannerDashboard from "@/components/PlannerDashboard";
-import EntryTabs from "@/components/EntryTabs";
+import TripForm from "@/components/TripForm";
 
 export const metadata: Metadata = {
   title: "Trip Planner — Build Your Perfect Itinerary | TravelPlanInfo",
@@ -39,9 +39,8 @@ export default async function Planner({ params }: Props) {
         {ctx ? (
           <PlannerDashboard isGuest={ctx.isGuest} />
         ) : (
-          <div className="w-full max-w-6xl mx-auto px-4">
-            <h1 className="text-3xl font-bold text-center mb-8">Plan Your Trip</h1>
-            <EntryTabs />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <TripForm />
           </div>
         )}
 
