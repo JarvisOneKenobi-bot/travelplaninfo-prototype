@@ -8,7 +8,9 @@ import Header from "@/components/Header";
 import HelpButton from "@/components/HelpButton";
 import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
-import GenerationProgress from '@/components/GenerationProgress';
+import TripContextStrip from "@/components/TripContextStrip";
+import SurpriseMeSection from "@/components/SurpriseMeSection";
+import GenerationProgress from "@/components/GenerationProgress";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -51,6 +53,13 @@ export default async function TripDetail({ params }: Props) {
   const pureInterests = interests.filter(i => !i.startsWith("vibe:")).map(i => i.replace(/^custom:/, ""));
   const isSurpriseMe = trip.destination === "Surprise Me";
 
+  // V1 hardcoded destinations for Surprise Me — replaced by real API data in Phase 2
+  const v1Destinations = [
+    { name: "Cancún, Mexico", airline: "Spirit NK", flightPrice: "$127", hotelPrice: "$89/night", nonstop: true },
+    { name: "San Juan, Puerto Rico", airline: "JetBlue", flightPrice: "$159", hotelPrice: "$95/night", nonstop: true },
+    { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
+  ];
+
   const budgetLabel = trip.budget === "midrange" ? t("midrange") : (trip.budget === "luxury" ? "Luxury" : (trip.budget || "Mid-range"));
   const vibesSummary = vibes.length > 0 ? vibes.join(" + ") : "flexible";
 
@@ -76,49 +85,74 @@ export default async function TripDetail({ params }: Props) {
           </div>
         </div>
 
+        {/* Context strip — always visible */}
+        <div className="mb-6">
+          <TripContextStrip
+            origin={trip.origin || null}
+            nearbyAirports={nearbyAirports}
+            budget={trip.budget}
+            vibes={vibes}
+            interests={pureInterests}
+            adults={trip.travelers_adults ?? 1}
+            childrenCount={trip.travelers_children ?? 0}
+          />
+        </div>
+
         {/* Two-column layout: itinerary + sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-          <div>
-            {items.length === 0 && (
-              <GenerationProgress destination={trip.destination} isGenerating={true} />
-            )}
-            {trip.entry_mode === 'surprise' && trip.quiz_vibes && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="text-sm text-gray-500">Based on:</span>
-                {trip.quiz_budget && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                    {trip.quiz_budget.replace('_', '-')}
-                  </span>
-                )}
-                {JSON.parse(trip.quiz_vibes || '[]').map((v: string) => (
-                  <span key={v} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
-                    {v}
-                  </span>
-                ))}
-                {trip.quiz_who && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
-                    {trip.quiz_who}
-                  </span>
-                )}
-              </div>
-            )}
-            <ItineraryBuilder
-              tripId={trip.id}
-              initialItems={items}
-              tripDestination={trip.destination}
-              tripBudget={trip.budget}
-              tripInterests={interests}
-              tripStartDate={trip.start_date}
-              tripEndDate={trip.end_date}
-              tripAdults={trip.travelers_adults ?? 1}
-              initialBudgetOverride={trip.budget_override ?? null}
+          {isSurpriseMe ? (
+            /* PATH B: Surprise Me — Atlas hero + dimmed planner */
+            <SurpriseMeSection
+              destinations={v1Destinations}
+              originCode={trip.origin || "???"}
+              vibesSummary={vibesSummary}
+              budgetLabel={budgetLabel}
             />
-            {items.length === 0 && (
-              <div className="text-center py-4 text-sm text-gray-500 border-t border-dashed border-gray-200 mt-4">
-                While you wait, add anything you already know
-              </div>
-            )}
-          </div>
+          ) : (
+            /* PATH A: Real destination — active planner */
+            <div>
+              {/* Quiz context chips for surprise-mode trips that resolved to a destination */}
+              {trip.entry_mode === 'surprise' && trip.quiz_vibes && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="text-sm text-gray-500">Based on:</span>
+                  {trip.quiz_budget && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {trip.quiz_budget.replace('_', '-')}
+                    </span>
+                  )}
+                  {JSON.parse(trip.quiz_vibes || '[]').map((v: string) => (
+                    <span key={v} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
+                      {v}
+                    </span>
+                  ))}
+                  {trip.quiz_who && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
+                      {trip.quiz_who}
+                    </span>
+                  )}
+                </div>
+              )}
+              {items.length === 0 && (
+                <GenerationProgress destination={trip.destination} isGenerating={true} />
+              )}
+              <ItineraryBuilder
+                tripId={trip.id}
+                initialItems={items}
+                tripDestination={trip.destination}
+                tripBudget={trip.budget}
+                tripInterests={interests}
+                tripStartDate={trip.start_date}
+                tripEndDate={trip.end_date}
+                tripAdults={trip.travelers_adults ?? 1}
+                initialBudgetOverride={trip.budget_override ?? null}
+              />
+              {items.length === 0 && (
+                <div className="text-center py-4 text-sm text-gray-500 border-t border-dashed border-gray-200 mt-4">
+                  While you wait, add anything you already know
+                </div>
+              )}
+            </div>
+          )}
           <AffiliateRecommendations
             tripId={trip.id}
             destination={trip.destination}
