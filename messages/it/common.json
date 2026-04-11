@@ -483,7 +483,11 @@
     "labelCruises": "Crociere",
     "cruisesTitle": "Crociere Caraibi e Bahamas",
     "cruisesDesc": "Fino al 75% di sconto. Offerte last minute disponibili.",
-    "viewCruises": "Vedi crociere"
+    "viewCruises": "Vedi crociere",
+    "labelFlightCompensation": "Risarcimento volo",
+    "airAdvisorTitle": "Volo in ritardo o cancellato?",
+    "airAdvisorDesc": "Richiedi fino a 600 € di risarcimento per ritardi e cancellazioni.",
+    "checkCompensation": "Verifica il mio volo"
   },
   "atlas": {
     "bookOnAviasales": "Prenota su Aviasales",

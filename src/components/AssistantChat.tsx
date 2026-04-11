@@ -216,6 +216,7 @@ function extractTripData(parts: ToolResult[]): {
           tier: (["budget", "mid", "luxury"].includes(String(a.tier)) ? String(a.tier) : "mid") as "budget" | "mid" | "luxury",
           interest: String(a.interest || "other"),
           duration: a.duration ? String(a.duration) : undefined,
+          klook_url: a.klook_url ? String(a.klook_url) : undefined,
         });
       }
     }

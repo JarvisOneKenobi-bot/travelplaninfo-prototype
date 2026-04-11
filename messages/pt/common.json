@@ -483,7 +483,11 @@
     "labelCruises": "Cruzeiros",
     "cruisesTitle": "Cruzeiros pelo Caribe e Bahamas",
     "cruisesDesc": "Até 75% de desconto. Ofertas de última hora disponíveis.",
-    "viewCruises": "Ver cruzeiros"
+    "viewCruises": "Ver cruzeiros",
+    "labelFlightCompensation": "Compensação de voo",
+    "airAdvisorTitle": "Voo atrasado ou cancelado?",
+    "airAdvisorDesc": "Reivindique até 600 € de compensação por atrasos e cancelamentos.",
+    "checkCompensation": "Verificar meu voo"
   },
   "atlas": {
     "bookOnAviasales": "Reservar no Aviasales",

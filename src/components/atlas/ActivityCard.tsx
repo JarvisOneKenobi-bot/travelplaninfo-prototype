@@ -6,6 +6,7 @@ interface ActivityData {
   tier: string;
   interest: string;
   duration?: string;
+  klook_url?: string;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -40,6 +41,18 @@ export default function ActivityCard({ activity }: { activity: ActivityData }) {
           </span>
         </div>
       </div>
+      {activity.klook_url && (
+        <div className="mt-2">
+          <a
+            href={activity.klook_url}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-block text-xs font-medium text-white bg-[#FF5722] hover:bg-[#E64A19] rounded px-2.5 py-1 transition-colors"
+          >
+            Book on Klook →
+          </a>
+        </div>
+      )}
     </div>
   );
 }

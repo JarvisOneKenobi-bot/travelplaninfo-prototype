@@ -483,7 +483,11 @@
     "labelCruises": "Croisières",
     "cruisesTitle": "Croisières Caraïbes et Bahamas",
     "cruisesDesc": "Jusqu à 75% de réduction. Offres de dernière minute disponibles.",
-    "viewCruises": "Voir les croisières"
+    "viewCruises": "Voir les croisières",
+    "labelFlightCompensation": "Indemnisation de vol",
+    "airAdvisorTitle": "Vol retardé ou annulé?",
+    "airAdvisorDesc": "Réclamez jusqu'à 600 € d'indemnisation pour retards et annulations.",
+    "checkCompensation": "Vérifier mon vol"
   },
   "atlas": {
     "bookOnAviasales": "Réserver sur Aviasales",

@@ -483,7 +483,11 @@
     "labelCruises": "Kreuzfahrten",
     "cruisesTitle": "Karibik & Bahamas Kreuzfahrten",
     "cruisesDesc": "Bis zu 75% Rabatt. Last-Minute-Angebote verfügbar.",
-    "viewCruises": "Kreuzfahrten ansehen"
+    "viewCruises": "Kreuzfahrten ansehen",
+    "labelFlightCompensation": "Flugentschädigung",
+    "airAdvisorTitle": "Flug verspätet oder gestrichen?",
+    "airAdvisorDesc": "Bis zu 600 € Entschädigung bei Verspätungen und Annullierungen.",
+    "checkCompensation": "Flug prüfen"
   },
   "atlas": {
     "bookOnAviasales": "Bei Aviasales buchen",

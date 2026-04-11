@@ -12,7 +12,7 @@ interface Recommendation {
   description: string;
   cta: string;
   url: string;
-  category: "hotel" | "flight" | "car_rental" | "cruise";
+  category: "hotel" | "flight" | "car_rental" | "cruise" | "flight_compensation";
   affiliate_program: string;
 }
 
@@ -116,6 +116,26 @@ function buildRecommendations(
       url: CJ_LINKS.cruisesLastMinute(),
       category: "cruise",
       affiliate_program: "CruiseDirect",
+    });
+  }
+
+  // AirAdvisor — flight compensation (CJ ID 7818110, click URL pending)
+  // Show when interests mention flight-related terms
+  const wantsFlightHelp =
+    interestStr.includes("flight") ||
+    interestStr.includes("airline") ||
+    interestStr.includes("delay") ||
+    interestStr.includes("compensat");
+  if (wantsFlightHelp) {
+    recs.push({
+      id: "air-advisor",
+      label: t("labelFlightCompensation"),
+      title: t("airAdvisorTitle"),
+      description: t("airAdvisorDesc"),
+      cta: t("checkCompensation"),
+      url: CJ_LINKS.airAdvisor(),
+      category: "flight_compensation",
+      affiliate_program: "AirAdvisor",
     });
   }
 

@@ -25,6 +25,10 @@ export const CJ_LINKS = {
   // EconomyBookings — car rentals
   cars: () => "https://www.jdoqocy.com/click-101692716-15586457",
   carsCompare: () => "https://www.tkqlhce.com/click-101692716-15586461",
+
+  // AirAdvisor — flight delay/cancellation compensation (CJ ID 7818110)
+  // TODO: replace with CJ click URL once generated (program status: "New")
+  airAdvisor: () => "https://airadvisor.com/en/flight-compensation",
 };
 
 // Travelpayouts — flight search widget (free to integrate, earns on bookings)
@@ -33,6 +37,14 @@ export const TP_CONFIG = {
   searchUrl: (origin: string, dest: string) => {
     const clean = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
     return `https://www.aviasales.com/search/${clean(origin)}${clean(dest)}1?marker=${TP_CONFIG.marker}`;
+  },
+};
+
+// Klook — Tours & Activities (Travelpayouts, TPI program ID 4110, trs 500721)
+export const TP_KLOOK = {
+  url: (city: string) => {
+    const dest = encodeURIComponent(`https://www.klook.com/search/?query=${encodeURIComponent(city)}`);
+    return `https://tp.media/r?campaign_id=137&marker=164743&p=4110&trs=500721&u=${dest}`;
   },
 };
 

@@ -36,6 +36,7 @@ export interface ActivityResult {
   tier: "budget" | "mid" | "luxury";
   interest: string;        // category grouping key
   duration?: string;
+  klook_url?: string;
 }
 
 /** Extends RestaurantCard data with budget tier */

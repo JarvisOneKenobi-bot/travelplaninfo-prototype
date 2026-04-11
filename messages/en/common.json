@@ -514,7 +514,11 @@
     "labelCruises": "Cruises",
     "cruisesTitle": "Caribbean & Bahamas Cruises",
     "cruisesDesc": "Up to 75% off cruise fares. Last-minute deals available.",
-    "viewCruises": "View Cruises"
+    "viewCruises": "View Cruises",
+    "labelFlightCompensation": "Flight Compensation",
+    "airAdvisorTitle": "Flight Delayed or Cancelled?",
+    "airAdvisorDesc": "Claim up to €600 compensation for delays and cancellations.",
+    "checkCompensation": "Check My Flight"
   },
   "atlas": {
     "bookOnAviasales": "Book on Aviasales",
