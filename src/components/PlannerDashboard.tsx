@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import EntryTabs from "./EntryTabs";
+import TripForm from "./TripForm";
 
 interface Trip {
   id: number;
@@ -46,8 +46,16 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
   if (showForm) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">{t("newTrip")}</h2>
-        <EntryTabs onCancel={() => setShowForm(false)} />
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">{t("newTrip")}</h2>
+          <button
+            onClick={() => setShowForm(false)}
+            className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+          >
+            ← {t("myTrips")}
+          </button>
+        </div>
+        <TripForm />
       </div>
     );
   }
