@@ -53,13 +53,6 @@ export default async function TripDetail({ params }: Props) {
   const pureInterests = interests.filter(i => !i.startsWith("vibe:")).map(i => i.replace(/^custom:/, ""));
   const isSurpriseMe = trip.destination === "Surprise Me";
 
-  // V1 hardcoded destinations for Surprise Me — replaced by real API data in Phase 2
-  const v1Destinations = [
-    { name: "Cancún, Mexico", airline: "Spirit NK", flightPrice: "$127", hotelPrice: "$89/night", nonstop: true },
-    { name: "San Juan, Puerto Rico", airline: "JetBlue", flightPrice: "$159", hotelPrice: "$95/night", nonstop: true },
-    { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
-  ];
-
   const budgetLabel = trip.budget === "midrange" ? t("midrange") : (trip.budget === "luxury" ? "Luxury" : (trip.budget || "Mid-range"));
   const vibesSummary = vibes.length > 0 ? vibes.join(" + ") : "flexible";
 
@@ -103,7 +96,6 @@ export default async function TripDetail({ params }: Props) {
           {isSurpriseMe ? (
             /* PATH B: Surprise Me — Atlas hero + dimmed planner */
             <SurpriseMeSection
-              destinations={v1Destinations}
               originCode={trip.origin || "???"}
               vibesSummary={vibesSummary}
               budgetLabel={budgetLabel}
