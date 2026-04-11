@@ -7,7 +7,7 @@ interface Destination {
   name: string;
   airline: string;
   flightPrice: string;
-  hotelPrice: string;
+  hotelPrice?: string;
   nonstop: boolean;
 }
 

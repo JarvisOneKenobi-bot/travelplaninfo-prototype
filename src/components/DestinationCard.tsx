@@ -6,7 +6,7 @@ interface DestinationCardProps {
   destination: string;
   airline: string;
   flightPrice: string;
-  hotelPrice: string;
+  hotelPrice?: string;
   nonstop: boolean;
   isTopPick?: boolean;
   onTellMeMore: () => void;
@@ -53,8 +53,8 @@ export default function DestinationCard({
         )}
       </p>
 
-      {/* Hotel price */}
-      <p className="text-sm text-gray-500 mt-0.5 mb-4">{hotelPrice}</p>
+      {/* Hotel price — only shown when available */}
+      {hotelPrice && <p className="text-sm text-gray-500 mt-0.5 mb-4">{hotelPrice}</p>}
 
       {/* CTA button — pinned to bottom */}
       <button
