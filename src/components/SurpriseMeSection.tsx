@@ -17,6 +17,9 @@ interface SurpriseMeSectionProps {
   originCode: string;
   vibesSummary: string;
   budgetLabel: string;
+  flexibleWindow?: string | null;  // "next_2_weeks" | "next_month" | "2_3_months" | etc.
+  tripLength?: string | null;      // "weekend" | "week" | "10_14_days" | "2_weeks" | etc.
+  startDate?: string | null;       // ISO date if specific dates were set
 }
 
 const V1_FALLBACK: Destination[] = [
@@ -25,10 +28,47 @@ const V1_FALLBACK: Destination[] = [
   { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
 ];
 
+// Convert flexible_window value to a YYYY-MM departure month
+function deriveDepartMonth(
+  flexibleWindow?: string | null,
+  startDate?: string | null,
+): string {
+  // Specific start date takes priority
+  if (startDate) return startDate.slice(0, 7); // "2026-05-15" → "2026-05"
+
+  const now = new Date();
+  switch (flexibleWindow) {
+    case "next_2_weeks": {
+      const d = new Date(now); d.setDate(d.getDate() + 14);
+      return d.toISOString().slice(0, 7);
+    }
+    case "next_month": {
+      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return d.toISOString().slice(0, 7);
+    }
+    case "2_3_months": {
+      const d = new Date(now.getFullYear(), now.getMonth() + 2, 1);
+      return d.toISOString().slice(0, 7);
+    }
+    case "6_months": {
+      const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+      return d.toISOString().slice(0, 7);
+    }
+    default: {
+      // "anytime" or unknown → next month
+      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return d.toISOString().slice(0, 7);
+    }
+  }
+}
+
 export default function SurpriseMeSection({
   originCode,
   vibesSummary,
   budgetLabel,
+  flexibleWindow,
+  tripLength,
+  startDate,
 }: SurpriseMeSectionProps) {
   const t = useTranslations("atlasHero");
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -36,7 +76,17 @@ export default function SurpriseMeSection({
 
   useEffect(() => {
     const origin = originCode === "???" ? "MIA" : originCode;
-    fetch(`/api/surprise-me?origin=${encodeURIComponent(origin)}`)
+    const departMonth = deriveDepartMonth(flexibleWindow, startDate);
+    const params = new URLSearchParams({ origin, depart_month: departMonth });
+    if (vibesSummary) {
+      const vibesParam = vibesSummary
+        .split(/\s*\+\s*/)
+        .map((v) => v.trim().toLowerCase())
+        .filter(Boolean)
+        .join(",");
+      if (vibesParam) params.set("vibes", vibesParam);
+    }
+    fetch(`/api/surprise-me?${params.toString()}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
@@ -47,7 +97,7 @@ export default function SurpriseMeSection({
       })
       .catch(() => setDestinations(V1_FALLBACK))
       .finally(() => setLoading(false));
-  }, [originCode]);
+  }, [originCode, vibesSummary, flexibleWindow, startDate]);
 
   function handleTellMeMore(index: number) {
     const dest = destinations[index];

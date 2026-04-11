@@ -99,6 +99,9 @@ export default async function TripDetail({ params }: Props) {
               originCode={trip.origin || "???"}
               vibesSummary={vibesSummary}
               budgetLabel={budgetLabel}
+              flexibleWindow={trip.flexible_window}
+              tripLength={trip.trip_length}
+              startDate={trip.start_date}
             />
           ) : (
             /* PATH A: Real destination — active planner */
