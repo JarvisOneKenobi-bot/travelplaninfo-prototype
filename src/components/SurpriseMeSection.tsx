@@ -78,6 +78,7 @@ export default function SurpriseMeSection({
     const origin = originCode === "???" ? "MIA" : originCode;
     const departMonth = deriveDepartMonth(flexibleWindow, startDate);
     const params = new URLSearchParams({ origin, depart_month: departMonth });
+    if (tripLength) params.set("trip_length", tripLength);
     if (vibesSummary) {
       const vibesParam = vibesSummary
         .split(/\s*\+\s*/)
@@ -97,7 +98,7 @@ export default function SurpriseMeSection({
       })
       .catch(() => setDestinations(V1_FALLBACK))
       .finally(() => setLoading(false));
-  }, [originCode, vibesSummary, flexibleWindow, startDate]);
+  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
 
   function handleTellMeMore(index: number) {
     const dest = destinations[index];

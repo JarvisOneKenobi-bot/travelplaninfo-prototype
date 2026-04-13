@@ -34,9 +34,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const origin = (searchParams.get("origin") ?? "MIA").toUpperCase();
   const vibes = searchParams.get("vibes") ?? "";
   const departMonth = searchParams.get("depart_month") ?? "";
+  const tripLength = searchParams.get("trip_length") ?? "";
 
-  // Cache key includes vibes and month so different combos get different results
-  const cacheKey = `${origin}|${vibes}|${departMonth}`;
+  // Cache key includes vibes, month, and trip_length so different combos get different results
+  const cacheKey = `${origin}|${vibes}|${departMonth}|${tripLength}`;
 
   const cached = cache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const params = new URLSearchParams({ origin });
     if (vibes) params.set("vibes", vibes);
     if (departMonth) params.set("depart_month", departMonth);
+    if (tripLength) params.set("trip_length", tripLength);
 
     const res = await fetch(
       `${FASTAPI_BASE}/api/assistant/surprise-destinations?${params.toString()}`,

@@ -28,14 +28,19 @@ function formatDate(dateStr: string): string {
 
 const FILTER_CATEGORIES = [
   { label: "All Guides", value: "all" },
-  { label: "Destinations", value: "worldwide-travel-destinations" },
-  { label: "Tips & Tricks", value: "travel-planning" },
-  { label: "Itineraries", value: "uncategorized" },
-  { label: "Transportation", value: "transportation" },
+  { label: "Destinations", value: "destinations" },
+  { label: "Itineraries", value: "itineraries" },
+  { label: "Planning & Tips", value: "planning-tips" },
+  { label: "Things to Do", value: "things-to-do" },
 ];
 
 export default function GuidesFilter({ posts }: { posts: Post[] }) {
   const [activeCategory, setActiveCategory] = useState("all");
+
+  const countFor = (value: string) =>
+    value === "all"
+      ? posts.length
+      : posts.filter((p) => p.categories.some((c) => c.slug === value)).length;
 
   const filtered =
     activeCategory === "all"
@@ -44,21 +49,32 @@ export default function GuidesFilter({ posts }: { posts: Post[] }) {
 
   return (
     <>
-      {/* Categories */}
+      {/* Category filter tabs */}
       <div className="flex flex-wrap gap-2 justify-center mb-8">
-        {FILTER_CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setActiveCategory(cat.value)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              activeCategory === cat.value
-                ? "bg-teal-700 text-white"
-                : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+        {FILTER_CATEGORIES.map((cat) => {
+          const count = countFor(cat.value);
+          const isEmpty = count === 0;
+          const isActive = activeCategory === cat.value;
+          return (
+            <button
+              key={cat.value}
+              onClick={() => !isEmpty && setActiveCategory(cat.value)}
+              disabled={isEmpty}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-teal-700 text-white"
+                  : isEmpty
+                  ? "bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed"
+                  : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400"
+              }`}
+            >
+              {cat.label}
+              <span className={`ml-1.5 text-xs ${isActive ? "text-teal-200" : isEmpty ? "text-gray-300" : "text-gray-400"}`}>
+                ({count})
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Posts Grid */}

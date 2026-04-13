@@ -11,7 +11,10 @@
     "canonical": "https://travelplaninfo.com/4-reasons-to-visit-the-english-riviera/"
   },
   "categories": [
-    "English Riviera   Torquay, Paignton & Brixham ()"
+    {
+      "name": "Destinations",
+      "slug": "destinations"
+    }
   ],
   "faq": [
     {
