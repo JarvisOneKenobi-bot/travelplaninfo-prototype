@@ -17,6 +17,7 @@ export interface Article {
     ogImage?: string;
   };
   affiliateOpportunities: string[];
+  search_location?: string;
   faq?: { question: string; answer: string }[];
   schemaType?: "hotel_review" | "destination_guide" | "how_to" | "comparison";
 }

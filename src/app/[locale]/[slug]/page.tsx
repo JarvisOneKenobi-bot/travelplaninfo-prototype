@@ -53,10 +53,21 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const post = getArticle(slug);
   if (!post) return { title: "Post Not Found | TravelPlanInfo" };
   const description = decodeEntities(post.seo.description || post.excerpt);
+
+  const base = "https://travelplaninfo.com";
+  const localePath = locale === "en" ? "" : `/${locale}`;
+  const url = `${base}${localePath}/${slug}/`;
+  const languages = Object.fromEntries(
+    routing.locales.map((loc) => [
+      loc,
+      `${base}${loc === "en" ? "" : "/" + loc}/${slug}/`,
+    ])
+  );
+
   return {
     title: post.seo.title || post.title,
     description,
@@ -64,13 +75,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.seo.title || post.title,
       description,
       type: "article",
+      url,
       publishedTime: post.date,
       modifiedTime: post.modified,
       authors: ["TravelPlanInfo"],
       images: post.seo.ogImage ? [post.seo.ogImage] : [],
     },
     alternates: {
-      canonical: post.seo.canonical || `https://travelplaninfo.com/${slug}/`,
+      canonical: locale === "en" ? post.seo.canonical || url : url,
+      languages,
     },
   };
 }
@@ -88,6 +101,12 @@ export default async function LocaleArticlePage({ params }: Props) {
     day: "numeric",
   });
 
+  const base = "https://travelplaninfo.com";
+  const localePath = locale === "en" ? "" : `/${locale}`;
+  const url = `${base}${localePath}/${slug}/`;
+  const homeUrl = `${base}${localePath}/`;
+  const guidesUrl = `${base}${localePath}/guides/`;
+
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -98,9 +117,9 @@ export default async function LocaleArticlePage({ params }: Props) {
     publisher: {
       "@type": "Organization",
       name: "TravelPlanInfo",
-      url: "https://travelplaninfo.com",
+      url: base,
     },
-    ...(post.featuredImage ? { image: `https://travelplaninfo.com${post.featuredImage}` } : {}),
+    ...(post.featuredImage ? { image: `${base}${post.featuredImage}` } : {}),
     description: post.seo.description || post.excerpt,
   };
 
@@ -108,9 +127,9 @@ export default async function LocaleArticlePage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://travelplaninfo.com" },
-      { "@type": "ListItem", position: 2, name: "Guides", item: "https://travelplaninfo.com/guides/" },
-      { "@type": "ListItem", position: 3, name: post.title, item: `https://travelplaninfo.com/${slug}/` },
+      { "@type": "ListItem", position: 1, name: "Home", item: homeUrl },
+      { "@type": "ListItem", position: 2, name: "Guides", item: guidesUrl },
+      { "@type": "ListItem", position: 3, name: post.title, item: url },
     ],
   };
 
@@ -199,7 +218,7 @@ export default async function LocaleArticlePage({ params }: Props) {
                   {post.affiliateOpportunities.length > 0 && i > 0 && i % 2 === 0 && (
                     <ArticleAffiliateCTA
                       opportunities={post.affiliateOpportunities}
-                      destination={post.categories?.[0]?.name}
+                      destination={post.search_location || post.categories?.[0]?.name}
                     />
                   )}
                 </Fragment>

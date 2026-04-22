@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next';
 import { getAllArticles } from '@/lib/articles';
+import { routing } from '@/i18n/routing';
 
 const SITE_URL = 'https://travelplaninfo.com';
-const LOCALES = ['en', 'es', 'pt', 'fr', 'de', 'it'] as const;
 
 function localeUrl(path: string, locale: string): string {
   if (locale === 'en') return `${SITE_URL}${path}`;
@@ -24,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Generate locale-aware static URLs (en is canonical, others get locale prefix)
   const staticUrls: MetadataRoute.Sitemap = STATIC_PAGES.flatMap(({ path, changeFrequency, priority }) =>
-    LOCALES.map((locale) => ({
+    routing.locales.map((locale) => ({
       url: localeUrl(path, locale),
       lastModified: now,
       changeFrequency,
@@ -32,13 +32,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   );
 
-  // Articles are English-only for now (at root level, no locale prefix)
-  const postUrls: MetadataRoute.Sitemap = getAllArticles().map((post) => ({
-    url: `${SITE_URL}/${post.slug}/`,
-    lastModified: new Date(post.modified || post.date),
-    changeFrequency: 'monthly' as const,
-    priority: 0.6,
-  }));
+  // Articles: emit one entry per locale with alternates.languages so search
+  // engines cluster the translations together.
+  const postUrls: MetadataRoute.Sitemap = getAllArticles().flatMap((post) => {
+    const lastModified = new Date(post.modified || post.date);
+    const languages = Object.fromEntries(
+      routing.locales.map((loc) => [loc, localeUrl(`/${post.slug}/`, loc)])
+    );
+    return routing.locales.map((locale) => ({
+      url: localeUrl(`/${post.slug}/`, locale),
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: locale === 'en' ? 0.6 : 0.6 * 0.9,
+      alternates: { languages },
+    }));
+  });
 
   return [...staticUrls, ...postUrls];
 }

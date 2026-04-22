@@ -1,4 +1,4 @@
-import { CJ_LINKS } from "@/config/affiliates";
+import { CJ_LINKS, TP_CONFIG, TP_KLOOK } from "@/config/affiliates";
 
 interface Props {
   opportunities: string[];
@@ -14,14 +14,18 @@ interface CTAConfig {
 }
 
 function buildCTAs(opportunities: string[], destination?: string): CTAConfig[] {
+  const hotelsCityCTA: CTAConfig = {
+    label: "🏨 Hotels",
+    title: destination ? `Hotels in ${destination}` : "Find Your Hotel",
+    description: "Top-rated hotels with free cancellation. Best price guaranteed.",
+    cta: "Search Hotels",
+    url: destination ? CJ_LINKS.hotelsCity(destination) : CJ_LINKS.hotels(),
+  };
+
   const ctaMap: Record<string, CTAConfig> = {
-    hotels: {
-      label: "🏨 Hotels",
-      title: destination ? `Hotels in ${destination}` : "Find Your Hotel",
-      description: "Top-rated hotels with free cancellation. Best price guaranteed.",
-      cta: "Search Hotels",
-      url: destination ? CJ_LINKS.hotelsCity(destination) : CJ_LINKS.hotelsCity(""),
-    },
+    hotels: hotelsCityCTA,
+    // Booking.com TP is archived for TPI — route "booking" to Hotels.com (CJ) per CLAUDE.md
+    booking: hotelsCityCTA,
     vrbo: {
       label: "🏠 Vacation Rentals",
       title: "Vacation Rentals",
@@ -42,6 +46,21 @@ function buildCTAs(opportunities: string[], destination?: string): CTAConfig[] {
       description: "Up to 75% off cruise fares. Last-minute deals available.",
       cta: "View Cruises",
       url: CJ_LINKS.cruisesLastMinute(),
+    },
+    tours: {
+      label: "🎟️ Tours & Activities",
+      title: destination ? `Tours & Activities in ${destination}` : "Tours & Activities",
+      description: "Skip-the-line tickets, day trips and local experiences.",
+      cta: "Browse Tours",
+      url: TP_KLOOK.url(destination ?? ""),
+    },
+    flights: {
+      label: "✈️ Flights",
+      title: destination ? `Flights to ${destination}` : "Flight Deals",
+      description: "Compare hundreds of airlines and agencies in one search.",
+      cta: "Search Flights",
+      // Aviasales accepts origin-empty — cleaner gets empty string, dest gets city code slug
+      url: TP_CONFIG.searchUrl("", destination ?? ""),
     },
   };
 
