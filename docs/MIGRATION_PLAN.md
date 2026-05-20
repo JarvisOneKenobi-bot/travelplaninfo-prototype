@@ -1,7 +1,9 @@
-# TravelPlanInfo — WP → Next.js/Vercel Migration Plan
+# TravelPlanInfo — Archived WP → Next.js/Vercel Migration Notes
 **Date:** 2026-02-23  
-**Status:** Active — pipeline paused, prototype deployed at travelplaninfo-proto.vercel.app  
+**Status:** Archived / historical reference only — original Vercel-era migration plan, superseded by `docs/deployment/local-to-vps.md`  
 **Scope:** 29 published posts, 3 categories, flat URL structure `/{slug}/`
+
+> Archive note: Vercel is retired as the deployment target for this repo. Keep this document for WordPress export and content-migration history only. Do not use it for current DNS, domain, or deployment operations; follow `docs/deployment/local-to-vps.md` instead.
 
 ---
 
@@ -18,7 +20,7 @@
 | Prototype pages | `/` (DesignA/B/C toggle), `/hot-deals` |
 | Missing prototype pages | Dynamic `/{slug}`, `/destinations`, `/guides`, `/planner` |
 | CMS client libs | ❌ None installed yet |
-| Pipeline | ⏸ PAUSED — no new WP content until Vercel goes live |
+| Pipeline | Historical snapshot — content freeze used during the original Vercel planning pass |
 
 ---
 
@@ -49,7 +51,7 @@ curl "https://travelplaninfo.com/wp-json/wp/v2/categories?per_page=100&_fields=i
 Reasoning:
 - 29 posts is a tiny corpus. JSON files are trivial to manage.
 - WP content is HTML rendered by Gutenberg/Classic Editor — it is **not** Markdown. Converting to MDX introduces HTML→MDX conversion bugs, encoding issues, and shortcode debris.
-- Headless WP (keep WP as API) adds a runtime dependency: if WP host goes down mid-deploy, Vercel SSG fails. Unnecessary for 29 posts.
+- Headless WP (keep WP as API) adds a runtime dependency: if WP host goes down mid-deploy, the original Vercel SSG plan would fail. Unnecessary for 29 posts.
 - JSON + `dangerouslySetInnerHTML` for the body HTML is the simplest, most faithful port of WP content.
 - Content is frozen (pipeline paused), so staleness is not a concern.
 
@@ -100,7 +102,7 @@ Next.js target: `travelplaninfo.com/{slug}` (no trailing slash — or match with
 
 For 29 frozen posts, this is the only sensible choice. There is no active editorial workflow on this site. The goal is to decommission WP, not maintain it. Static JSON means:
 - Zero runtime dependencies
-- Free Vercel hobby tier is sufficient
+- In the original prototype plan, free Vercel hosting was expected to be sufficient
 - Full control over HTML sanitization
 - WP can be shut down the day after cutover
 
@@ -241,7 +243,7 @@ export default function robots() {
 
 ---
 
-### Phase 4: Redirect Map (WP URLs → Vercel)
+### Historical Phase 4: Redirect Map (WP URLs → original Vercel target)
 **Estimate: 1–2 hours**
 
 Since WP used `/{slug}/` and Next.js target also uses `/{slug}/` (with `trailingSlash: true`), **zero post-level redirects are needed** — the URL space is identical.
@@ -280,8 +282,10 @@ async redirects() {
 
 ---
 
-### Phase 5: DNS Cutover Checklist
+### Historical Phase 5: DNS Cutover Checklist (archived)
 **Estimate: 30 min (excluding propagation wait)**
+
+Historical note: this checklist is preserved to document the retired Vercel cutover concept. It is not the active deployment procedure.
 
 Pre-cutover (must be done while WP is still live):
 - [ ] Vercel custom domain `travelplaninfo.com` added and SSL cert issued (takes ~5 min)
@@ -301,7 +305,7 @@ Cutover steps (do during low-traffic window — early morning EST):
 
 ---
 
-### Phase 6: WP Decommission
+### Historical Phase 6: WP Decommission
 **Estimate: 1 hour — do 30 days post-cutover**
 
 Wait 30 days after cutover to catch any edge cases in GSC/analytics.
@@ -351,9 +355,9 @@ Wait 30 days after cutover to catch any edge cases in GSC/analytics.
 
 ---
 
-## 6. Go-Live Criteria (DNS Cutover Gate)
+## 6. Historical Go-Live Criteria (archived Vercel cutover gate)
 
-All of the following must be `✅` before DNS is touched:
+All of the following had to be `✅` for the original Vercel cutover concept:
 
 ### Content
 - [ ] All 29 post slugs return HTTP 200 on `travelplaninfo-proto.vercel.app/{slug}`
@@ -372,14 +376,14 @@ All of the following must be `✅` before DNS is touched:
 - [ ] Lighthouse SEO score = 100 on at least one post page
 - [ ] LCP < 2.5s on homepage (mobile, 4G simulated)
 
-### Infrastructure
+### Historical infrastructure
 - [ ] Vercel custom domain `travelplaninfo.com` added → SSL cert issued (green padlock)
 - [ ] `www.travelplaninfo.com` redirects to apex (or vice versa — pick one, be consistent)
 - [ ] `next.config.ts` has `trailingSlash: true`
 - [ ] All category redirects tested (`/category/worldwide-travel-destinations` → 301)
 - [ ] Google Search Console property exists for `travelplaninfo.com`
 
-### Rollback Plan
+### Historical rollback plan
 - WP site stays **live and untouched** for 30 days post-cutover
 - If something breaks: flip DNS back to WP in < 5 minutes (TTL should be set to 300s before cutover)
 - Keep WP hosting paid through at least 2026-04-01
@@ -402,7 +406,7 @@ Week 2
 
 Week 3
 ├── Performance audit (Lighthouse)                        [1 hr]
-├── Vercel custom domain + SSL                            [30 min]
+├── Archived Vercel custom domain + SSL                   [30 min]
 ├── Pre-cutover SEO checklist sign-off                    [1 hr]
 └── Phase 5: DNS cutover                                  [30 min]
 

@@ -2,6 +2,9 @@
 /.next
 /out
 /.env*
+!.env.example
+.vercel/
+tsconfig.tsbuildinfo
 .DS_Store
 data/
 test-results/

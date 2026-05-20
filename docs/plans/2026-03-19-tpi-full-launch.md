@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 15, React 19, Tailwind CSS 3.4, NextAuth.js 5, better-sqlite3, Nginx, PM2, Let's Encrypt SSL, Playwright E2E tests.
 
+> Status note (2026-05-20): VPS / self-hosted deployment is the active hosting direction. For current live deployment and rollback steps, use `docs/deployment/local-to-vps.md`. This launch plan still captures product scope and implementation sequencing, but it is not the canonical operations runbook.
+
 ---
 
 ## Phase 1: Clean House (remove dead code, fix P0 bugs)

@@ -3,6 +3,8 @@
 Rebuild this Next.js prototype to exactly match the approved design screenshot at:
 `/home/jarvis/.openclaw/workspace/content-pipeline/travelplaninfo/images/vercel-approved.png`
 
+Note: `vercel-approved.png` is a historical filename from the original prototype review flow. It is an image asset name only and should not be interpreted as current deployment guidance.
+
 ## Stack
 - Next.js 15.5.12 (already installed, keep it)
 - Tailwind CSS (install + configure)

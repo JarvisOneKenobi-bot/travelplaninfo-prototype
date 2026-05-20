@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TravelPlanInfo WP → Vercel Export Script
+ * TravelPlanInfo WP content export script
  * Fetches all posts from WP REST API, strips Elementor markup,
  * downloads images, and produces src/content/posts.json
  */
