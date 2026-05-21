@@ -2,19 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
-import fs from "fs";
-import path from "path";
-
-// ── Anthropic client (reads credentials from disk) ──────────────────────────
-
-function getAnthropicClient(): Anthropic {
-  const credsPath = path.join(
-    process.env.HOME || "",
-    ".openclaw/credentials/anthropic.json"
-  );
-  const creds = JSON.parse(fs.readFileSync(credsPath, "utf-8"));
-  return new Anthropic({ apiKey: creds.api_key });
-}
+import { getAnthropicApiKey, getFastApiBaseUrl } from "@/lib/server-config";
 
 // ── POST handler ────────────────────────────────────────────────────────────
 
@@ -62,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const existingSummary = db
     .prepare(
-      "SELECT id FROM user_memory WHERE user_id = ? AND key = ?"
+      "SELECT id FROM user_memory WHERE user_id = ? AND key = ? AND TRIM(COALESCE(value, '')) != ''"
     )
     .get(userId, summaryKey) as { id: number } | undefined;
 
@@ -97,7 +85,15 @@ export async function POST(req: NextRequest) {
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
 
-  const anthropic = getAnthropicClient();
+  const anthropicApiKey = getAnthropicApiKey();
+  if (!anthropicApiKey) {
+    return NextResponse.json(
+      { error: "Summarization service not configured" },
+      { status: 503 }
+    );
+  }
+
+  const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
   let completion: Anthropic.Message;
   try {
@@ -120,8 +116,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 7. Parse response into key-value pairs
-  const responseText =
-    completion.content[0].type === "text" ? completion.content[0].text : "";
+  const firstTextBlock = completion.content.find(
+    (block) => block.type === "text"
+  );
+  const responseText = firstTextBlock?.text ?? "";
 
   let kvPairs: Array<{ key: string; value: string }>;
   try {
@@ -141,7 +139,13 @@ export async function POST(req: NextRequest) {
       parseErr
     );
     // Fallback: save the raw text as a single summary entry
-    kvPairs = [{ key: summaryKey, value: responseText.slice(0, 500) }];
+    const fallbackSummary = responseText.trim().slice(0, 500);
+    kvPairs = [
+      {
+        key: summaryKey,
+        value: fallbackSummary || "Summarization fallback: empty model response",
+      },
+    ];
   }
 
   // 8. Upsert into user_memory
@@ -162,11 +166,16 @@ export async function POST(req: NextRequest) {
         }
       }
       // Also save the overall summary marker so we don't re-summarize
-      if (!rows.some((r) => r.key === summaryKey)) {
+      if (!rows.some((r) => r.key === summaryKey && r.value)) {
         const summaryValue = rows
+          .filter((r) => r.key && r.value)
           .map((r) => `${r.key}: ${r.value}`)
           .join("; ");
-        upsert.run(userId, summaryKey, summaryValue);
+        upsert.run(
+          userId,
+          summaryKey,
+          summaryValue || "Summarization fallback: no structured memory extracted"
+        );
       }
     }
   );
@@ -182,8 +191,12 @@ export async function POST(req: NextRequest) {
   try {
     const inputTokens = completion.usage?.input_tokens ?? 0;
     const outputTokens = completion.usage?.output_tokens ?? 0;
+    const recordSpendUrl = new URL(
+      "/api/assistant/record-spend",
+      getFastApiBaseUrl()
+    );
 
-    await fetch("http://localhost:8766/api/assistant/record-spend", {
+    await fetch(recordSpendUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

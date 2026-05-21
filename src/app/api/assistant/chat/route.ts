@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import {
+  getAuthenticatedAppBaseUrl,
+  getFastApiBaseUrl,
+} from "@/lib/server-config";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
 
@@ -115,12 +119,13 @@ export async function POST(req: NextRequest) {
        JOIN chat_messages cm ON cm.session_id = cs.id
        WHERE cs.user_id = ?
          AND cs.id != ?
-         AND NOT EXISTS (
-           SELECT 1 FROM user_memory um
-           WHERE um.user_id = cs.user_id
-             AND um.key = 'conversation_summary_' || DATE(cs.created_at)
-         )
-       GROUP BY cs.id
+        AND NOT EXISTS (
+          SELECT 1 FROM user_memory um
+          WHERE um.user_id = cs.user_id
+            AND um.key = 'conversation_summary_' || DATE(cs.created_at)
+            AND TRIM(COALESCE(um.value, '')) != ''
+        )
+GROUP BY cs.id
        HAVING msg_count >= 6
        ORDER BY cs.created_at DESC
        LIMIT 1`
@@ -132,7 +137,12 @@ export async function POST(req: NextRequest) {
   if (unsummarizedSession && !ctx.isGuest) {
     // Fire-and-forget: summarize in background (don't block the chat response)
     const cookieHeader = req.headers.get("cookie") || "";
-    fetch("http://localhost:3000/api/assistant/summarize", {
+    const summarizeUrl = new URL(
+      "/api/assistant/summarize",
+      getAuthenticatedAppBaseUrl()
+    );
+
+    fetch(summarizeUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -176,7 +186,12 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const backendRes = await fetch("http://localhost:8766/api/assistant/chat", {
+        const backendChatUrl = new URL(
+          "/api/assistant/chat",
+          getFastApiBaseUrl()
+        );
+
+        const backendRes = await fetch(backendChatUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

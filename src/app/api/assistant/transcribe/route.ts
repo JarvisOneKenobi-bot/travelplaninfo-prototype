@@ -1,20 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import fs from "fs";
-import path from "path";
+import { getOpenAIApiKey } from "@/lib/server-config";
 
-// Load OpenAI key server-side
-function getOpenAIKey(): string {
-  const credPath = path.join(
-    process.env.HOME || "/home/jarvis",
-    ".openclaw/credentials/openai.json"
-  );
-  try {
-    const data = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-    return data.api_key || data.key || "";
-  } catch {
-    return process.env.OPENAI_API_KEY || "";
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+const ALLOWED_AUDIO_TYPES = new Set([
+  "audio/webm",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+]);
+const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
+  "audio/webm": "webm",
+  "audio/mp4": "mp4",
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/ogg": "ogg",
+};
+
+function getUploadFileName(audioFile: File): string {
+  const trimmedName = audioFile.name?.trim();
+  if (trimmedName) {
+    return trimmedName;
   }
+
+  const extension = MIME_TYPE_TO_EXTENSION[audioFile.type] || "bin";
+  return `audio.${extension}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -35,8 +50,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!ALLOWED_AUDIO_TYPES.has(audioFile.type)) {
+      return NextResponse.json(
+        { error: "Unsupported audio format" },
+        { status: 400 }
+      );
+    }
+
+    if (audioFile.size > MAX_AUDIO_BYTES) {
+      return NextResponse.json(
+        { error: "Audio file too large" },
+        { status: 413 }
+      );
+    }
+
     // Forward to OpenAI Whisper API
-    const openaiKey = getOpenAIKey();
+    const openaiKey = getOpenAIApiKey();
     if (!openaiKey) {
       return NextResponse.json(
         { error: "Transcription service not configured" },
@@ -45,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
     const whisperForm = new FormData();
-    whisperForm.append("file", audioFile, "audio.webm");
+    whisperForm.append("file", audioFile, getUploadFileName(audioFile));
     whisperForm.append("model", "whisper-1");
     whisperForm.append("language", "en");
 

@@ -15,7 +15,7 @@ The intended workflow is:
 5. Put Nginx in front of the app and proxy public traffic to `127.0.0.1:3001`.
 6. Run post-deploy verification before considering the deploy complete.
 
-This runbook does not change application logic. It documents the runtime contract the repo currently expects.
+This runbook documents the runtime contract the repo currently expects.
 
 ## 2. Runtime topology
 
@@ -31,25 +31,25 @@ Expected process layout:
 
 - public HTTPS -> Nginx
 - Nginx -> `http://127.0.0.1:3001`
-- Next.js server -> local filesystem + SQLite + localhost FastAPI dependency where configured
+- Next.js server -> local filesystem + SQLite + FastAPI dependency resolved from `FASTAPI_URL` or local fallback
 
-## 3. Current localhost caveats you must account for
+## 3. Application URL and backend URL behavior
 
-These caveats are real in the current codebase and must be preserved in deployment planning until the code is updated:
+Current server-side URL behavior:
 
-- Some server-side code still calls `http://localhost:3000` directly.
-  - `src/app/api/assistant/chat/route.ts` triggers background summarization via `http://localhost:3000/api/assistant/summarize`.
-  - This means a deployment that only exposes Next.js on port 3001 can still have internal assumptions about `localhost:3000`.
-- Some server-side code still calls `http://localhost:8766` directly.
-  - `src/app/api/assistant/chat/route.ts` calls the assistant backend at `http://localhost:8766/api/assistant/chat`.
-  - `src/app/api/assistant/summarize/route.ts` records spend to `http://localhost:8766/api/assistant/record-spend`.
-- The surprise-me route uses `FASTAPI_URL` if set, but otherwise falls back to `http://localhost:8766`.
+- Authenticated internal Next.js self-calls use trusted app-base config.
+  - For assistant chat background summarization, the app builds `/api/assistant/summarize` against `APP_BASE_URL`, then `NEXTAUTH_URL`, then `http://localhost:3000`.
+  - Authenticated self-calls do not trust request-derived origin or host values.
+- FastAPI sidecar calls use `FASTAPI_URL` when set.
+  - If `FASTAPI_URL` is blank or unset, the app falls back to `http://localhost:8766` for local development.
+- URL composition is path-safe.
+  - Base URLs are normalized without trailing slashes before route paths are appended.
 
 Operationally, that means:
 
-- Do not assume the repo is fully host/port-agnostic yet.
-- If the VPS deploy runs Next.js on 3001, either keep a local compatibility path for `localhost:3000` or treat those internal hard-coded calls as a known limitation until a later remediation task changes them.
-- The FastAPI-side assistant services are still expected on `localhost:8766` unless explicitly reconfigured where supported.
+- Set `APP_BASE_URL` to the canonical application base URL for server-side self-calls.
+- Keep `NEXTAUTH_URL` aligned with the canonical app URL for auth flows.
+- Set `FASTAPI_URL` explicitly on the VPS if the sidecar is not reachable at the default local fallback.
 
 ## 4. Environment variables and credential inputs in use today
 
@@ -61,8 +61,10 @@ Required or effectively required for normal operation:
   - Used implicitly by NextAuth runtime for session security.
 - `NEXTAUTH_URL`
   - Used implicitly by NextAuth runtime for canonical auth URLs.
+- `APP_BASE_URL`
+  - Used for trusted server-side authenticated self-call fallback.
 - `FASTAPI_URL`
-  - Used by `src/app/api/surprise-me/route.ts`; otherwise the route falls back to `http://localhost:8766`.
+  - Used by assistant chat, summarization spend recording, and surprise-destination backend calls; otherwise those routes fall back to `http://localhost:8766`.
 - `TRAVELPAYOUTS_TOKEN`
   - Used by `src/app/api/trending-prices/route.ts`.
 - `GOOGLE_GEOCODING_KEY`
@@ -73,14 +75,18 @@ Required or effectively required for normal operation:
   - Enables Google auth provider when paired with `GOOGLE_CLIENT_SECRET`.
 - `GOOGLE_CLIENT_SECRET`
   - Enables Google auth provider when paired with `GOOGLE_CLIENT_ID`.
+- `ANTHROPIC_API_KEY`
+  - Preferred credential source for assistant summarization.
 - `OPENAI_API_KEY`
-  - Fallback for transcription if the OpenAI credential file is absent.
+  - Preferred credential source for transcription.
 
-Credential-file behavior that matters today:
+Credential-file compatibility behavior that matters today:
 
-- Anthropic summarization does not read `ANTHROPIC_API_KEY`.
-- Anthropic summarization currently reads `~/.openclaw/credentials/anthropic.json` and expects an `api_key` entry there.
-- OpenAI transcription first tries `~/.openclaw/credentials/openai.json` and falls back to `OPENAI_API_KEY` only if that file is not available.
+- Anthropic summarization first reads `ANTHROPIC_API_KEY`.
+- If `ANTHROPIC_API_KEY` is unset, summarization can still fall back to `~/.openclaw/credentials/anthropic.json` and expects an `api_key` entry there.
+- OpenAI transcription first reads `OPENAI_API_KEY`.
+- If `OPENAI_API_KEY` is unset, transcription can still fall back to `~/.openclaw/credentials/openai.json` and accepts either `api_key` or `key`.
+- The legacy credential files are compatibility fallbacks only. VPS deployments should prefer env-only configuration.
 
 Optional verification-only variable:
 
@@ -125,10 +131,10 @@ curl -I http://127.0.0.1:3001/
 curl -I http://127.0.0.1:3001/hot-deals
 ```
 
-If testing assistant-related flows locally, remember the current caveats:
+If testing assistant-related flows locally, remember the current defaults:
 
-- some code paths still assume `localhost:3000`
-- FastAPI-backed assistant flows assume `localhost:8766` unless configured otherwise
+- authenticated self-calls fall back to `APP_BASE_URL`, then `NEXTAUTH_URL`, then `http://localhost:3000`
+- FastAPI-backed assistant flows use `FASTAPI_URL` or fall back to `http://localhost:8766`
 
 ## 7. VPS deployment steps
 
@@ -145,7 +151,7 @@ Deploy procedure:
 
 1. Sync the latest repo state to the VPS.
 2. Change into the repo root.
-3. Ensure runtime inputs exist (`.env`, credential files, and any required service config).
+3. Ensure runtime inputs exist (`.env` and any required service config). Prefer env vars for API credentials; only rely on legacy credential files for compatibility.
 4. Ensure the SQLite directory exists:
 
 ```bash
@@ -233,7 +239,7 @@ test -d data && echo "data dir present"
 test -f data/tpi.db && echo "sqlite present" || echo "sqlite will be created on first DB write"
 ```
 
-If validating assistant-adjacent behavior, also verify dependency reachability with the current caveats in mind:
+If validating assistant-adjacent behavior, also verify dependency reachability with the current runtime contract in mind:
 
 ```bash
 curl -I http://127.0.0.1:8766/ || true
