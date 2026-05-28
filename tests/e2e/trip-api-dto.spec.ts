@@ -14,4 +14,5 @@ test('GET /api/trips returns DTO shape — no quiz_/group_/origin_auto columns l
   expect(created).not.toHaveProperty('quiz_budget');
   expect(created).not.toHaveProperty('group_share');
   expect(created).not.toHaveProperty('origin_auto');
+  expect(Array.isArray(created.interests)).toBe(true);
 });

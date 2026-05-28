@@ -3,7 +3,6 @@
 
 export interface TripDto {
   id: number;
-  userId: number;
   name: string;
   destination: string;
   startDate: string | null;
@@ -90,7 +89,6 @@ function safeJsonObject(s: unknown): Record<string, number> | null {
 export function toTripDto(row: any): TripDto {
   return {
     id: row.id,
-    userId: row.user_id,
     name: row.name,
     destination: row.destination,
     startDate: row.start_date ?? null,

@@ -72,7 +72,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       .run(val == null ? null : val, id);
   }
 
-  const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id);
+  const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id) as any;
+  if (!updated) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   return NextResponse.json(toTripDto(updated));
 }
 
