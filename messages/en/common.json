@@ -593,5 +593,18 @@
     "searching": "searching...",
     "complete": "Atlas found {count} results for your trip.",
     "viewDetails": "View details"
+  },
+  "atlasSmartSearch": {
+    "ariaLabel": "Atlas smart search",
+    "prompt": "I can search flights, hotels, and activities for {destination}.",
+    "start": "Start smart search",
+    "notYet": "Not yet"
+  },
+  "tripFormNudge": {
+    "chooser": "Not sure where to start? Pick the option that feels closest — you can change it later.",
+    "flight-no-origin": "Tell me where you're flying from, or tap Atlas and say it in plain English.",
+    "flight-no-destination": "Where are you going? Type a city or airport code.",
+    "explore-no-vibes": "Pick a feeling — chill, adventure, romance. Atlas will narrow the rest.",
+    "explore-no-interests": "Add two things you like and Atlas can build better suggestions."
   }
 }

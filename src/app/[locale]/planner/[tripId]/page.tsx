@@ -106,6 +106,8 @@ export default async function TripDetail({ params }: Props) {
           ) : (
             /* PATH A: Real destination — active planner */
             <div>
+              {/* Atlas smart search consent chip mounts here */}
+              <div id="atlas-smart-search-slot" />
               {/* Quiz context chips for surprise-mode trips that resolved to a destination */}
               {trip.entry_mode === 'surprise' && trip.quiz_vibes && (
                 <div className="flex flex-wrap gap-2 mb-4">

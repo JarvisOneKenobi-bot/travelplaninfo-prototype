@@ -584,5 +584,18 @@
     "searching": "searching...",
     "complete": "Atlas found {count} results for your trip.",
     "viewDetails": "View details"
+  },
+  "atlasSmartSearch": {
+    "ariaLabel": "Atlas intelligente Suche",
+    "prompt": "Ich kann Flüge, Hotels und Aktivitäten für {destination} suchen.",
+    "start": "Intelligente Suche starten",
+    "notYet": "Noch nicht"
+  },
+  "tripFormNudge": {
+    "chooser": "Nicht sicher, wo du anfangen sollst? Wähle die Option, die am nächsten liegt – du kannst sie später ändern.",
+    "flight-no-origin": "Sag mir, von wo du fliegst, oder tippe auf Atlas und sage es auf Deutsch.",
+    "flight-no-destination": "Wohin geht die Reise? Gib eine Stadt oder einen Flughafencode ein.",
+    "explore-no-vibes": "Wähle ein Gefühl – entspannt, Abenteuer, Romantik. Atlas übernimmt den Rest.",
+    "explore-no-interests": "Füge zwei Dinge hinzu, die du magst, und Atlas kann bessere Vorschläge machen."
   }
 }

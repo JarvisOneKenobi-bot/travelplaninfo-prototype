@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useAtlasBubble } from "@/hooks/useAtlasBubble";
+import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
+import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
 import HotelCard from "./atlas/HotelCard";
@@ -454,6 +457,43 @@ function renderMarkdownLite(text: string) {
   return html;
 }
 
+// ── Auto-search prompt builder (extracted from former 800ms auto-trigger) ────
+// Pure function — no React, no side effects.
+
+function buildAutoSearchPrompt(ctx: {
+  destination: string;
+  dates?: { start: string; end: string };
+  flexibleWindow?: string;
+  tripLength?: string;
+}): string {
+  const windowLabels: Record<string, string> = {
+    next_2_weeks: "in the next 2 weeks",
+    next_month: "next month",
+    "2_3_months": "in 2-3 months",
+    "6_months": "in about 6 months",
+    this_year: "sometime this year",
+    any: "whenever it's cheapest",
+  };
+  const lengthLabels: Record<string, string> = {
+    weekend: "a weekend (2-3 days)",
+    week: "about a week",
+    "10_14_days": "10-14 days",
+    "2_plus_weeks": "2+ weeks",
+    any: "however long gives the best deal",
+  };
+
+  let prompt = `I just created a trip to ${ctx.destination}`;
+  if (ctx.dates) {
+    prompt += ` from ${ctx.dates.start} to ${ctx.dates.end}`;
+  } else if (ctx.flexibleWindow || ctx.tripLength) {
+    const when = ctx.flexibleWindow ? windowLabels[ctx.flexibleWindow] || ctx.flexibleWindow : "flexible dates";
+    const howLong = ctx.tripLength ? lengthLabels[ctx.tripLength] || ctx.tripLength : "flexible duration";
+    prompt += `. I'm flexible on dates — thinking ${when}, for ${howLong}`;
+  }
+  prompt += ". Search flights, hotels, and activities for me.";
+  return prompt;
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function AssistantChat() {
@@ -475,12 +515,25 @@ export default function AssistantChat() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<ModalData | null>(null);
 
+  // ── Trip context for trigger governance ──────────────────────────────────
+  const [tripCtx, setTripCtx] = useState<TripContext>(() => ({
+    destination: "your destination",
+    adults: 1,
+    budgetTier: "mid",
+  }));
+
+  // ── Portal slot for consent chip ─────────────────────────────────────────
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setSlot(document.getElementById('atlas-smart-search-slot'));
+  }, []);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const msgIdCounter = useRef(0);
   const hasAutoTriggered = useRef(false);
   const messagesLenRef = useRef(0);
-  const sendMessageRef = useRef<(msg: string) => void>(() => {});
+  const sendMessageRef = useRef<(msg: string, opts?: { onDone?: () => void }) => void>(() => {});
 
   // ── Quiz escape hatch — open chat via custom event ───────────────────────
   useEffect(() => {
@@ -591,7 +644,7 @@ export default function AssistantChat() {
   // ── Send message ─────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { onDone?: () => void }) => {
       if (!text.trim() || isLoading) return;
 
       setError(null);
@@ -694,6 +747,7 @@ export default function AssistantChat() {
                 : m
             )
           );
+          opts?.onDone?.();
           setIsLoading(false);
           return;
         }
@@ -706,6 +760,7 @@ export default function AssistantChat() {
                 : m
             )
           );
+          opts?.onDone?.();
           setIsLoading(false);
           return;
         }
@@ -768,6 +823,7 @@ export default function AssistantChat() {
             m.id === assistantMsgId ? { ...m, isStreaming: false } : m
           )
         );
+        opts?.onDone?.();
 
         // Voice output (TTS)
         if (voiceEnabled && fullText && !fullText.startsWith("[TOOL:")) {
@@ -798,6 +854,7 @@ export default function AssistantChat() {
               : m
           )
         );
+        opts?.onDone?.();
       }
 
       setIsLoading(false);
@@ -805,69 +862,43 @@ export default function AssistantChat() {
     [sessionId, isLoading, createSession, voiceEnabled]
   );
 
-  // ── Auto-trigger searches on first itinerary visit ─────────────────────
-
-  // Keep sendMessageRef always pointing to the latest sendMessage
+  // ── Keep sendMessageRef always pointing to the latest sendMessage ──────────
   sendMessageRef.current = sendMessage;
 
+  // ── Read trip context once after mount ───────────────────────────────────
   useEffect(() => {
-    if (hasAutoTriggered.current) return;
-
-    const timer = setTimeout(() => {
-      if (hasAutoTriggered.current) return;
-
-      const ctx = readTripContext();
-
-      // Only trigger if we have a real trip with a destination
-      if (!ctx.tripId || !ctx.destination || ctx.destination === "your destination" || ctx.destination === "Surprise Me") return;
-
-      // Don't trigger if user already has real items (returning to existing trip)
-      // Real items = items with a non-null price_estimate AND category !== "note"
-      const hasRealItems = ctx.items && ctx.items.some(
-        (item) => item.price_estimate !== null && item.category !== "note"
-      );
-      if (hasRealItems) return;
-
-      // Don't trigger if there are already messages (history was loaded)
-      if (messagesLenRef.current > 0) return;
-
-      hasAutoTriggered.current = true;
-
-      // Build the auto-search prompt with date context
-      const windowLabels: Record<string, string> = {
-        next_2_weeks: "in the next 2 weeks",
-        next_month: "next month",
-        "2_3_months": "in 2-3 months",
-        "6_months": "in about 6 months",
-        this_year: "sometime this year",
-        any: "whenever it's cheapest",
-      };
-      const lengthLabels: Record<string, string> = {
-        weekend: "a weekend (2-3 days)",
-        week: "about a week",
-        "10_14_days": "10-14 days",
-        "2_plus_weeks": "2+ weeks",
-        any: "however long gives the best deal",
-      };
-
-      let prompt = `I just created a trip to ${ctx.destination}`;
-      if (ctx.dates) {
-        prompt += ` from ${ctx.dates.start} to ${ctx.dates.end}`;
-      } else if (ctx.flexibleWindow || ctx.tripLength) {
-        const when = ctx.flexibleWindow ? windowLabels[ctx.flexibleWindow] || ctx.flexibleWindow : "flexible dates";
-        const howLong = ctx.tripLength ? lengthLabels[ctx.tripLength] || ctx.tripLength : "flexible duration";
-        prompt += `. I'm flexible on dates — thinking ${when}, for ${howLong}`;
-      }
-      prompt += ". Search flights, hotels, and activities for me.";
-
-      // Open the chat panel and fire the search
-      setIsOpen(true);
-      sendMessageRef.current(prompt);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setTripCtx(readTripContext());
   }, []);
+
+  // ── Trigger governance hook ───────────────────────────────────────────────
+  const hasRealItems = tripCtx.items?.some(
+    (i) => i.price_estimate !== null && i.category !== 'note'
+  ) ?? false;
+
+  const atlasTrigger = useAtlasTrigger({
+    tripId: tripCtx.tripId ?? null,
+    destination: tripCtx.destination ?? null,
+    hasItems: hasRealItems,
+    isSurpriseMe: tripCtx.destination === 'Surprise Me',
+    hasPriorMessages: messagesLenRef.current > 0,
+  });
+
+  // ── Consent effect: fire search only when user consents ──────────────────
+  useEffect(() => {
+    if (atlasTrigger.status !== 'consented') return;
+    if (!tripCtx.destination || tripCtx.destination === 'your destination') return;
+
+    const prompt = buildAutoSearchPrompt({
+      destination: tripCtx.destination,
+      dates: tripCtx.dates,
+      flexibleWindow: tripCtx.flexibleWindow,
+      tripLength: tripCtx.tripLength,
+    });
+    setIsOpen(true);
+    atlasTrigger.markSearchStarted();
+    sendMessageRef.current(prompt, { onDone: atlasTrigger.markSearchFinished });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atlasTrigger.status]);
 
   // ── Guest save nudge — suggest registration after meaningful engagement ────
 
@@ -1567,6 +1598,16 @@ export default function AssistantChat() {
           budgetTier={modalData.tripContext.budgetTier}
           tripId={modalData.tripContext.tripId}
         />
+      )}
+
+      {/* Atlas smart search consent chip — portaled into the trip page slot */}
+      {atlasTrigger.status === 'awaiting_consent' && tripCtx.destination && slot && createPortal(
+        <AtlasSmartSearchChip
+          destination={tripCtx.destination}
+          onConsent={atlasTrigger.requestConsent}
+          onDecline={atlasTrigger.declineConsent}
+        />,
+        slot
       )}
     </>
   );

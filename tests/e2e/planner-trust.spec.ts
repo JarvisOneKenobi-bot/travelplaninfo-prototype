@@ -149,3 +149,30 @@ test('SurpriseMeSection signals unknown-origin instead of silently defaulting to
   // Should show prompt to set home airport, NOT silently load MIA destinations
   await expect(page.locator('[data-testid="origin-needed-prompt"]')).toBeVisible({ timeout: 5000 });
 });
+
+test('Atlas does NOT auto-send on new Path A trip — chip is shown, no SSE until consent', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: { name: 'Consent test', destination: 'Tokyo', budget: 'midrange' },
+  });
+  const trip = await post.json();
+
+  const sseCalls: string[] = [];
+  page.on('request', (req) => {
+    if (req.url().includes('/api/assistant/chat')) sseCalls.push(req.url());
+  });
+
+  await page.goto(`/planner/${trip.id}`);
+  await page.waitForTimeout(2500);
+
+  // Chip must be visible
+  await expect(page.locator('[data-testid="atlas-smart-search-chip"]')).toBeVisible();
+  // No SSE call yet
+  expect(sseCalls).toHaveLength(0);
+
+  // Click "Start smart search"
+  await page.click('[data-testid="atlas-smart-search-start"]');
+
+  // Now SSE should fire
+  await page.waitForResponse((r) => r.url().includes('/api/assistant/chat'), { timeout: 5000 });
+  expect(sseCalls.length).toBeGreaterThanOrEqual(1);
+});
