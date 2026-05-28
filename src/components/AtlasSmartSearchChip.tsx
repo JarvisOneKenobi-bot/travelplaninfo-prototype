@@ -22,6 +22,7 @@ export default function AtlasSmartSearchChip({ destination, onConsent, onDecline
         {t("prompt", { destination })}
       </div>
       <button
+        type="button"
         onClick={onConsent}
         data-testid="atlas-smart-search-start"
         className="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-700"
@@ -29,6 +30,7 @@ export default function AtlasSmartSearchChip({ destination, onConsent, onDecline
         {t("start")}
       </button>
       <button
+        type="button"
         onClick={onDecline}
         data-testid="atlas-smart-search-decline"
         className="text-orange-700 px-2 py-1.5 text-sm hover:underline"

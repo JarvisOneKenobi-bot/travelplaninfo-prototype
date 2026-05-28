@@ -256,11 +256,12 @@ function readTripContext(): TripContext {
     const data = JSON.parse(el.textContent || "{}");
     const budgetMap: Record<string, BudgetTier> = { budget: "budget", midrange: "mid", mid: "mid", luxury: "luxury" };
     const budgetTier = (budgetMap[data.budget] || "mid") as BudgetTier;
+    const startVal = data.dates?.start ?? data.startDate ?? data.start_date;
+    const endVal = data.dates?.end ?? data.endDate ?? data.end_date;
+    const dates = startVal && endVal ? { start: startVal as string, end: endVal as string } : undefined;
     return {
       destination: data.destination || defaults.destination,
-      dates: (data.startDate || data.start_date) && (data.endDate || data.end_date)
-        ? { start: data.startDate || data.start_date, end: data.endDate || data.end_date }
-        : undefined,
+      dates,
       adults: data.adults || data.travelers_adults || defaults.adults,
       budgetTier,
       tripId: data.tripId || data.trip_id || data.id,
@@ -531,7 +532,6 @@ export default function AssistantChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const msgIdCounter = useRef(0);
-  const hasAutoTriggered = useRef(false);
   const messagesLenRef = useRef(0);
   const sendMessageRef = useRef<(msg: string, opts?: { onDone?: () => void }) => void>(() => {});
 
@@ -712,21 +712,23 @@ export default function AssistantChat() {
         }
 
         // Check for pre-submit form context (TripForm exposes this via window.__atlasFormContext)
-        const formContext = (window as any).__atlasFormContext;
+        const formContext = window.__atlasFormContext;
         if (formContext) {
           const dest = formContext.destination || "";
-          const isSurprise = formContext.surpriseMe;
+          const isSurprise = formContext.mode === 'explore' && !dest;
           const vibes = (formContext.vibes || []).join(", ");
           const allInterests = (formContext.interests || []).join(", ");
           const budget = formContext.budget || "";
           const origin = formContext.origin || "";
+          const adults = formContext.travelers?.adults;
+          const children = formContext.travelers?.children;
           pageContext += `\n\nForm context (user is filling out TripForm):`;
           pageContext += `\n  Destination: ${isSurprise ? `Surprise Me (hint: ${dest})` : dest}`;
           if (isSurprise && vibes) pageContext += `\n  Vibes: ${vibes}`;
           if (allInterests) pageContext += `\n  Interests: ${allInterests}`;
           if (budget) pageContext += `\n  Budget: ${budget}`;
           if (origin) pageContext += `\n  Flying from: ${origin}`;
-          if (formContext.adults) pageContext += `\n  Travelers: ${formContext.adults} adults, ${formContext.children || 0} children`;
+          if (adults) pageContext += `\n  Travelers: ${adults} adults, ${children || 0} children`;
         }
 
         const res = await fetch("/api/assistant/chat", {
