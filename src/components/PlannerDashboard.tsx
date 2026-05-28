@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import TripForm from "./TripForm";
+import PlannerErrorBanner from "./PlannerErrorBanner";
 
 interface Trip {
   id: number;
@@ -20,16 +21,29 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
   const t = useTranslations("plannerDashboard");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch("/api/trips")
-      .then(r => r.json())
-      .then(data => { setTrips(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    loadTrips();
   }, []);
+
+  async function loadTrips() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trips");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setTrips(Array.isArray(data) ? data : (data.trips ?? []));
+    } catch (e: any) {
+      setError(e.message || "fetch_failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Merge guest trips into real account after login
   useEffect(() => {
@@ -62,6 +76,15 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
 
   return (
     <div className="space-y-6">
+      {error && (
+        <PlannerErrorBanner
+          testId="planner-dashboard-error"
+          variant="error"
+          title={t("dashboardError.title")}
+          body={t("dashboardError.body")}
+          onRetry={loadTrips}
+        />
+      )}
       {isGuest && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
           <p className="text-sm text-amber-800">{t("guestWarning")} <Link href="/register?callbackUrl=/planner" className="font-medium underline hover:text-amber-900">{t("createFreeAccount")}</Link> {t("keepForever")}</p>

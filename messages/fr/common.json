@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Supprimer ce voyage ?",
     "confirmDeleteMessage": "Cela supprimera définitivement le voyage et tous les éléments de l'itinéraire. Cette action est irréversible.",
     "confirmDeleteButton": "Oui, supprimer",
-    "cancelDelete": "Annuler"
+    "cancelDelete": "Annuler",
+    "dashboardError": {
+      "title": "Impossible de charger vos voyages.",
+      "body": "Problème de réseau ou de serveur. Réessayez."
+    }
   },
   "auth": {
     "signIn": {

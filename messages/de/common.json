@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Diese Reise löschen?",
     "confirmDeleteMessage": "Dies löscht die Reise und alle Reiseplan-Elemente dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmDeleteButton": "Ja, löschen",
-    "cancelDelete": "Abbrechen"
+    "cancelDelete": "Abbrechen",
+    "dashboardError": {
+      "title": "Konnte deine Reisen nicht laden.",
+      "body": "Netzwerk- oder Serverfehler. Versuch es erneut."
+    }
   },
   "auth": {
     "signIn": {

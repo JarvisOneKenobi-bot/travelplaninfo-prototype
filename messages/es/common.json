@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "¿Eliminar este viaje?",
     "confirmDeleteMessage": "Esto eliminará permanentemente el viaje y todos sus elementos del itinerario. Esta acción no se puede deshacer.",
     "confirmDeleteButton": "Sí, eliminar",
-    "cancelDelete": "Cancelar"
+    "cancelDelete": "Cancelar",
+    "dashboardError": {
+      "title": "No se pudieron cargar tus viajes.",
+      "body": "Problema de red o del servidor. Inténtalo de nuevo."
+    }
   },
   "auth": {
     "signIn": {

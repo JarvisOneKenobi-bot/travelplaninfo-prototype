@@ -176,3 +176,19 @@ test('Atlas does NOT auto-send on new Path A trip — chip is shown, no SSE unti
   await page.waitForResponse((r) => r.url().includes('/api/assistant/chat'), { timeout: 5000 });
   expect(sseCalls.length).toBeGreaterThanOrEqual(1);
 });
+
+test('PlannerDashboard shows error banner + Retry when /api/trips fails', async ({ page, context }) => {
+  // Ensure we're authenticated as a guest first
+  await context.request.post('/api/trips', { data: { name: 'Seed', destination: 'Miami' } });
+
+  // Then force /api/trips to fail
+  await context.route('**/api/trips', (route) => {
+    if (route.request().method() === 'GET') return route.abort();
+    return route.continue();
+  });
+
+  await page.goto('/planner');
+
+  await expect(page.locator('[data-testid="planner-dashboard-error"]')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
+});

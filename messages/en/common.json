@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Delete this trip?",
     "confirmDeleteMessage": "This will permanently delete the trip and all its itinerary items. This action cannot be undone.",
     "confirmDeleteButton": "Yes, Delete",
-    "cancelDelete": "Cancel"
+    "cancelDelete": "Cancel",
+    "dashboardError": {
+      "title": "Couldn't load your trips.",
+      "body": "Network or server hiccup. Try again."
+    }
   },
   "auth": {
     "signIn": {

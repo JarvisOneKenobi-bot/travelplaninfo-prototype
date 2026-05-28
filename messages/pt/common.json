@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Excluir esta viagem?",
     "confirmDeleteMessage": "Isso excluirá permanentemente a viagem e todos os itens do itinerário. Esta ação não pode ser desfeita.",
     "confirmDeleteButton": "Sim, excluir",
-    "cancelDelete": "Cancelar"
+    "cancelDelete": "Cancelar",
+    "dashboardError": {
+      "title": "Não foi possível carregar suas viagens.",
+      "body": "Erro de rede ou de servidor. Tente novamente."
+    }
   },
   "auth": {
     "signIn": {
