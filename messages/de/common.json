@@ -601,5 +601,18 @@
     "flight-no-destination": "Wohin geht die Reise? Gib eine Stadt oder einen Flughafencode ein.",
     "explore-no-vibes": "Wähle ein Gefühl – entspannt, Abenteuer, Romantik. Atlas übernimmt den Rest.",
     "explore-no-interests": "Füge zwei Dinge hinzu, die du magst, und Atlas kann bessere Vorschläge machen."
+  },
+  "bootstrapModal": {
+    "title": "Willkommen — orientieren wir uns kurz.",
+    "subtitle": "Erzähl Atlas die Basics, damit Vorschläge zu deinem Wohnort und Geschmack passen.",
+    "homeAirportLabel": "Heimatflughafen (IATA-Code)",
+    "interestsLabel": "Was magst du auf Reisen? Wähle mindestens 2.",
+    "interest": {
+      "beach": "Strand",
+      "mountains": "Berge",
+      "food": "Essen",
+      "culture": "Kultur"
+    },
+    "save": "Speichern & weiter"
   }
 }

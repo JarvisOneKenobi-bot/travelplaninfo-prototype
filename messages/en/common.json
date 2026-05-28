@@ -610,5 +610,18 @@
     "flight-no-destination": "Where are you going? Type a city or airport code.",
     "explore-no-vibes": "Pick a feeling — chill, adventure, romance. Atlas will narrow the rest.",
     "explore-no-interests": "Add two things you like and Atlas can build better suggestions."
+  },
+  "bootstrapModal": {
+    "title": "Welcome — let's get oriented.",
+    "subtitle": "Tell Atlas the basics so suggestions match where you live and what you like.",
+    "homeAirportLabel": "Home airport (IATA code)",
+    "interestsLabel": "What do you enjoy on a trip? Pick at least 2.",
+    "interest": {
+      "beach": "Beach",
+      "mountains": "Mountains",
+      "food": "Food",
+      "culture": "Culture"
+    },
+    "save": "Save & continue"
   }
 }

@@ -610,5 +610,18 @@
     "flight-no-destination": "Para onde vai? Digite uma cidade ou código de aeroporto.",
     "explore-no-vibes": "Escolha um clima — tranquilo, aventura, romance. O Atlas cuida do resto.",
     "explore-no-interests": "Adicione duas coisas que gosta e o Atlas poderá fazer melhores sugestões."
+  },
+  "bootstrapModal": {
+    "title": "Bem-vindo — vamos nos orientar.",
+    "subtitle": "Conte ao Atlas o básico para que as sugestões combinem com onde você mora e o que gosta.",
+    "homeAirportLabel": "Aeroporto de origem (código IATA)",
+    "interestsLabel": "O que você curte em uma viagem? Escolha pelo menos 2.",
+    "interest": {
+      "beach": "Praia",
+      "mountains": "Montanhas",
+      "food": "Comida",
+      "culture": "Cultura"
+    },
+    "save": "Salvar e continuar"
   }
 }

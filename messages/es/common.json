@@ -610,5 +610,18 @@
     "flight-no-destination": "¿A dónde vas? Escribe una ciudad o código de aeropuerto.",
     "explore-no-vibes": "Elige un ambiente — tranquilo, aventura, romance. Atlas se encarga del resto.",
     "explore-no-interests": "Añade dos cosas que te gusten y Atlas podrá hacer mejores sugerencias."
+  },
+  "bootstrapModal": {
+    "title": "Bienvenido — vamos a orientarnos.",
+    "subtitle": "Cuéntale a Atlas lo básico para que las sugerencias coincidan con donde vives y lo que te gusta.",
+    "homeAirportLabel": "Aeropuerto de origen (código IATA)",
+    "interestsLabel": "¿Qué disfrutas en un viaje? Elige al menos 2.",
+    "interest": {
+      "beach": "Playa",
+      "mountains": "Montañas",
+      "food": "Comida",
+      "culture": "Cultura"
+    },
+    "save": "Guardar y continuar"
   }
 }

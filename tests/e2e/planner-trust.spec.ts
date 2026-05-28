@@ -192,3 +192,24 @@ test('PlannerDashboard shows error banner + Retry when /api/trips fails', async 
   await expect(page.locator('[data-testid="planner-dashboard-error"]')).toBeVisible({ timeout: 5000 });
   await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
 });
+
+test('Guest user sees bootstrap onboarding once', async ({ page, context }) => {
+  // Fresh browser context — no cookies, no localStorage
+  await page.goto('/');
+  await page.waitForTimeout(2000);
+
+  // Onboarding bootstrap modal must be visible for guest
+  await expect(page.locator('[data-testid="onboarding-bootstrap"]')).toBeVisible({ timeout: 5000 });
+
+  // After completing bootstrap (simulate)
+  await page.fill('[data-testid="bootstrap-home-airport"]', 'MIA');
+  // Click 2 interests (the save button is disabled until min 2 interests)
+  await page.click('button[aria-pressed="false"]:has-text("Beach")');
+  await page.click('button[aria-pressed="false"]:has-text("Food")');
+  await page.click('[data-testid="bootstrap-save"]');
+
+  // Reload — bootstrap should NOT appear again
+  await page.reload();
+  await page.waitForTimeout(2000);
+  await expect(page.locator('[data-testid="onboarding-bootstrap"]')).not.toBeVisible();
+});
