@@ -819,7 +819,7 @@ export default function AssistantChat() {
       const ctx = readTripContext();
 
       // Only trigger if we have a real trip with a destination
-      if (!ctx.tripId || !ctx.destination || ctx.destination === "your destination") return;
+      if (!ctx.tripId || !ctx.destination || ctx.destination === "your destination" || ctx.destination === "Surprise Me") return;
 
       // Don't trigger if user already has real items (returning to existing trip)
       // Real items = items with a non-null price_estimate AND category !== "note"
