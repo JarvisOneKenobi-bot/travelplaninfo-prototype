@@ -34,10 +34,12 @@ test.describe('Planner trust + trigger governance', () => {
     expect(sseCalls).toHaveLength(0);
   });
 
-  test('Path A with no items shows truthful Atlas-ready hint, not fake progress spinner', async ({ page }) => {
-    // Navigate to a planner page (assume a trip with destination and no items exists)
-    // For now, we'll test the condition by navigating to a known trip ID
-    await page.goto('/planner/1', { waitUntil: 'domcontentloaded' });
+  test('Path A with no items shows truthful Atlas-ready hint, not fake progress spinner', async ({ page, context }) => {
+    const post = await context.request.post('/api/trips', {
+      data: { name: 'Hint test', destination: 'Miami', budget: 'midrange' },
+    });
+    const trip = await post.json();
+    await page.goto(`/planner/${trip.id}`);
 
     // GenerationProgress with its 5-step animation must NOT be rendered
     await expect(page.locator('[data-testid="generation-progress"]')).toHaveCount(0);
