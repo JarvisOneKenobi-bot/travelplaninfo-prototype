@@ -202,7 +202,15 @@ export default function ItineraryBuilder({
     }
 
     if (created.length > 0) {
-      setItems(prev => [...prev, ...created]);
+      setItems(prev => {
+        const seen = new Set(prev.map(item => item.id));
+        const uniqueCreated = created.filter(item => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
+        return uniqueCreated.length > 0 ? [...prev, ...uniqueCreated] : prev;
+      });
     }
   }, [autoPopulated, initialItems.length, tripDestination, tripBudget, tripId]);
 
