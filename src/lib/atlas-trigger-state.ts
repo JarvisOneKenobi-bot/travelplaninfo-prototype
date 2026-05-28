@@ -116,12 +116,14 @@ export function nudgeReducer(state: NudgeState, action: NudgeAction): NudgeState
 
 export interface AtlasFormContext {
   mode: 'chooser' | 'flight' | 'explore';
-  origin?: string;
   destination?: string;
+  origin?: string;
   vibes?: string[];
   interests?: string[];
   budget?: string;
-  travelers?: { adults: number; children: number };
+  adults?: number;
+  children?: number;
+  surpriseMe?: boolean;
 }
 
 declare global {
