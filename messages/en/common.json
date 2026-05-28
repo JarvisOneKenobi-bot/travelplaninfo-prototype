@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Delete this trip?",
     "confirmDeleteMessage": "This will permanently delete the trip and all its itinerary items. This action cannot be undone.",
     "confirmDeleteButton": "Yes, Delete",
-    "cancelDelete": "Cancel"
+    "cancelDelete": "Cancel",
+    "dashboardError": {
+      "title": "Couldn't load your trips.",
+      "body": "Network or server hiccup. Try again."
+    }
   },
   "auth": {
     "signIn": {
@@ -459,7 +463,9 @@
     "midrange": "Mid-range",
     "allTrips": "All trips",
     "fromAirport": "from {code}",
-    "editTrip": "Edit"
+    "editTrip": "Edit",
+    "atlasReadyTitle": "Atlas can plan {destination} for you.",
+    "atlasReadyBody": "Tap the chat panel below to search flights, hotels, and activities — or add items manually."
   },
   "contextStrip": {
     "departingFrom": "from {origin}",
@@ -481,7 +487,17 @@
     "hotelsFrom": "Hotels from {price}/night",
     "nonstop": "nonstop",
     "dimmedPlanner": "Pick a destination above and your itinerary will appear here",
-    "noDestYet": "Your itinerary will appear once you choose a destination"
+    "noDestYet": "Your itinerary will appear once you choose a destination",
+    "planTripTo": "Plan a trip to {destination}",
+    "fallbackTitle": "Atlas couldn't load fresh suggestions.",
+    "fallbackBody": "These are example destinations while we try again.",
+    "originNeededTitle": "We need your home airport.",
+    "originNeededBody": "Tap to set it — Atlas will tailor suggestions to your origin.",
+    "setOriginCta": "Set origin →"
+  },
+  "plannerErrorBanner": {
+    "retry": "Retry",
+    "dismiss": "Dismiss"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Recommended Bookings",
@@ -581,5 +597,31 @@
     "searching": "searching...",
     "complete": "Atlas found {count} results for your trip.",
     "viewDetails": "View details"
+  },
+  "atlasSmartSearch": {
+    "ariaLabel": "Atlas smart search",
+    "prompt": "I can search flights, hotels, and activities for {destination}.",
+    "start": "Start smart search",
+    "notYet": "Not yet"
+  },
+  "tripFormNudge": {
+    "chooser": "Not sure where to start? Pick the option that feels closest — you can change it later.",
+    "flight-no-origin": "Tell me where you're flying from, or tap Atlas and say it in plain English.",
+    "flight-no-destination": "Where are you going? Type a city or airport code.",
+    "explore-no-vibes": "Pick a feeling — chill, adventure, romance. Atlas will narrow the rest.",
+    "explore-no-interests": "Add two things you like and Atlas can build better suggestions."
+  },
+  "bootstrapModal": {
+    "title": "Welcome — let's get oriented.",
+    "subtitle": "Tell Atlas the basics so suggestions match where you live and what you like.",
+    "homeAirportLabel": "Home airport (IATA code)",
+    "interestsLabel": "What do you enjoy on a trip? Pick at least 2.",
+    "interest": {
+      "beach": "Beach",
+      "mountains": "Mountains",
+      "food": "Food",
+      "culture": "Culture"
+    },
+    "save": "Save & continue"
   }
 }

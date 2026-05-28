@@ -1,6 +1,11 @@
 // Manages talk bubble state: which message to show, when, interaction tracking
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useReducer } from 'react';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import {
+  nudgeReducer, initialNudgeState,
+  type Section,
+} from '@/lib/atlas-trigger-state';
 
 interface BubbleMessage {
   id: string;
@@ -24,6 +29,8 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
   const [currentBubble, setCurrentBubble] = useState<BubbleMessage | null>(null);
   const [interactionCount, setInteractionCount] = useState(0);
   const pathname = usePathname();
+  const tNudge = useTranslations('tripFormNudge');
+  const [nudgeState, nudgeDispatch] = useReducer(nudgeReducer, initialNudgeState);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldownRef = useRef(false);
   const lastShownRef = useRef<number>(0);
@@ -141,6 +148,38 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
     return () => clearTimeout(idleTimer);
   }, [pageContext, isAtlasOpen, currentBubble, wasShown, markShown]);
 
+  // Idle timer: section-aware nudges for planner landing page
+  useEffect(() => {
+    if (pageContext !== 'planner' || isAtlasOpen) return;
+
+    // Update nudge section from window.__atlasFormContext
+    const section = detectSection(window.__atlasFormContext ?? null);
+    if (section) {
+      nudgeDispatch({ type: 'setSection', section, now: Date.now() });
+    }
+
+    // Tick every 5s to check idle time
+    const tickInterval = setInterval(() => {
+      nudgeDispatch({ type: 'tick', now: Date.now() });
+    }, 5000);
+
+    return () => clearInterval(tickInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageContext, isAtlasOpen]);
+
+  // Emit bubble when nudge state has a pending nudge
+  useEffect(() => {
+    if (!nudgeState.pendingNudge || currentBubble || isAtlasOpen) return;
+    const nudgeKey = nudgeState.pendingNudge;
+    const nudgeText = tNudge(nudgeKey as any);
+    if (!nudgeText) return;
+    const nudgeMsg: BubbleMessage = { id: `nudge-${nudgeKey}`, text: nudgeText, context: 'planner' };
+    setCurrentBubble(nudgeMsg);
+    nudgeDispatch({ type: 'consumeNudge' });
+    lastShownRef.current = Date.now();
+    dismissTimerRef.current = setTimeout(() => setCurrentBubble(null), 8000);
+  }, [nudgeState.pendingNudge, currentBubble, isAtlasOpen, tNudge]);
+
   // Dismiss when Atlas opens
   useEffect(() => {
     if (isAtlasOpen) dismissBubble();
@@ -148,10 +187,22 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
 
   // Listen for global atlas-interaction events (from ItineraryBuilder / TripForm)
   useEffect(() => {
-    const handler = () => trackInteraction();
+    const handler = () => {
+      trackInteraction();
+      // Also reset nudge idle timer on planner page
+      if (pageContext === 'planner') {
+        nudgeDispatch({ type: 'interaction', now: Date.now() });
+        // Re-detect section since form state may have changed
+        const section = detectSection(window.__atlasFormContext ?? null);
+        if (section) {
+          nudgeDispatch({ type: 'setSection', section, now: Date.now() });
+        }
+      }
+    };
     window.addEventListener('atlas-interaction', handler);
     return () => window.removeEventListener('atlas-interaction', handler);
-  }, [trackInteraction]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackInteraction, pageContext]);
 
   // Click-outside handler to dismiss bubble
   useEffect(() => {
@@ -175,4 +226,24 @@ export function useAtlasBubble(isAtlasOpen: boolean) {
     dismissBubble,
     trackInteraction,
   };
+}
+
+// ── Section detection helper ─────────────────────────────────────────────────
+// Reads from window.__atlasFormContext (set by TripForm) to determine which
+// planner section the user is on, for section-aware idle nudges.
+
+function detectSection(ctx: { mode?: string; origin?: string; destination?: string; vibes?: string[]; interests?: string[] } | null): Section | null {
+  if (!ctx) return null;
+  if (ctx.mode === 'chooser') return 'chooser';
+  if (ctx.mode === 'flight') {
+    if (!ctx.origin) return 'flight-no-origin';
+    if (!ctx.destination) return 'flight-no-destination';
+    return 'complete';
+  }
+  if (ctx.mode === 'explore') {
+    if (!ctx.vibes || ctx.vibes.length === 0) return 'explore-no-vibes';
+    if (!ctx.interests || ctx.interests.length < 2) return 'explore-no-interests';
+    return 'complete';
+  }
+  return null;
 }

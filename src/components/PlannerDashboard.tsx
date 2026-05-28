@@ -4,32 +4,46 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import TripForm from "./TripForm";
+import PlannerErrorBanner from "./PlannerErrorBanner";
 
 interface Trip {
   id: number;
   name: string;
   destination: string;
-  start_date: string | null;
-  end_date: string | null;
+  startDate: string | null;
+  endDate: string | null;
   budget: string | null;
   status: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolean }) {
   const t = useTranslations("plannerDashboard");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetch("/api/trips")
-      .then(r => r.json())
-      .then(data => { setTrips(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    loadTrips();
   }, []);
+
+  async function loadTrips() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trips");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setTrips(Array.isArray(data) ? data : (data.trips ?? []));
+    } catch (e: any) {
+      setError(e.message || "fetch_failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Merge guest trips into real account after login
   useEffect(() => {
@@ -62,6 +76,15 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
 
   return (
     <div className="space-y-6">
+      {error && (
+        <PlannerErrorBanner
+          testId="planner-dashboard-error"
+          variant="error"
+          title={t("dashboardError.title")}
+          body={t("dashboardError.body")}
+          onRetry={loadTrips}
+        />
+      )}
       {isGuest && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
           <p className="text-sm text-amber-800">{t("guestWarning")} <Link href="/register?callbackUrl=/planner" className="font-medium underline hover:text-amber-900">{t("createFreeAccount")}</Link> {t("keepForever")}</p>
@@ -105,11 +128,11 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
                   }`}>{trip.status}</span>
                 </div>
                 <p className="text-gray-500 text-sm mb-3">📍 {trip.destination}</p>
-                {(trip.start_date || trip.end_date) && (
+                {(trip.startDate || trip.endDate) && (
                   <p className="text-gray-400 text-xs mb-3">
-                    {trip.start_date && new Date(trip.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    {trip.start_date && trip.end_date && " → "}
-                    {trip.end_date && new Date(trip.end_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {trip.startDate && new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {trip.startDate && trip.endDate && " → "}
+                    {trip.endDate && new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                 )}
                 {trip.budget && (

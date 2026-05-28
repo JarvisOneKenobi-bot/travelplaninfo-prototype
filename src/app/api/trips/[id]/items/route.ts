@@ -76,6 +76,21 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const db = getDb();
 
+  if (is_placeholder) {
+    const existingPlaceholder = db
+      .prepare(
+        `SELECT * FROM trip_items
+         WHERE trip_id = ? AND day_number = ? AND category = ? AND title = ? AND is_placeholder = 1
+         ORDER BY id ASC
+         LIMIT 1`
+      )
+      .get(id, day_number, category, title);
+
+    if (existingPlaceholder) {
+      return NextResponse.json(existingPlaceholder, { status: 200 });
+    }
+  }
+
   // Get trip destination for geocoding
   const trip = db.prepare("SELECT destination FROM trips WHERE id = ?").get(id) as { destination: string } | undefined;
   const destination = trip?.destination || "";

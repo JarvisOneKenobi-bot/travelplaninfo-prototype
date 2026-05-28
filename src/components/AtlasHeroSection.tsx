@@ -19,6 +19,7 @@ interface AtlasHeroSectionProps {
   onTellMeMore: (index: number) => void;
   onShowDifferent: () => void;
   onChatWithAtlas: () => void;
+  onResolveDestination?: (index: number) => void;
 }
 
 export default function AtlasHeroSection({
@@ -29,6 +30,7 @@ export default function AtlasHeroSection({
   onTellMeMore,
   onShowDifferent,
   onChatWithAtlas,
+  onResolveDestination,
 }: AtlasHeroSectionProps) {
   const t = useTranslations("atlasHero");
 
@@ -65,6 +67,7 @@ export default function AtlasHeroSection({
             nonstop={dest.nonstop}
             isTopPick={i === 0}
             onTellMeMore={() => onTellMeMore(i)}
+            onPlanTrip={onResolveDestination ? () => onResolveDestination(i) : undefined}
           />
         ))}
       </div>

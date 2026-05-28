@@ -45,6 +45,8 @@ async function createGuestTrip(
   await page.waitForLoadState('networkidle');
 
   // The unauthenticated /planner page renders TripForm directly (no PlannerDashboard)
+  await page.getByRole('button', { name: /i know when & where/i }).click();
+
   // Step 1 — Departing from (required field — airport code input with placeholder)
   const originInput = page.getByPlaceholder('Airport code (e.g., MIA, JFK, LAX)');
   await expect(originInput).toBeVisible({ timeout: 15_000 });
@@ -88,7 +90,7 @@ test('Test 1: guest trip creation sets cookies and redirects to /planner/{id}', 
   });
 
   // 1a. URL should be /planner/{numeric id}
-  expect(tripUrl).toMatch(/\/planner\/\d+$/);
+  expect(tripUrl).toMatch(/\/planner\/\d+\/?$/);
 
   // 1b. tpi_guest and tpi_guest_hint cookies must be present
   const cookies = await context.cookies();
@@ -116,15 +118,15 @@ test('Test 2: guest sees auto-populated placeholders and can add a manual item',
   // Wait for them to appear — each shows a category badge chip.
   // ItineraryBuilder uses category metadata: flight="Flight", hotel="Hotel / Accommodation", car="Car Rental"
   await expect(
-    page.getByText('Flight', { exact: false })
+    page.getByText('Flights to Barcelona, Spain', { exact: true })
   ).toBeVisible({ timeout: 15_000 });
 
   await expect(
-    page.getByText('Hotel / Accommodation', { exact: false })
+    page.getByText('Hotel / Accommodation', { exact: false }).first()
   ).toBeVisible();
 
   await expect(
-    page.getByText('Car Rental', { exact: false })
+    page.getByText('Car Rental in Barcelona, Spain', { exact: true })
   ).toBeVisible();
 
   // Add a manual item via the "+ Add item" button in Day 1 header
@@ -140,7 +142,7 @@ test('Test 2: guest sees auto-populated placeholders and can add a manual item',
   await page.getByPlaceholder('Title *').fill('My Custom Note');
 
   // Submit the inline form with "Add Item" button
-  await page.getByRole('button', { name: /add item/i }).click();
+  await page.getByRole('button', { name: 'Add Item', exact: true }).click();
 
   // Verify the new item appears in the itinerary
   await expect(page.getByText('My Custom Note')).toBeVisible({ timeout: 8_000 });
@@ -162,7 +164,7 @@ test('Test 3: after guest trip creation, GET /api/trips/{tripId} returns >= 3 it
 
   // Wait for auto-population to finish (items render in the UI) before hitting the API
   await expect(
-    page.getByText('Flight', { exact: false })
+    page.getByText('Car Rental in Tokyo, Japan', { exact: true })
   ).toBeVisible({ timeout: 15_000 });
 
   // Retrieve cookies from the browser context to attach to the API request

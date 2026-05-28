@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Diese Reise löschen?",
     "confirmDeleteMessage": "Dies löscht die Reise und alle Reiseplan-Elemente dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmDeleteButton": "Ja, löschen",
-    "cancelDelete": "Abbrechen"
+    "cancelDelete": "Abbrechen",
+    "dashboardError": {
+      "title": "Konnte deine Reisen nicht laden.",
+      "body": "Netzwerk- oder Serverfehler. Versuch es erneut."
+    }
   },
   "auth": {
     "signIn": {
@@ -452,6 +456,29 @@
     "category_transportation": "Transport",
     "category_note": "Notiz / Erinnerung"
   },
+  "atlasHero": {
+    "title": "Atlas hat {count} Optionen für dich gefunden!",
+    "subtitle": "{vibes} Vibes ab {origin} · {budget} Budget",
+    "topPick": "TOP WAHL",
+    "tellMeMore": "Mehr erfahren →",
+    "showDifferent": "Zeig mir andere Optionen",
+    "chatWithAtlas": "Mit Atlas chatten",
+    "flightsFrom": "ab {price}",
+    "hotelsFrom": "Hotels ab {price}/Nacht",
+    "nonstop": "Nonstop",
+    "dimmedPlanner": "Wähle oben ein Reiseziel und dein Reiseplan erscheint hier",
+    "noDestYet": "Dein Reiseplan erscheint, sobald du ein Reiseziel gewählt hast",
+    "planTripTo": "Plane eine Reise nach {destination}",
+    "fallbackTitle": "Atlas konnte keine frischen Vorschläge laden.",
+    "fallbackBody": "Das sind Beispiel-Reiseziele, während wir es erneut versuchen.",
+    "originNeededTitle": "Wir brauchen deinen Heimatflughafen.",
+    "originNeededBody": "Tipp hier, um ihn festzulegen — Atlas passt Vorschläge an deinen Abflugort an.",
+    "setOriginCta": "Heimatflughafen festlegen →"
+  },
+  "plannerErrorBanner": {
+    "retry": "Wiederholen",
+    "dismiss": "Schließen"
+  },
   "affiliateRecommendations": {
     "recommendedBookings": "Empfohlene Buchungen",
     "matchedToTrip": "Abgestimmt auf Ihr Reiseziel und Ihre Interessen. Klicken Sie auf 'Hinzufügen', um es mit einem direkten Buchungslink zu Ihrem Reiseplan hinzuzufügen.",
@@ -508,7 +535,9 @@
     "midrange": "Mittelklasse",
     "allTrips": "Alle Reisen",
     "fromAirport": "ab {code}",
-    "editTrip": "Bearbeiten"
+    "editTrip": "Bearbeiten",
+    "atlasReadyTitle": "Atlas kann {destination} für dich planen.",
+    "atlasReadyBody": "Tippe unten auf den Chat, um Flüge, Hotels und Aktivitäten zu suchen — oder füge Einträge manuell hinzu."
   },
   "entryTabs": {
     "directTab": "I Know When & Where I'm Going",
@@ -559,5 +588,31 @@
     "searching": "searching...",
     "complete": "Atlas found {count} results for your trip.",
     "viewDetails": "View details"
+  },
+  "atlasSmartSearch": {
+    "ariaLabel": "Atlas intelligente Suche",
+    "prompt": "Ich kann Flüge, Hotels und Aktivitäten für {destination} suchen.",
+    "start": "Intelligente Suche starten",
+    "notYet": "Noch nicht"
+  },
+  "tripFormNudge": {
+    "chooser": "Nicht sicher, wo du anfangen sollst? Wähle die Option, die am nächsten liegt – du kannst sie später ändern.",
+    "flight-no-origin": "Sag mir, von wo du fliegst, oder tippe auf Atlas und sage es auf Deutsch.",
+    "flight-no-destination": "Wohin geht die Reise? Gib eine Stadt oder einen Flughafencode ein.",
+    "explore-no-vibes": "Wähle ein Gefühl – entspannt, Abenteuer, Romantik. Atlas übernimmt den Rest.",
+    "explore-no-interests": "Füge zwei Dinge hinzu, die du magst, und Atlas kann bessere Vorschläge machen."
+  },
+  "bootstrapModal": {
+    "title": "Willkommen — orientieren wir uns kurz.",
+    "subtitle": "Erzähl Atlas die Basics, damit Vorschläge zu deinem Wohnort und Geschmack passen.",
+    "homeAirportLabel": "Heimatflughafen (IATA-Code)",
+    "interestsLabel": "Was magst du auf Reisen? Wähle mindestens 2.",
+    "interest": {
+      "beach": "Strand",
+      "mountains": "Berge",
+      "food": "Essen",
+      "culture": "Kultur"
+    },
+    "save": "Speichern & weiter"
   }
 }

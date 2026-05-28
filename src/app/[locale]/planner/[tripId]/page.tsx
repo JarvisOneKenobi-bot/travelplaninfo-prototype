@@ -10,7 +10,6 @@ import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 import TripContextStrip from "@/components/TripContextStrip";
 import SurpriseMeSection from "@/components/SurpriseMeSection";
-import GenerationProgress from "@/components/GenerationProgress";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -60,7 +59,7 @@ export default async function TripDetail({ params }: Props) {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-[90rem] mx-auto px-6 py-8">
+      <main className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Trip header — compact */}
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -96,6 +95,7 @@ export default async function TripDetail({ params }: Props) {
           {isSurpriseMe ? (
             /* PATH B: Surprise Me — Atlas hero + dimmed planner */
             <SurpriseMeSection
+              tripId={trip.id}
               originCode={trip.origin || "???"}
               vibesSummary={vibesSummary}
               budgetLabel={budgetLabel}
@@ -106,6 +106,8 @@ export default async function TripDetail({ params }: Props) {
           ) : (
             /* PATH A: Real destination — active planner */
             <div>
+              {/* Atlas smart search consent chip mounts here */}
+              <div id="atlas-smart-search-slot" />
               {/* Quiz context chips for surprise-mode trips that resolved to a destination */}
               {trip.entry_mode === 'surprise' && trip.quiz_vibes && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -128,7 +130,13 @@ export default async function TripDetail({ params }: Props) {
                 </div>
               )}
               {items.length === 0 && (
-                <GenerationProgress destination={trip.destination} isGenerating={true} />
+                <div
+                  data-testid="atlas-ready-hint"
+                  className="rounded-xl border border-orange-200 bg-orange-50 p-5 text-sm text-orange-900"
+                >
+                  <p className="font-medium">{t("atlasReadyTitle", { destination: trip.destination })}</p>
+                  <p className="mt-1 opacity-90">{t("atlasReadyBody")}</p>
+                </div>
               )}
               <ItineraryBuilder
                 tripId={trip.id}

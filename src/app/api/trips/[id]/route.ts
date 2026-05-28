@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import { toTripDetailDto, toTripDto } from "@/lib/dto/trip";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,9 +25,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const db = getDb();
   const items = db
     .prepare("SELECT * FROM trip_items WHERE trip_id = ? ORDER BY day_number, sort_order")
-    .all(id);
+    .all(id) as any[];
 
-  return NextResponse.json({ ...trip, items });
+  return NextResponse.json(toTripDetailDto(trip, items));
 }
 
 export async function PUT(req: NextRequest, { params }: Params) {
@@ -71,8 +72,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
       .run(val == null ? null : val, id);
   }
 
-  const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id);
-  return NextResponse.json(updated);
+  const updated = db.prepare("SELECT * FROM trips WHERE id = ?").get(id) as any;
+  if (!updated) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  return NextResponse.json(toTripDto(updated));
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {

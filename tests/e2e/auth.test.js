@@ -43,6 +43,7 @@ test('protected planner redirects or shows sign-in CTA when unauthenticated', as
   if (url.includes('signin')) {
     await expect(page.locator('input[type="email"]')).toBeVisible();
   } else {
-    await expect(page.getByRole('link', { name: 'Sign in to start planning' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /plan your perfect trip/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /i know when & where/i })).toBeVisible();
   }
 });

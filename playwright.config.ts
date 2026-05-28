@@ -5,7 +5,10 @@ const config: PlaywrightTestConfig = {
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // The E2E suite exercises shared SQLite-backed auth/trip/newsletter flows and
+  // the Next dev server. Keep local runs serialized as well as CI so the suite
+  // validates behavior instead of dev-server contention or shared rate-limit state.
+  workers: 1,
   reporter: [
     ['list'],
     ['html', { outputFolder: 'playwright-report' }],

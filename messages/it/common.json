@@ -209,7 +209,11 @@
     "confirmDeleteTitle": "Eliminare questo viaggio?",
     "confirmDeleteMessage": "Questo eliminerà permanentemente il viaggio e tutti gli elementi dell'itinerario. Questa azione non può essere annullata.",
     "confirmDeleteButton": "Sì, elimina",
-    "cancelDelete": "Annulla"
+    "cancelDelete": "Annulla",
+    "dashboardError": {
+      "title": "Impossibile caricare i tuoi viaggi.",
+      "body": "Errore di rete o del server. Riprova."
+    }
   },
   "auth": {
     "signIn": {
@@ -501,7 +505,9 @@
     "midrange": "Fascia media",
     "allTrips": "Tutti i viaggi",
     "fromAirport": "da {code}",
-    "editTrip": "Modifica"
+    "editTrip": "Modifica",
+    "atlasReadyTitle": "Atlas può pianificare {destination} per te.",
+    "atlasReadyBody": "Tocca il pannello chat qui sotto per cercare voli, hotel e attività — o aggiungi elementi manualmente."
   },
   "contextStrip": {
     "departingFrom": "da {origin}",
@@ -523,7 +529,17 @@
     "hotelsFrom": "Hotel da {price}/notte",
     "nonstop": "diretto",
     "dimmedPlanner": "Scegli una destinazione sopra e il tuo itinerario apparirà qui",
-    "noDestYet": "Il tuo itinerario apparirà una volta scelta una destinazione"
+    "noDestYet": "Il tuo itinerario apparirà una volta scelta una destinazione",
+    "planTripTo": "Pianifica un viaggio a {destination}",
+    "fallbackTitle": "Atlas non è riuscito a caricare nuovi suggerimenti.",
+    "fallbackBody": "Queste sono destinazioni di esempio mentre riproviamo.",
+    "originNeededTitle": "Abbiamo bisogno del tuo aeroporto di partenza.",
+    "originNeededBody": "Tocca per impostarlo — Atlas adatterà i suggerimenti alla tua origine.",
+    "setOriginCta": "Imposta origine →"
+  },
+  "plannerErrorBanner": {
+    "retry": "Riprova",
+    "dismiss": "Chiudi"
   },
   "affiliatePreviewModal": {
     "poweredBy": "Offerto da {partner}",
@@ -581,5 +597,31 @@
     "searching": "searching...",
     "complete": "Atlas found {count} results for your trip.",
     "viewDetails": "View details"
+  },
+  "atlasSmartSearch": {
+    "ariaLabel": "Ricerca intelligente di Atlas",
+    "prompt": "Posso cercare voli, hotel e attività per {destination}.",
+    "start": "Avvia ricerca intelligente",
+    "notYet": "Non ancora"
+  },
+  "tripFormNudge": {
+    "chooser": "Non sai da dove iniziare? Scegli l'opzione più vicina — puoi cambiarla in seguito.",
+    "flight-no-origin": "Dimmi da dove parti, o tocca Atlas e dimmelo in italiano.",
+    "flight-no-destination": "Dove vai? Digita una città o un codice aeroportuale.",
+    "explore-no-vibes": "Scegli un'atmosfera — relax, avventura, romanticismo. Atlas farà il resto.",
+    "explore-no-interests": "Aggiungi due cose che ti piacciono e Atlas potrà fare suggerimenti migliori."
+  },
+  "bootstrapModal": {
+    "title": "Benvenuto — orientiamoci.",
+    "subtitle": "Racconta ad Atlas le basi: i suggerimenti saranno in linea con dove vivi e con ciò che ti piace.",
+    "homeAirportLabel": "Aeroporto di origine (codice IATA)",
+    "interestsLabel": "Cosa ti piace in viaggio? Scegli almeno 2.",
+    "interest": {
+      "beach": "Spiaggia",
+      "mountains": "Montagna",
+      "food": "Cucina",
+      "culture": "Cultura"
+    },
+    "save": "Salva e continua"
   }
 }

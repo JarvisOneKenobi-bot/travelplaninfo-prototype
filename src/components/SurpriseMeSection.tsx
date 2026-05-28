@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import AtlasHeroSection from "./AtlasHeroSection";
+import PlannerErrorBanner from "./PlannerErrorBanner";
 
 interface Destination {
   name: string;
@@ -14,6 +16,7 @@ interface Destination {
 }
 
 interface SurpriseMeSectionProps {
+  tripId: number;
   originCode: string;
   vibesSummary: string;
   budgetLabel: string;
@@ -63,6 +66,7 @@ function deriveDepartMonth(
 }
 
 export default function SurpriseMeSection({
+  tripId,
   originCode,
   vibesSummary,
   budgetLabel,
@@ -71,34 +75,59 @@ export default function SurpriseMeSection({
   startDate,
 }: SurpriseMeSectionProps) {
   const t = useTranslations("atlasHero");
+  const router = useRouter();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [originUnknown, setOriginUnknown] = useState(false);
+  const [fallbackUsed, setFallbackUsed] = useState(false);
 
-  useEffect(() => {
-    const origin = originCode === "???" ? "MIA" : originCode;
+  const fetchSuggestions = useCallback((signal?: AbortSignal) => {
+    setLoading(true);
+    setFallbackUsed(false);
+
     const departMonth = deriveDepartMonth(flexibleWindow, startDate);
-    const params = new URLSearchParams({ origin, depart_month: departMonth });
+    const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
     if (tripLength) params.set("trip_length", tripLength);
     if (vibesSummary) {
       const vibesParam = vibesSummary
-        .split(/\s*\+\s*/)
-        .map((v) => v.trim().toLowerCase())
-        .filter(Boolean)
-        .join(",");
+        .split(/\s*\+\s*/).map((v) => v.trim().toLowerCase()).filter(Boolean).join(",");
       if (vibesParam) params.set("vibes", vibesParam);
     }
-    fetch(`/api/surprise-me?${params.toString()}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+
+    return fetch(`/api/surprise-me?${params.toString()}`, { signal })
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
         } else {
           setDestinations(V1_FALLBACK);
+          setFallbackUsed(true);
         }
       })
-      .catch(() => setDestinations(V1_FALLBACK))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if ((e as { name?: string })?.name === "AbortError") return;
+        console.warn("[SurpriseMeSection] fetch failed", e);
+        setDestinations(V1_FALLBACK);
+        setFallbackUsed(true);
+      })
+      .finally(() => {
+        if (!signal?.aborted) setLoading(false);
+      });
   }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+
+  useEffect(() => {
+    if (originCode === "???") {
+      setOriginUnknown(true);
+      setLoading(false);
+      return;
+    }
+    setOriginUnknown(false);
+    const controller = new AbortController();
+    fetchSuggestions(controller.signal);
+    return () => controller.abort();
+  }, [originCode, fetchSuggestions]);
 
   function handleTellMeMore(index: number) {
     const dest = destinations[index];
@@ -123,8 +152,59 @@ export default function SurpriseMeSection({
     window.dispatchEvent(new CustomEvent("atlas-open", { detail: {} }));
   }
 
+  async function handleResolveDestination(index: number) {
+    const dest = destinations[index];
+    if (!dest) return;
+    setResolving(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/resolve-surprise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: dest.name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setResolveError((err as { error?: string }).error || 'Could not resolve destination');
+        setResolving(false);
+        return;
+      }
+      // Locale-aware navigation: typed router honors localePrefix='as-needed'.
+      router.push(`/planner/${tripId}`);
+      router.refresh();
+    } catch {
+      setResolveError('Network error');
+      setResolving(false);
+    }
+  }
+
+  if (originUnknown) {
+    return (
+      <div className="space-y-6" data-testid="surprise-me-section">
+        <div data-testid="origin-needed-prompt" className="rounded-xl border-2 border-orange-200 bg-orange-50 p-6">
+          <p className="font-medium text-orange-900">{t("originNeededTitle")}</p>
+          <p className="text-sm text-orange-800 mt-1">{t("originNeededBody")}</p>
+          <Link href="/planner" className="inline-block mt-3 text-sm font-medium underline">{t("setOriginCta")}</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div data-testid="surprise-me-section" className="space-y-6">
+      {resolveError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+          {resolveError}
+          <button onClick={() => setResolveError(null)} className="ml-2 underline">Dismiss</button>
+        </div>
+      )}
+      {fallbackUsed && (
+        <PlannerErrorBanner
+          testId="surprise-fallback-banner"
+          title={t("fallbackTitle")}
+          body={t("fallbackBody")}
+          onRetry={() => fetchSuggestions()}
+        />
+      )}
       {loading ? (
         /* Loading skeleton — 3 placeholder cards */
         <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 animate-pulse">
@@ -156,6 +236,7 @@ export default function SurpriseMeSection({
           onTellMeMore={handleTellMeMore}
           onShowDifferent={handleShowDifferent}
           onChatWithAtlas={handleChatWithAtlas}
+          onResolveDestination={resolving ? undefined : handleResolveDestination}
         />
       )}
 
