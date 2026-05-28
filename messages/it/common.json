@@ -501,7 +501,9 @@
     "midrange": "Fascia media",
     "allTrips": "Tutti i viaggi",
     "fromAirport": "da {code}",
-    "editTrip": "Modifica"
+    "editTrip": "Modifica",
+    "atlasReadyTitle": "Atlas può pianificare {destination} per te.",
+    "atlasReadyBody": "Tocca il pannello chat qui sotto per cercare voli, hotel e attività — o aggiungi elementi manualmente."
   },
   "contextStrip": {
     "departingFrom": "da {origin}",

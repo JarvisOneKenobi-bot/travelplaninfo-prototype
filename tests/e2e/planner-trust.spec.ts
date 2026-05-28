@@ -33,6 +33,18 @@ test.describe('Planner trust + trigger governance', () => {
     // Verify no SSE call was made — the guard blocks auto-trigger for "Surprise Me"
     expect(sseCalls).toHaveLength(0);
   });
+
+  test('Path A with no items shows truthful Atlas-ready hint, not fake progress spinner', async ({ page }) => {
+    // Navigate to a planner page (assume a trip with destination and no items exists)
+    // For now, we'll test the condition by navigating to a known trip ID
+    await page.goto('/planner/1', { waitUntil: 'domcontentloaded' });
+
+    // GenerationProgress with its 5-step animation must NOT be rendered
+    await expect(page.locator('[data-testid="generation-progress"]')).toHaveCount(0);
+
+    // The truthful Atlas-ready hint must be visible
+    await expect(page.locator('[data-testid="atlas-ready-hint"]')).toBeVisible();
+  });
 });
 
 test('POST /api/trips/[id]/resolve-surprise transitions trip from Surprise Me → real destination', async ({ context }) => {

@@ -501,7 +501,9 @@
     "midrange": "Rango medio",
     "allTrips": "Todos los viajes",
     "fromAirport": "desde {code}",
-    "editTrip": "Editar"
+    "editTrip": "Editar",
+    "atlasReadyTitle": "Atlas puede planear {destination} por ti.",
+    "atlasReadyBody": "Toca el panel de chat abajo para buscar vuelos, hoteles y actividades — o añade elementos manualmente."
   },
   "contextStrip": {
     "departingFrom": "desde {origin}",

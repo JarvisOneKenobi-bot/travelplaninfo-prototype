@@ -10,7 +10,6 @@ import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 import TripContextStrip from "@/components/TripContextStrip";
 import SurpriseMeSection from "@/components/SurpriseMeSection";
-import GenerationProgress from "@/components/GenerationProgress";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -129,7 +128,13 @@ export default async function TripDetail({ params }: Props) {
                 </div>
               )}
               {items.length === 0 && (
-                <GenerationProgress destination={trip.destination} isGenerating={true} />
+                <div
+                  data-testid="atlas-ready-hint"
+                  className="rounded-xl border border-orange-200 bg-orange-50 p-5 text-sm text-orange-900"
+                >
+                  <p className="font-medium">{t("atlasReadyTitle", { destination: trip.destination })}</p>
+                  <p className="mt-1 opacity-90">{t("atlasReadyBody")}</p>
+                </div>
               )}
               <ItineraryBuilder
                 tripId={trip.id}

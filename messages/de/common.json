@@ -531,7 +531,9 @@
     "midrange": "Mittelklasse",
     "allTrips": "Alle Reisen",
     "fromAirport": "ab {code}",
-    "editTrip": "Bearbeiten"
+    "editTrip": "Bearbeiten",
+    "atlasReadyTitle": "Atlas kann {destination} für dich planen.",
+    "atlasReadyBody": "Tippe unten auf den Chat, um Flüge, Hotels und Aktivitäten zu suchen — oder füge Einträge manuell hinzu."
   },
   "entryTabs": {
     "directTab": "I Know When & Where I'm Going",
