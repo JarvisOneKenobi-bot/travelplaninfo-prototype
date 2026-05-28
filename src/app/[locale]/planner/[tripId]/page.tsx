@@ -59,7 +59,7 @@ export default async function TripDetail({ params }: Props) {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-[90rem] mx-auto px-6 py-8">
+      <main className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Trip header — compact */}
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
