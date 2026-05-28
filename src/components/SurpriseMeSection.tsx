@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import AtlasHeroSection from "./AtlasHeroSection";
 import PlannerErrorBanner from "./PlannerErrorBanner";
 
@@ -82,22 +82,10 @@ export default function SurpriseMeSection({
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [originUnknown, setOriginUnknown] = useState(false);
   const [fallbackUsed, setFallbackUsed] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (originCode === "???") {
-      setOriginUnknown(true);
-      setLoading(false);
-      return;
-    }
-    setOriginUnknown(false);
-    fetchSuggestions();
-  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
-
-  function fetchSuggestions() {
+  const fetchSuggestions = useCallback((signal?: AbortSignal) => {
     setLoading(true);
     setFallbackUsed(false);
-    setFetchError(null);
 
     const departMonth = deriveDepartMonth(flexibleWindow, startDate);
     const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
@@ -108,7 +96,7 @@ export default function SurpriseMeSection({
       if (vibesParam) params.set("vibes", vibesParam);
     }
 
-    fetch(`/api/surprise-me?${params.toString()}`)
+    return fetch(`/api/surprise-me?${params.toString()}`, { signal })
       .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
@@ -119,12 +107,27 @@ export default function SurpriseMeSection({
         }
       })
       .catch((e) => {
+        if ((e as { name?: string })?.name === "AbortError") return;
+        console.warn("[SurpriseMeSection] fetch failed", e);
         setDestinations(V1_FALLBACK);
         setFallbackUsed(true);
-        setFetchError(String(e));
       })
-      .finally(() => setLoading(false));
-  }
+      .finally(() => {
+        if (!signal?.aborted) setLoading(false);
+      });
+  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+
+  useEffect(() => {
+    if (originCode === "???") {
+      setOriginUnknown(true);
+      setLoading(false);
+      return;
+    }
+    setOriginUnknown(false);
+    const controller = new AbortController();
+    fetchSuggestions(controller.signal);
+    return () => controller.abort();
+  }, [originCode, fetchSuggestions]);
 
   function handleTellMeMore(index: number) {
     const dest = destinations[index];
@@ -180,7 +183,7 @@ export default function SurpriseMeSection({
         <div data-testid="origin-needed-prompt" className="rounded-xl border-2 border-orange-200 bg-orange-50 p-6">
           <p className="font-medium text-orange-900">{t("originNeededTitle")}</p>
           <p className="text-sm text-orange-800 mt-1">{t("originNeededBody")}</p>
-          <a href="/planner" className="inline-block mt-3 text-sm font-medium underline">Set origin →</a>
+          <Link href="/planner" className="inline-block mt-3 text-sm font-medium underline">{t("setOriginCta")}</Link>
         </div>
       </div>
     );
@@ -199,7 +202,7 @@ export default function SurpriseMeSection({
           testId="surprise-fallback-banner"
           title={t("fallbackTitle")}
           body={t("fallbackBody")}
-          onRetry={fetchSuggestions}
+          onRetry={() => fetchSuggestions()}
         />
       )}
       {loading ? (

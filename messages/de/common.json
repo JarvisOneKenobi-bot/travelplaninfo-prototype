@@ -468,7 +468,8 @@
     "fallbackTitle": "Atlas konnte keine frischen Vorschläge laden.",
     "fallbackBody": "Das sind Beispiel-Reiseziele, während wir es erneut versuchen.",
     "originNeededTitle": "Wir brauchen deinen Heimatflughafen.",
-    "originNeededBody": "Tipp hier, um ihn festzulegen — Atlas passt Vorschläge an deinen Abflugort an."
+    "originNeededBody": "Tipp hier, um ihn festzulegen — Atlas passt Vorschläge an deinen Abflugort an.",
+    "setOriginCta": "Heimatflughafen festlegen →"
   },
   "plannerErrorBanner": {
     "retry": "Wiederholen",

@@ -528,7 +528,8 @@
     "fallbackTitle": "Atlas non è riuscito a caricare nuovi suggerimenti.",
     "fallbackBody": "Queste sono destinazioni di esempio mentre riproviamo.",
     "originNeededTitle": "Abbiamo bisogno del tuo aeroporto di partenza.",
-    "originNeededBody": "Tocca per impostarlo — Atlas adatterà i suggerimenti alla tua origine."
+    "originNeededBody": "Tocca per impostarlo — Atlas adatterà i suggerimenti alla tua origine.",
+    "setOriginCta": "Imposta origine →"
   },
   "plannerErrorBanner": {
     "retry": "Riprova",

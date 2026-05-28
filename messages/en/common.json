@@ -486,7 +486,8 @@
     "fallbackTitle": "Atlas couldn't load fresh suggestions.",
     "fallbackBody": "These are example destinations while we try again.",
     "originNeededTitle": "We need your home airport.",
-    "originNeededBody": "Tap to set it — Atlas will tailor suggestions to your origin."
+    "originNeededBody": "Tap to set it — Atlas will tailor suggestions to your origin.",
+    "setOriginCta": "Set origin →"
   },
   "plannerErrorBanner": {
     "retry": "Retry",
