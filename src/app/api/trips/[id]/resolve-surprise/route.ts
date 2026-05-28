@@ -28,19 +28,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const db = getDb();
-  const trip = db.prepare('SELECT * FROM trips WHERE id = ? AND user_id = ?').get(id, ctx.userId) as any;
-  if (!trip) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  if (trip.destination !== 'Surprise Me') {
+
+  // Atomic test-and-set: only updates if the trip is still 'Surprise Me' for this user.
+  const result = db
+    .prepare(
+      `UPDATE trips
+       SET destination = ?, entry_mode = 'surprise', updated_at = datetime('now')
+       WHERE id = ? AND user_id = ? AND destination = 'Surprise Me'`
+    )
+    .run(destination, id, ctx.userId);
+
+  if (result.changes === 0) {
+    // Either the row doesn't exist (for this user) or it was no longer 'Surprise Me'.
+    // Distinguish so the client gets the right error.
+    const check = db
+      .prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?')
+      .get(id, ctx.userId);
+    if (!check) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'not_surprise_me_trip' }, { status: 400 });
   }
 
-  // Atomic write: destination + entry_mode='surprise' + updated_at
-  const now = new Date().toISOString();
-  db.prepare(`UPDATE trips
-              SET destination = ?, entry_mode = 'surprise', updated_at = ?
-              WHERE id = ? AND user_id = ?`)
-    .run(destination, now, id, ctx.userId);
-
-  const updated = db.prepare('SELECT * FROM trips WHERE id = ?').get(id) as any;
+  const updated = db
+    .prepare('SELECT * FROM trips WHERE id = ? AND user_id = ?')
+    .get(id, ctx.userId) as any;
+  if (!updated) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  }
   return NextResponse.json(toTripDto(updated));
 }
