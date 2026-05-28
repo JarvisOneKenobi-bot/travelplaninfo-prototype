@@ -9,11 +9,11 @@ interface Trip {
   id: number;
   name: string;
   destination: string;
-  start_date: string | null;
-  end_date: string | null;
+  startDate: string | null;
+  endDate: string | null;
   budget: string | null;
   status: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolean }) {
@@ -105,11 +105,11 @@ export default function PlannerDashboard({ isGuest = false }: { isGuest?: boolea
                   }`}>{trip.status}</span>
                 </div>
                 <p className="text-gray-500 text-sm mb-3">📍 {trip.destination}</p>
-                {(trip.start_date || trip.end_date) && (
+                {(trip.startDate || trip.endDate) && (
                   <p className="text-gray-400 text-xs mb-3">
-                    {trip.start_date && new Date(trip.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    {trip.start_date && trip.end_date && " → "}
-                    {trip.end_date && new Date(trip.end_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {trip.startDate && new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {trip.startDate && trip.endDate && " → "}
+                    {trip.endDate && new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                 )}
                 {trip.budget && (

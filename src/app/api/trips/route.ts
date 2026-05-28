@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, getOrCreateGuest } from "@/lib/guest";
 import { getDb } from "@/lib/db";
+import { toTripsListDto, toTripDto } from "@/lib/dto/trip";
 
 export async function GET() {
   const ctx = await getUserId();
@@ -10,9 +11,9 @@ export async function GET() {
   const db = getDb();
   const trips = db
     .prepare("SELECT * FROM trips WHERE user_id = ? ORDER BY created_at DESC")
-    .all(userId);
+    .all(userId) as any[];
 
-  return NextResponse.json(trips);
+  return NextResponse.json(toTripsListDto(trips));
 }
 
 export async function POST(req: NextRequest) {
@@ -132,5 +133,5 @@ export async function POST(req: NextRequest) {
     ) as any;
 
   const trip = db.prepare("SELECT * FROM trips WHERE id = ?").get(result.lastInsertRowid);
-  return NextResponse.json(trip, { status: 201 });
+  return NextResponse.json(toTripDto(trip), { status: 201 });
 }
