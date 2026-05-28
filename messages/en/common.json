@@ -482,7 +482,15 @@
     "nonstop": "nonstop",
     "dimmedPlanner": "Pick a destination above and your itinerary will appear here",
     "noDestYet": "Your itinerary will appear once you choose a destination",
-    "planTripTo": "Plan a trip to {destination}"
+    "planTripTo": "Plan a trip to {destination}",
+    "fallbackTitle": "Atlas couldn't load fresh suggestions.",
+    "fallbackBody": "These are example destinations while we try again.",
+    "originNeededTitle": "We need your home airport.",
+    "originNeededBody": "Tap to set it — Atlas will tailor suggestions to your origin."
+  },
+  "plannerErrorBanner": {
+    "retry": "Retry",
+    "dismiss": "Dismiss"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Recommended Bookings",

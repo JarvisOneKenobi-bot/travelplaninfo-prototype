@@ -524,7 +524,15 @@
     "nonstop": "directo",
     "dimmedPlanner": "Elige un destino arriba y tu itinerario aparecerá aquí",
     "noDestYet": "Tu itinerario aparecerá una vez que elijas un destino",
-    "planTripTo": "Planea un viaje a {destination}"
+    "planTripTo": "Planea un viaje a {destination}",
+    "fallbackTitle": "Atlas no pudo cargar sugerencias nuevas.",
+    "fallbackBody": "Estos son destinos de ejemplo mientras lo intentamos de nuevo.",
+    "originNeededTitle": "Necesitamos tu aeropuerto de origen.",
+    "originNeededBody": "Toca para configurarlo — Atlas adaptará las sugerencias a tu origen."
+  },
+  "plannerErrorBanner": {
+    "retry": "Reintentar",
+    "dismiss": "Descartar"
   },
   "affiliatePreviewModal": {
     "poweredBy": "Con tecnología de {partner}",

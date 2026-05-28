@@ -109,3 +109,29 @@ test('Path B → "Plan a trip to X" CTA resolves trip and renders Path A', async
   await expect(page.locator('[data-testid="itinerary-builder"]')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('[data-testid="surprise-me-section"]')).not.toBeVisible();
 });
+
+test('SurpriseMeSection shows non-silent fallback banner on API failure', async ({ page, context }) => {
+  // Force /api/surprise-me to fail
+  await context.route('/api/surprise-me*', (route) => route.abort());
+
+  const post = await context.request.post('/api/trips', {
+    data: { name: 'Fallback test', destination: 'Surprise Me', budget: 'midrange', origin: 'DEN' },
+  });
+  const trip = await post.json();
+  await page.goto(`/planner/${trip.id}`);
+
+  // Banner with retry button must be visible
+  await expect(page.locator('[data-testid="surprise-fallback-banner"]')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
+});
+
+test('SurpriseMeSection signals unknown-origin instead of silently defaulting to MIA', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: { name: 'Unknown origin', destination: 'Surprise Me', budget: 'midrange', origin: '???' },
+  });
+  const trip = await post.json();
+  await page.goto(`/planner/${trip.id}`);
+
+  // Should show prompt to set home airport, NOT silently load MIA destinations
+  await expect(page.locator('[data-testid="origin-needed-prompt"]')).toBeVisible({ timeout: 5000 });
+});

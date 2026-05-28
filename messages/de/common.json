@@ -464,7 +464,15 @@
     "nonstop": "Nonstop",
     "dimmedPlanner": "Wähle oben ein Reiseziel und dein Reiseplan erscheint hier",
     "noDestYet": "Dein Reiseplan erscheint, sobald du ein Reiseziel gewählt hast",
-    "planTripTo": "Plane eine Reise nach {destination}"
+    "planTripTo": "Plane eine Reise nach {destination}",
+    "fallbackTitle": "Atlas konnte keine frischen Vorschläge laden.",
+    "fallbackBody": "Das sind Beispiel-Reiseziele, während wir es erneut versuchen.",
+    "originNeededTitle": "Wir brauchen deinen Heimatflughafen.",
+    "originNeededBody": "Tipp hier, um ihn festzulegen — Atlas passt Vorschläge an deinen Abflugort an."
+  },
+  "plannerErrorBanner": {
+    "retry": "Wiederholen",
+    "dismiss": "Schließen"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Empfohlene Buchungen",

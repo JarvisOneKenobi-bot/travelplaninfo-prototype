@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import AtlasHeroSection from "./AtlasHeroSection";
+import PlannerErrorBanner from "./PlannerErrorBanner";
 
 interface Destination {
   name: string;
@@ -79,32 +80,51 @@ export default function SurpriseMeSection({
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [originUnknown, setOriginUnknown] = useState(false);
+  const [fallbackUsed, setFallbackUsed] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    const origin = originCode === "???" ? "MIA" : originCode;
+    if (originCode === "???") {
+      setOriginUnknown(true);
+      setLoading(false);
+      return;
+    }
+    setOriginUnknown(false);
+    fetchSuggestions();
+  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+
+  function fetchSuggestions() {
+    setLoading(true);
+    setFallbackUsed(false);
+    setFetchError(null);
+
     const departMonth = deriveDepartMonth(flexibleWindow, startDate);
-    const params = new URLSearchParams({ origin, depart_month: departMonth });
+    const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
     if (tripLength) params.set("trip_length", tripLength);
     if (vibesSummary) {
       const vibesParam = vibesSummary
-        .split(/\s*\+\s*/)
-        .map((v) => v.trim().toLowerCase())
-        .filter(Boolean)
-        .join(",");
+        .split(/\s*\+\s*/).map((v) => v.trim().toLowerCase()).filter(Boolean).join(",");
       if (vibesParam) params.set("vibes", vibesParam);
     }
+
     fetch(`/api/surprise-me?${params.toString()}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
         } else {
           setDestinations(V1_FALLBACK);
+          setFallbackUsed(true);
         }
       })
-      .catch(() => setDestinations(V1_FALLBACK))
+      .catch((e) => {
+        setDestinations(V1_FALLBACK);
+        setFallbackUsed(true);
+        setFetchError(String(e));
+      })
       .finally(() => setLoading(false));
-  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+  }
 
   function handleTellMeMore(index: number) {
     const dest = destinations[index];
@@ -154,6 +174,18 @@ export default function SurpriseMeSection({
     }
   }
 
+  if (originUnknown) {
+    return (
+      <div className="space-y-6" data-testid="surprise-me-section">
+        <div data-testid="origin-needed-prompt" className="rounded-xl border-2 border-orange-200 bg-orange-50 p-6">
+          <p className="font-medium text-orange-900">{t("originNeededTitle")}</p>
+          <p className="text-sm text-orange-800 mt-1">{t("originNeededBody")}</p>
+          <a href="/planner" className="inline-block mt-3 text-sm font-medium underline">Set origin →</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div data-testid="surprise-me-section" className="space-y-6">
       {resolveError && (
@@ -161,6 +193,14 @@ export default function SurpriseMeSection({
           {resolveError}
           <button onClick={() => setResolveError(null)} className="ml-2 underline">Dismiss</button>
         </div>
+      )}
+      {fallbackUsed && (
+        <PlannerErrorBanner
+          testId="surprise-fallback-banner"
+          title={t("fallbackTitle")}
+          body={t("fallbackBody")}
+          onRetry={fetchSuggestions}
+        />
       )}
       {loading ? (
         /* Loading skeleton — 3 placeholder cards */
