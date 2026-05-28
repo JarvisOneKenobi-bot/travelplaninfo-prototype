@@ -394,7 +394,7 @@ export default function ItineraryBuilder({
   const hasInterests = userInterests.length > 0 && !userInterests.every(i => i === "ai_assisted");
 
   return (
-    <div className="space-y-6">
+    <div data-testid="itinerary-builder" className="space-y-6">
       {/* Unified sticky toolbar: Map + Add Day + Budget Bar */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm px-4 py-2.5 -mx-4 mb-4">
         <div className="flex items-center gap-3 flex-wrap">

@@ -96,6 +96,7 @@ export default async function TripDetail({ params }: Props) {
           {isSurpriseMe ? (
             /* PATH B: Surprise Me — Atlas hero + dimmed planner */
             <SurpriseMeSection
+              tripId={trip.id}
               originCode={trip.origin || "???"}
               vibesSummary={vibesSummary}
               budgetLabel={budgetLabel}

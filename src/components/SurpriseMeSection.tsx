@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import AtlasHeroSection from "./AtlasHeroSection";
 
 interface Destination {
@@ -14,6 +15,7 @@ interface Destination {
 }
 
 interface SurpriseMeSectionProps {
+  tripId: number;
   originCode: string;
   vibesSummary: string;
   budgetLabel: string;
@@ -63,6 +65,7 @@ function deriveDepartMonth(
 }
 
 export default function SurpriseMeSection({
+  tripId,
   originCode,
   vibesSummary,
   budgetLabel,
@@ -71,8 +74,11 @@ export default function SurpriseMeSection({
   startDate,
 }: SurpriseMeSectionProps) {
   const t = useTranslations("atlasHero");
+  const router = useRouter();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   useEffect(() => {
     const origin = originCode === "???" ? "MIA" : originCode;
@@ -123,8 +129,39 @@ export default function SurpriseMeSection({
     window.dispatchEvent(new CustomEvent("atlas-open", { detail: {} }));
   }
 
+  async function handleResolveDestination(index: number) {
+    const dest = destinations[index];
+    if (!dest) return;
+    setResolving(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/resolve-surprise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: dest.name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setResolveError((err as { error?: string }).error || 'Could not resolve destination');
+        setResolving(false);
+        return;
+      }
+      // Locale-aware navigation: typed router honors localePrefix='as-needed'.
+      router.push(`/planner/${tripId}`);
+      router.refresh();
+    } catch {
+      setResolveError('Network error');
+      setResolving(false);
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div data-testid="surprise-me-section" className="space-y-6">
+      {resolveError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+          {resolveError}
+          <button onClick={() => setResolveError(null)} className="ml-2 underline">Dismiss</button>
+        </div>
+      )}
       {loading ? (
         /* Loading skeleton — 3 placeholder cards */
         <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 animate-pulse">
@@ -156,6 +193,7 @@ export default function SurpriseMeSection({
           onTellMeMore={handleTellMeMore}
           onShowDifferent={handleShowDifferent}
           onChatWithAtlas={handleChatWithAtlas}
+          onResolveDestination={resolving ? undefined : handleResolveDestination}
         />
       )}
 

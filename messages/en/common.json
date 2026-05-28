@@ -481,7 +481,8 @@
     "hotelsFrom": "Hotels from {price}/night",
     "nonstop": "nonstop",
     "dimmedPlanner": "Pick a destination above and your itinerary will appear here",
-    "noDestYet": "Your itinerary will appear once you choose a destination"
+    "noDestYet": "Your itinerary will appear once you choose a destination",
+    "planTripTo": "Plan a trip to {destination}"
   },
   "affiliateRecommendations": {
     "recommendedBookings": "Recommended Bookings",

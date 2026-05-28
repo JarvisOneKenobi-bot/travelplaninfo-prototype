@@ -523,7 +523,8 @@
     "hotelsFrom": "Hoteles desde {price}/noche",
     "nonstop": "directo",
     "dimmedPlanner": "Elige un destino arriba y tu itinerario aparecerá aquí",
-    "noDestYet": "Tu itinerario aparecerá una vez que elijas un destino"
+    "noDestYet": "Tu itinerario aparecerá una vez que elijas un destino",
+    "planTripTo": "Planea un viaje a {destination}"
   },
   "affiliatePreviewModal": {
     "poweredBy": "Con tecnología de {partner}",

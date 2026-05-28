@@ -91,3 +91,21 @@ test('resolve-surprise enforces ownership (404 on someone else trip)', async ({ 
   });
   expect([401, 404]).toContain(resolve.status());
 });
+
+test('Path B → "Plan a trip to X" CTA resolves trip and renders Path A', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: { name: 'CTA test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA' },
+  });
+  const trip = await post.json();
+  await page.goto(`/planner/${trip.id}`);
+
+  // Wait for SurpriseMeSection to load destinations
+  await page.waitForSelector('[data-testid="atlas-destination-card"]', { timeout: 10000 });
+
+  // Click primary CTA on first card
+  await page.click('[data-testid="atlas-destination-card"]:first-child [data-testid="plan-trip-cta"]');
+
+  // After navigation, page should render Path A — ItineraryBuilder visible, no SurpriseMeSection
+  await expect(page.locator('[data-testid="itinerary-builder"]')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('[data-testid="surprise-me-section"]')).not.toBeVisible();
+});
