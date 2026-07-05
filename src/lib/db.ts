@@ -114,6 +114,21 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_geocoding_cache_query ON geocoding_cache(query);
   `);
 
+  // Migration: assistant spend tracking table
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS assistant_cost (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      date           TEXT NOT NULL,
+      model          TEXT NOT NULL,
+      usd            REAL NOT NULL DEFAULT 0,
+      input_tokens   INTEGER NOT NULL DEFAULT 0,
+      output_tokens  INTEGER NOT NULL DEFAULT 0,
+      created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(date, model)
+    );
+    CREATE INDEX IF NOT EXISTS idx_assistant_cost_date ON assistant_cost(date);
+  `);
+
   // Migration: map feature columns on trip_items
   const mapMigrations = [
     "ALTER TABLE trip_items ADD COLUMN latitude REAL",

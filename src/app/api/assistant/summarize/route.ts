@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
-import { getAnthropicApiKey, getFastApiBaseUrl } from "@/lib/server-config";
+import { getAnthropicApiKey } from "@/lib/server-config";
+import { recordAssistantSpend } from "@/lib/atlas/spend";
 
 // ── POST handler ────────────────────────────────────────────────────────────
 
@@ -187,23 +188,13 @@ export async function POST(req: NextRequest) {
   const memoriesSaved = kvPairs.filter((r) => r.key && r.value).length +
     (hasSummaryKey ? 0 : 1);
 
-  // 9. Record cost via FastAPI
+  // 9. Record cost in the shared Atlas spend meter
   try {
     const inputTokens = completion.usage?.input_tokens ?? 0;
     const outputTokens = completion.usage?.output_tokens ?? 0;
-    const recordSpendUrl = new URL(
-      "/api/assistant/record-spend",
-      getFastApiBaseUrl()
-    );
-
-    await fetch(recordSpendUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-      }),
+    recordAssistantSpend("claude-sonnet-4-6", {
+      inputTokens,
+      outputTokens,
     });
   } catch (costErr) {
     // Non-fatal: log but don't fail the response

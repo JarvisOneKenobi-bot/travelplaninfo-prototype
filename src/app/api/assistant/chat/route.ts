@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
-import {
-  getAuthenticatedAppBaseUrl,
-  getFastApiBaseUrl,
-} from "@/lib/server-config";
+import { getAuthenticatedAppBaseUrl } from "@/lib/server-config";
+import { runAtlasTurn } from "@/lib/atlas/tool-loop";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
 
@@ -174,11 +173,11 @@ GROUP BY cs.id
     content: r.content,
   }));
 
-  // 8. Forward to FastAPI backend
+  // 8. Run the in-app Atlas brain
   // The conversation history already includes the user message we just saved (step 6),
-  // so we send it as-is. The backend appends `message` separately, so we must exclude
+  // so we send it as-is. The tool loop appends `message` separately, so we must exclude
   // the latest user message from conversation_history to avoid duplication.
-  const historyWithoutCurrent = conversationHistory.slice(0, -1);
+  const historyWithoutCurrent = conversationHistory.slice(0, -1) as MessageParam[];
 
   let fullResponse = "";
   const encoder = new TextEncoder();
@@ -186,88 +185,34 @@ GROUP BY cs.id
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const backendChatUrl = new URL(
-          "/api/assistant/chat",
-          getFastApiBaseUrl()
-        );
-
-        const backendRes = await fetch(backendChatUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            preferences_json: preferencesJson,
-            message,
-            conversation_history: historyWithoutCurrent,
-            session_id,
-            stream: true,
-            page_context: page_context || null,
-            memory_context: memoryContext,
-          }),
+        const atlasFrames = runAtlasTurn({
+          message,
+          history: historyWithoutCurrent,
+          pageContext: page_context,
+          preferencesJson,
+          memoryContext,
         });
 
-        if (!backendRes.ok || !backendRes.body) {
-          const errText = `Atlas backend returned ${backendRes.status}`;
-          controller.enqueue(encoder.encode(`data: {"error": "${errText}"}\n\n`));
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
-        }
+        for await (const frame of atlasFrames) {
+          controller.enqueue(encoder.encode(frame));
 
-        const reader = backendRes.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+          if (!frame.startsWith("data: ")) continue;
+          const data = frame.slice(6).trimEnd();
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          // Process complete SSE frames
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || ""; // Keep incomplete frame in buffer
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6);
-
-            // Pass through to client
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-
-            // Accumulate text (skip control messages and tool markers)
-            if (
-              data !== "[DONE]" &&
-              !data.startsWith("[TOOL:") &&
-              !data.startsWith('{"error"')
-            ) {
-              fullResponse += data;
-            }
+          // Accumulate text (skip control messages and tool markers)
+          if (
+            data !== "[DONE]" &&
+            !data.startsWith("[TOOL:") &&
+            !data.startsWith('{"error"')
+          ) {
+            fullResponse += data;
           }
         }
-
-        // Process any remaining buffer
-        if (buffer.startsWith("data: ")) {
-          const data = buffer.slice(6).trim();
-          if (data) {
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            if (
-              data !== "[DONE]" &&
-              !data.startsWith("[TOOL:") &&
-              !data.startsWith('{"error"')
-            ) {
-              fullResponse += data;
-            }
-          }
-        }
-
-        // Ensure [DONE] is sent
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       } catch (err) {
-        // FastAPI unreachable (ECONNREFUSED etc.)
-        console.error("Atlas backend connection error:", err);
+        console.error("Atlas in-app brain error:", err);
         controller.enqueue(
           encoder.encode(
-            `data: {"error": "Atlas is taking a nap. Please try again in a moment."}\n\n`
+            `data: {"error": "Atlas encountered an unexpected error. Please try again in a moment."}\n\n`
           )
         );
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
