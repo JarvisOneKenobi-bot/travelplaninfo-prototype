@@ -134,7 +134,8 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
         thinking: { type: "disabled" },
         system: useTools ? systemPrompt : `${systemPrompt}\n\nIMPORTANT: Respond with text only. Do not use any tools.`,
         messages: currentMessages,
-        ...(useTools ? { tools: TOOLS } : {}),
+        tools: TOOLS,
+        ...(useTools ? {} : { tool_choice: { type: "none" as const } }),
       });
 
       recordAssistantSpend(MODEL, {

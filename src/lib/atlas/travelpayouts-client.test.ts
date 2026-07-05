@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { searchFlights, buildAviasalesLink } from "./travelpayouts-client";
+import { searchFlights, getDeals, buildAviasalesLink } from "./travelpayouts-client";
 
 describe("travelpayouts-client", () => {
   beforeEach(() => {
@@ -24,7 +24,36 @@ describe("travelpayouts-client", () => {
     expect("no_data" in result).toBe(false);
     if (!("no_data" in result)) {
       expect(result.flights.length).toBeGreaterThan(0);
-      expect(result.flights[0].price).toBe(210);
+      expect(result.flights[0]).toMatchObject({
+        route: "MIA → CUN",
+        price: "$210 round-trip",
+        duration: "",
+        stops: "Nonstop",
+        depart_date: "2026-09-01T10:00:00Z",
+      });
+      expect(result.flights[0].book_url).toContain("aviasales.com/search/");
+    }
+  });
+
+  it("returns frontend-ready deal card data when the API responds with prices", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [{ origin: "MIA", destination: "SJU", price: 155, departure_at: "2026-08-12T09:00:00Z" }],
+      }),
+    });
+
+    const result = await getDeals("MIA");
+    expect("no_data" in result).toBe(false);
+    if (!("no_data" in result)) {
+      expect(result.deals[0]).toMatchObject({
+        date: "2026-08-12",
+        destination: "SJU",
+        price: "$155",
+        savings_pct: 0,
+      });
+      expect(result.deals[0].search_url).toContain("aviasales.com/search/");
     }
   });
 
@@ -52,6 +81,6 @@ describe("getPopularRoutes", () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
     const { getPopularRoutes } = await import("./travelpayouts-client");
     const result = await getPopularRoutes("MIA");
-    expect(result).toMatchObject({ routes: [], no_data: true });
+    expect(result).toMatchObject({ suggestions: [], no_data: true });
   });
 });

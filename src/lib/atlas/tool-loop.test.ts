@@ -13,7 +13,7 @@ vi.mock("./spend", async (importOriginal) => {
 vi.mock("./travelpayouts-client", () => ({
   searchFlights: vi.fn(async () => ({ flights: [], no_data: true, reason: "test" })),
   getDeals: vi.fn(async () => ({ deals: [], no_data: true, reason: "test" })),
-  getPopularRoutes: vi.fn(async () => ({ routes: [], no_data: true, reason: "test" })),
+  getPopularRoutes: vi.fn(async () => ({ suggestions: [], no_data: true, reason: "test" })),
 }));
 vi.mock("./tools/get-article", () => ({ getArticleTool: vi.fn(() => ({ articles: [] })) }));
 
@@ -103,7 +103,28 @@ describe("runAtlasTurn", () => {
     const frames = await collect(runAtlasTurn({ message: "surprise me", history: [] }));
     const toolFrame = frames.find((f) => f.startsWith("data: [TOOL:surprise_me]"));
     expect(toolFrame).toBeDefined();
-    expect(toolFrame).toContain('"routes":[]');
+    expect(toolFrame).toContain('"suggestions":[]');
     expect(getPopularRoutes).toHaveBeenCalledWith("MIA");
+  });
+
+  it("keeps tools available but disables tool choice on the final exhaustion call", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      createMock.mockResolvedValueOnce({
+        stop_reason: "tool_use",
+        content: [{ type: "tool_use", id: `t${i}`, name: "surprise_me", input: { origin: "MIA" } }],
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+    }
+    createMock.mockResolvedValueOnce({
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: "No more tools." }],
+      usage: { input_tokens: 2, output_tokens: 2 },
+    });
+
+    await collect(runAtlasTurn({ message: "keep using tools", history: [] }));
+
+    const finalCall = createMock.mock.calls[5][0];
+    expect(finalCall.tools).toBeDefined();
+    expect(finalCall.tool_choice).toEqual({ type: "none" });
   });
 });

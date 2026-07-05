@@ -18,6 +18,17 @@ export interface FlightOption {
   link: string;
 }
 
+export interface FlightCardOption {
+  airline: string;
+  route: string;
+  price: string;
+  duration: string;
+  stops: string;
+  depart_date: string;
+  return_date: string;
+  book_url: string;
+}
+
 export interface DealOption {
   price: number | null;
   airline?: string;
@@ -28,6 +39,14 @@ export interface DealOption {
   link: string;
 }
 
+export interface DealCardOption {
+  date: string;
+  destination: string;
+  price: string;
+  savings_pct: number;
+  search_url: string;
+}
+
 export interface PopularRoute {
   price: number | null;
   airline?: string;
@@ -36,6 +55,12 @@ export interface PopularRoute {
   departure_at: string;
   transfers: number;
   link: string;
+}
+
+export interface DestinationSuggestion {
+  city: string;
+  tagline: string;
+  estimated_flight: string;
 }
 
 type TpResponse = { success?: boolean; data?: unknown };
@@ -230,6 +255,16 @@ function datePart(dateString: string | undefined): string {
   return `${match[3]}${match[2]}`;
 }
 
+function formatPrice(price: number | null | undefined, suffix = ""): string {
+  const value = price ?? 0;
+  return value > 0 ? `$${value}${suffix}` : "$0";
+}
+
+function formatStops(transfers: number): string {
+  if (transfers === 0) return "Nonstop";
+  return `${transfers} ${transfers === 1 ? "stop" : "stops"}`;
+}
+
 function airportsWithNearby(iata: string): string[] {
   const airports = [iata];
   for (const nearbyCode of NEARBY_AIRPORTS_MAP[iata] ?? []) {
@@ -349,7 +384,7 @@ export async function searchFlights(
   departDate: string,
   returnDate?: string
 ): Promise<
-  | { flights: FlightOption[]; airports_searched: string[]; destinations_searched: string[]; origin: string; destination: string }
+  | { flights: FlightCardOption[]; airports_searched: string[]; destinations_searched: string[]; origin: string; destination: string }
   | { flights: []; no_data: true; reason: string; origin: string; destination: string; airports_searched: string[]; destinations_searched: string[] }
 > {
   const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
@@ -393,7 +428,17 @@ export async function searchFlights(
   const flights = results
     .flat()
     .sort((a, b) => (a.price ?? 999999) - (b.price ?? 999999))
-    .slice(0, 10);
+    .slice(0, 10)
+    .map((flight) => ({
+      airline: flight.airline ?? "",
+      route: `${flight.origin} → ${flight.destination}`,
+      price: formatPrice(flight.price, flight.return_at && (flight.price ?? 0) > 0 ? " round-trip" : ""),
+      duration: "",
+      stops: formatStops(flight.transfers),
+      depart_date: flight.departure_at,
+      return_date: flight.return_at ?? "",
+      book_url: flight.link,
+    }));
 
   if (flights.length === 0) {
     return {
@@ -418,7 +463,7 @@ export async function searchFlights(
 
 export async function getDeals(
   origin: string
-): Promise<{ deals: DealOption[] } | { deals: []; no_data: true; reason: string }> {
+): Promise<{ deals: DealCardOption[] } | { deals: []; no_data: true; reason: string }> {
   const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
   const today = new Date().toISOString().slice(0, 7);
   const params = {
@@ -438,13 +483,11 @@ export async function getDeals(
     const dest = cleanIata(item.destination ?? "");
     const depart = item.departure_at ?? "";
     return {
-      price: item.price ?? null,
-      airline: item.airline,
+      date: depart.slice(0, 10) || depart,
       destination: dest,
-      departure_at: depart,
-      return_at: item.return_at,
-      transfers: item.transfers ?? 0,
-      link: buildAviasalesLink(cleanOrigin, dest, depart),
+      price: formatPrice(item.price),
+      savings_pct: 0,
+      search_url: buildAviasalesLink(cleanOrigin, dest, depart),
     };
   });
 
@@ -453,7 +496,7 @@ export async function getDeals(
 
 export async function getPopularRoutes(
   origin: string
-): Promise<{ routes: PopularRoute[] } | { routes: []; no_data: true; reason: string }> {
+): Promise<{ suggestions: DestinationSuggestion[] } | { suggestions: []; no_data: true; reason: string }> {
   const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
   const params = {
     origin: cleanOrigin,
@@ -464,24 +507,19 @@ export async function getPopularRoutes(
 
   const items = rawItems(await tpGet("/aviasales/v3/prices_for_dates", params));
   if (items.length === 0) {
-    return { routes: [], no_data: true, reason: "TP API returned no popular routes for this origin" };
+    return { suggestions: [], no_data: true, reason: "TP API returned no popular routes for this origin" };
   }
 
-  const routes = items.slice(0, 100).map((item) => {
+  const suggestions = items.slice(0, 5).map((item) => {
     const dest = cleanIata(item.destination ?? "");
-    const depart = item.departure_at ?? "";
     return {
-      price: item.price ?? null,
-      airline: item.airline,
-      destination: dest,
-      destination_city: IATA_TO_CITY[dest] ?? dest,
-      departure_at: depart,
-      transfers: item.transfers ?? 0,
-      link: buildAviasalesLink(cleanOrigin, dest, depart),
+      city: IATA_TO_CITY[dest] ?? dest,
+      tagline: `Popular route from ${cleanOrigin}`,
+      estimated_flight: item.price && item.price > 0 ? `$${item.price}` : "—",
     };
   });
 
-  return { routes };
+  return { suggestions };
 }
 
 export function buildAviasalesLink(origin: string, destination: string, departDate: string, returnDate?: string): string {
