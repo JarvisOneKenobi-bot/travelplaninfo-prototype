@@ -69,7 +69,7 @@ Acceptance:
 Verification commands:
 ```bash
 git diff --check
-grep -R "FILL_ME_IN\|Phase 0 .*will\|Phase 0 .*future" docs/product docs/DECISIONS.md || true
+! grep -RIn "FILL_ME_[I]N\|TB[D]\b" docs/product docs/DECISIONS.md
 wc -l docs/product/*.md docs/DECISIONS.md
 ```
 
@@ -164,7 +164,7 @@ Goal:
 Tasks:
 1. Finish D3 UI/data changes: no fabricated hotel/activity/restaurant cards or itinerary items.
 2. Add partner-search handoff card shape and renderers if needed.
-3. Add or complete Tiqets, Kiwi.com, and Kiwitaxi config if missing from `src/config/affiliates.ts` under D7.
+3. Add Tiqets, Kiwi.com, and Kiwitaxi config to `src/config/affiliates.ts` under D7; these three partner configs do not exist there today.
 4. Add partner metadata (`embedMode` or equivalent) and centralized affiliate opener/tracker.
 5. Fix `rel="sponsored"` inconsistency on Aviasales and other affiliate anchors.
 6. Resolve AirAdvisor TODO: either configure approved CJ URL or flag off until approved.

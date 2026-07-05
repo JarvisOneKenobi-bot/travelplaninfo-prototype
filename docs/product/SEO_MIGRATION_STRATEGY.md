@@ -15,6 +15,11 @@ Current sitemap behavior:
 - Article URLs: 59 articles x 6 locales = 354 URLs (`src/app/sitemap.ts:35-49`, diagnosis counted the 59-article corpus).
 - Approximate total: 396 sitemap URLs for about 60 pages of unique article content.
 
+Post-Phase-4 sitemap target:
+- Static URLs remain 7 static paths x 6 locales = 42 URLs while those localized static templates self-canonicalize correctly.
+- Article URLs become 59 canonical English article URLs only; the 295 non-English duplicate article URLs remain live/crawlable per D5 but are dropped from `sitemap.xml` because they are not canonical.
+- Target total with the current corpus: 42 static URLs + 59 canonical article URLs = 101 sitemap URLs, not 396.
+
 Current article behavior:
 - `getArticle(slug)` ignores locale and returns the same JSON body for every locale (`src/lib/articles.ts:43-55`).
 - Article metadata currently self-canonicalizes non-English pages to their own localized URL (`src/app/[locale]/[slug]/page.tsx:61-88`).
@@ -35,6 +40,7 @@ Implementation rule:
 - English article canonical remains `post.seo.canonical` when present, otherwise the English URL.
 - Hreflang may still list locale variants, but canonical tells search engines the English original is the preferred URL.
 - Add `x-default` to the English URL in hreflang clusters when implementation touches metadata/sitemap.
+- Post-Phase-4, `sitemap.xml` must list only the canonical English article URL for each article, not the 295 non-English duplicate article URLs; those non-English URLs remain live/crawlable per D5 but are omitted from the sitemap because they are not canonical.
 
 ## Template metadata matrix
 
@@ -122,7 +128,7 @@ Minimum Phase 1/2 measurement setup:
 A crawl of the fixed site must verify:
 - Non-English article pages canonicalize to the English original.
 - English article pages canonicalize to English.
-- Sitemap URL counts reconcile to the matrix.
+- Sitemap URL counts reconcile to the matrix: with the current 59-article corpus, 42 localized static URLs + 59 canonical English article URLs = 101 `<loc>` entries, with zero non-English article `<loc>` entries.
 - Auth/account/trip detail pages are noindex and absent from the sitemap.
 - Hub pages have canonical metadata.
 - FAQ schema remains valid on article pages that carry `faq`.

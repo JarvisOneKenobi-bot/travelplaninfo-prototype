@@ -81,7 +81,7 @@ Current code evidence:
 
 Implementation consequence:
 - `affiliateOpportunities` values must map to this config layer.
-- If Tiqets, Kiwi.com, or Kiwitaxi are part of the locked partner set but not fully represented in the current config, Phase 3 must add them to the config before using them in articles/Atlas/planner.
+- Tiqets, Kiwi.com, and Kiwitaxi are absent from `src/config/affiliates.ts` today, so Phase 3 must add them to the config before using them in articles/Atlas/planner.
 - Do not add article-level hardcoded affiliate links outside the config unless the config is missing a required program and the same change adds that program.
 
 ## Relationship to Article Factory
