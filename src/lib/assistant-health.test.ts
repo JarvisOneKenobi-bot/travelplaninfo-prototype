@@ -17,7 +17,7 @@ function mockFetchOnce(impl: () => Promise<Response> | never) {
 
 beforeEach(() => {
   __resetAssistantHealthCacheForTests();
-  mockAnthropicKey.mockReturnValue('«redacted:sk-…»');
+  mockAnthropicKey.mockReturnValue('sk-ant-fake-key');
   mockFastApiUrl.mockReturnValue('http://localhost:8766');
   vi.unstubAllEnvs();
 });
