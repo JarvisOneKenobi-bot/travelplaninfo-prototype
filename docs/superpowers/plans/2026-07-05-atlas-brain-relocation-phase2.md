@@ -17,8 +17,10 @@
 - Preserve the SSE contract byte-for-byte: `data: [TOOL:name]{json}\n\n` for tool results, `data: {token}\n\n` for text tokens, `data: [DONE]\n\n` to end, `data: {"error": "..."}\n\n` for errors. Do not invent new frame types.
 - D3 (no fabrication): `search_hotels`, `search_activities`, `search_restaurants` are **not** tool definitions in this codebase going forward. Never add them back as callable tools. The system prompt must instruct Atlas to answer those requests in prose plus a real link (see Task 4).
 - D7 (partner links): use `CJ_LINKS.hotelsCity(city)` from `src/config/affiliates.ts` for hotel links, `TP_KLOOK.url(city)` for activity/tour links. There is no restaurant affiliate program configured — use a plain (non-affiliate) Google Maps search URL for restaurants: `https://www.google.com/maps/search/restaurants+in+${encodeURIComponent(city)}`.
-- Spend cap stays $10.00/month, same as the Python `ASSISTANT_SPEND_CAP = 69.0` — wait, verify the exact current Python value by reading `command-post/routers/assistant.py` line ~69 before writing the constant; do not guess it. If it reads `10.0`, use `10.0`.
+- Spend cap stays $10.00/month — confirmed as `ASSISTANT_SPEND_CAP = 10.0` at `command-post/routers/assistant.py:69`. Use `10.0` directly, no further verification needed.
 - Pricing constants for `claude-sonnet-5`: input **$2.00/MTok**, output **$10.00/MTok** (introductory pricing through 2026-08-31; standard pricing after that date is $3.00/$15.00 per MTok). Add a code comment on the pricing constants noting the 2026-08-31 cutoff and that these must be updated to $3.00/$15.00 after that date, or replaced with a dated lookup table if this becomes a recurring maintenance burden.
+- **Test command:** this repo's `npm run test` (`package.json`) runs `npm run test:unit && npm run test:e2e` — passing a file path after `npm run test --` forwards it to the *e2e* runner, not vitest, because npm appends args to the end of that compound script. Every unit-test verification step in this plan uses `npm run test:unit -- <path>` (the `test:unit` script is `vitest run`). Do not use `npm run test -- <path>` for a single file.
+- **Deliberate deviations from the Python original** (record these, do not "fix" them back to match Python without asking): (1) `max_tokens: 4096` per turn, vs. Python's `1024` (`assistant.py:1178`) — chosen for headroom on Sonnet 5's larger tokenizer; (2) the OpenAI `gpt-4o-mini` rate-limit fallback (`assistant.py:1192-1205`) is intentionally NOT ported in Phase 2 — out of this Claude-API-only scope; a rate-limited request degrades to the honest "taking a nap" error frame instead of silently switching providers. Flag to Jose if provider-fallback parity is wanted later. (`MAX_TOOL_ITERATIONS` exhaustion behavior is NOT a deviation — Task 6 step 7 matches the Python original's graceful forced-final-text-call exactly.)
 - What not to touch: Article Factory cadence, trip schema/quiz column cleanup, UI redesign beyond what's strictly needed (there should be none — see architecture note above), locale/SEO changes, the `command-post` Python code itself (leave it in place; it becomes dead code on the VPS side but Jose may still use it locally — do not delete it in this phase).
 - Every new source file gets a matching test file. Follow the existing repo convention: plain Vitest unit tests for pure logic (see `src/lib/assistant-health.test.ts` for style — mock external dependencies, don't hit real network/DB in unit tests).
 
@@ -79,7 +81,7 @@ describe("checkAtlasEnvPreflight", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/env-preflight.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/env-preflight.test.ts`
 Expected: FAIL — `env-preflight` module does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -98,7 +100,7 @@ export function checkAtlasEnvPreflight(): { ok: boolean; missing: string[] } {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/env-preflight.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/env-preflight.test.ts`
 Expected: PASS (3/3)
 
 - [ ] **Step 5: Commit**
@@ -124,6 +126,8 @@ git commit -m "feat(atlas): add env preflight check for in-app brain"
   - `ASSISTANT_SPEND_CAP_USD` constant (read the actual value from `command-post/routers/assistant.py` around line 69 first; use that exact number)
   - `SONNET5_PRICE_PER_MTOK = { input: 2.0, output: 10.0 }` (see Global Constraints re: 2026-08-31 cutoff)
 
+**Test isolation warning:** `DB_PATH` in `src/lib/db.ts:6` is hardcoded to `process.cwd()/data/tpi.db` — the real developer/dev-server database. There is no existing precedent in this repo for a test that calls `getDb()` directly (verified: zero current test files touch it). A test that does `DELETE FROM assistant_cost` and inserts fake spend rows against that real file would corrupt local dev data and, after Task 8 ships, could flip the developer's local Atlas to "unhealthy" via the real spend cap. **Do not let the test touch the real `data/tpi.db`.** Instead, mock the `@/lib/db` module in `spend.test.ts` to return an in-memory `better-sqlite3` database (`new Database(":memory:")`) with just the `assistant_cost` table created inline in the test file's `beforeEach` — this follows the existing repo convention of mocking external dependencies in unit tests (see `src/lib/assistant-health.test.ts`'s approach of mocking `@/lib/server-config` rather than touching real files).
+
 Table schema (add to `src/lib/db.ts`'s `_db.exec(...)` migration block, following the existing style exactly):
 
 ```sql
@@ -146,13 +150,33 @@ CREATE INDEX IF NOT EXISTS idx_assistant_cost_date ON assistant_cost(date);
 
 ```typescript
 // src/lib/atlas/spend.test.ts
-import { describe, it, expect, beforeEach } from "vitest";
-import { getDb } from "@/lib/db";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import Database from "better-sqlite3";
+
+// In-memory DB — never touches the real data/tpi.db. Mirrors the
+// assistant_cost schema added to src/lib/db.ts in this task.
+let memDb: Database.Database;
+vi.mock("@/lib/db", () => ({
+  getDb: () => memDb,
+}));
+
 import { recordAssistantSpend, getAssistantMonthlySpendUsd, ASSISTANT_SPEND_CAP_USD } from "./spend";
 
 describe("assistant spend tracking", () => {
   beforeEach(() => {
-    getDb().exec("DELETE FROM assistant_cost");
+    memDb = new Database(":memory:");
+    memDb.exec(`
+      CREATE TABLE assistant_cost (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        model TEXT NOT NULL,
+        usd REAL NOT NULL DEFAULT 0,
+        input_tokens INTEGER NOT NULL DEFAULT 0,
+        output_tokens INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(date, model)
+      );
+    `);
   });
 
   it("records spend and computes cost from token usage", () => {
@@ -177,7 +201,7 @@ describe("assistant spend tracking", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/spend.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/spend.test.ts`
 Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Add the table to `src/lib/db.ts` and implement `src/lib/atlas/spend.ts`**
@@ -228,7 +252,7 @@ export function getAssistantMonthlySpendUsd(): number {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/spend.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/spend.test.ts`
 Expected: PASS (3/3)
 
 - [ ] **Step 5: Commit**
@@ -248,16 +272,22 @@ git commit -m "feat(atlas): add assistant_cost table and monthly spend tracking"
 
 **Interfaces:**
 - Produces:
-  - `searchFlights(origin: string, destination: string, departDate: string, returnDate?: string): Promise<{ flights: FlightOption[] } | { flights: []; no_data: true; reason: string }>`
+  - `searchFlights(origin: string, destination: string, departDate: string, returnDate?: string): Promise<{ flights: FlightOption[] } | { flights: []; no_data: true; reason: string }>` — this is the **handler-level** port (fan-out + defaulting included, see below), not just the raw `tp_client.py` call.
   - `getDeals(origin: string): Promise<{ deals: DealOption[] } | { deals: []; no_data: true; reason: string }>`
+  - `getPopularRoutes(origin: string): Promise<{ routes: PopularRoute[] } | { routes: []; no_data: true; reason: string }>` — powers the `surprise_me` tool in Task 6. Real Travelpayouts data only — do not port the Python's curated-fallback destination list (`assistant.py:999-1089`); an honest empty result is preferable to a hardcoded fallback list under D3's spirit. If this feels like a real product regression, flag it in the PR description for Jose rather than silently adding the fallback back.
   - `buildAviasalesLink(origin: string, destination: string, departDate: string, returnDate?: string): string`
-  - `FlightOption`, `DealOption` types
+  - `FlightOption`, `DealOption`, `PopularRoute` types
 
-Port the **real-API-only** logic from `command-post/tp_client.py` (read it directly — it is the source of truth). Specifically port:
+Port the **real-API-only** logic from `command-post/tp_client.py` (read it directly — it is the source of truth for the raw API calls). Specifically port:
 - `_tp_get()` — the base GET wrapper with a 10s timeout and 5-minute in-memory cache (a simple `Map<string, {data, expiresAt}>` keyed by URL is sufficient; do not port the 200 req/hour rate limiter unless you confirm Travelpayouts still requires it — if unsure, port it too, it's cheap insurance: a sliding-window counter of timestamps, reject/wait if 200 requests were made in the last hour).
-- `search_flights()` — real Aviasales `prices_for_dates` v3 call, with the month-granularity fallback retry when the specific-date query is empty. Returns `{ flights: [], no_data: true, reason: "..." }` on failure/empty — **never fabricate a price**.
-- `get_deals()` / `get_popular()` — real Travelpayouts calls, same honest-empty-result behavior.
+- `search_flights()` (in `tp_client.py`) — real Aviasales `prices_for_dates` v3 call, with the month-granularity fallback retry when the specific-date query is empty. Returns `{ flights: [], no_data: true, reason: "..." }` on failure/empty — **never fabricate a price**.
+- `get_deals()` / `get_popular()` (in `tp_client.py`) — real Travelpayouts calls, same honest-empty-result behavior. `get_popular()` backs `getPopularRoutes()` above.
 - `_build_aviasales_link()` → `buildAviasalesLink()`: `https://www.aviasales.com/search/{ORIGIN}{DD}{MM}{DEST}{RDD}{RMM}1?marker=164743` (marker `164743`, matches `TP_CONFIG.marker` in `src/config/affiliates.ts` — import and reuse that constant instead of hardcoding it again).
+
+**Also port the handler-level logic that `tp_client.py` does NOT contain** — this lives in the Python `_handle_search_flights` handler at `command-post/routers/assistant.py:231-292`, one layer above `tp_client.py`, and must be folded into this file's `searchFlights()` so the TS tool gets the same result quality as the Python one:
+- Nearby-airport fan-out: for both origin and destination, look up nearby alternate airports via the `NEARBY_AIRPORTS_MAP` constant table and query them concurrently (`Promise.all`) alongside the primary airport, then merge and sort all results by price. Copy the `NEARBY_AIRPORTS_MAP` and `IATA_TO_CITY` constant tables **verbatim** from `command-post/routers/assistant.py` (they sit roughly in the 600-750 line region — read the file to find their exact location; do not summarize, reduce, or re-derive these ~130-entry tables by hand, copy them exactly as TypeScript object literals).
+- Date defaulting: if no `departDate` is given, default to today+14 days; if `returnDate` is omitted but the trip implies a round trip, default it to `departDate`+7 days. Match the Python handler's exact defaulting rule (read `assistant.py:231-292` for the precise logic before implementing).
+- IATA code sanitization: before building any URL or API call, sanitize origin/destination inputs to 3 uppercase letters only (`.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3)`), mirroring the existing `clean()` helper inside `TP_CONFIG.searchUrl` in `src/config/affiliates.ts:33-37`) — do not trust tool-call input as pre-validated.
 
 Do **not** port `search_hotels`, `search_activities`, or `search_restaurants` from `tp_client.py` — those are the D3-forbidden LLM-generation methods (`_llm_generate()` calls). They have no place in this file or anywhere in the TS codebase.
 
@@ -309,12 +339,26 @@ describe("travelpayouts-client", () => {
     expect(link).toContain("aviasales.com/search/");
     expect(link).toContain("marker=164743");
   });
+
+  it("sanitizes IATA codes before use, rejecting non-letter characters", () => {
+    const link = buildAviasalesLink("mi'a; drop table--", "CUN", "2026-09-01");
+    expect(link).toContain("/search/MIA"); // truncated/sanitized to 3 letters
+  });
+});
+
+describe("getPopularRoutes", () => {
+  it("returns honest empty result when no popular routes are available, never a curated fallback list", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+    const { getPopularRoutes } = await import("./travelpayouts-client");
+    const result = await getPopularRoutes("MIA");
+    expect(result).toMatchObject({ routes: [], no_data: true });
+  });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/travelpayouts-client.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/travelpayouts-client.test.ts`
 Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Implement `src/lib/atlas/travelpayouts-client.ts`**
@@ -323,8 +367,8 @@ Port from `command-post/tp_client.py` per the spec above. Use `TP_CONFIG.marker`
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/travelpayouts-client.test.ts`
-Expected: PASS (3/3)
+Run: `npm run test:unit -- src/lib/atlas/travelpayouts-client.test.ts`
+Expected: PASS (5/5)
 
 - [ ] **Step 5: Commit**
 
@@ -342,20 +386,24 @@ git commit -m "feat(atlas): port Travelpayouts client for real flight/deal data"
 - Test: `src/lib/atlas/system-prompt.test.ts`
 
 **Interfaces:**
-- Produces: `buildAtlasSystemPrompt(ctx: { destination?: string; budgetTier?: string; preferences?: Record<string, unknown> }): string`
+- Produces: `buildAtlasSystemPrompt(ctx: { pageContext?: string; preferencesJson?: string; memoryContext?: string }): string`
 
-Port `_build_system_prompt()` from `command-post/routers/assistant.py` (read it directly for the full text — the "You are Atlas, the AI travel concierge..." prompt, nearby-airport hints, budget-tier rules, no-fabrication rule for `no_data: true`). Required changes from the Python version:
+Port `_build_system_prompt()` from `command-post/routers/assistant.py` (read it directly for the full text — the "You are Atlas, the AI travel concierge..." prompt, nearby-airport hints, budget-tier rules, no-fabrication rule for `no_data: true`). The Python version pastes the whole `page_context`/`preferences_json`/`memory_context` strings into the prompt rather than parsing them into structured fields (`assistant.py:857-897`, `:869`, `:876`) — match that: accept them as opaque strings and interpolate them into the prompt text as-is, same as Python does. Required changes from the Python version:
 
-1. **D3 instruction (new, mandatory):** Add an explicit section instructing Atlas that for hotel, activity/tour, and restaurant requests it must NOT invent specific named properties, ratings, or prices. Instead it must give general prose guidance (neighborhood, price tier, what to look for) plus exactly one real link, verbatim, chosen from:
+1. **D3 instruction (new, mandatory):** Add an explicit section instructing Atlas that for hotel, activity/tour, and restaurant requests it must NOT invent specific named properties, ratings, or prices. Instead it must give general prose guidance (neighborhood, price tier, what to look for) plus exactly one real link, chosen from:
    - Hotels → `CJ_LINKS.hotelsCity(city)` (from `@/config/affiliates`)
    - Activities/tours → `TP_KLOOK.url(city)` (from `@/config/affiliates`)
    - Restaurants → `` `https://www.google.com/maps/search/restaurants+in+${encodeURIComponent(city)}` `` (no affiliate program exists for dining; state this plainly in the prompt as a code comment, not to the model)
 
-   Interpolate the actual link into the system prompt text for the trip's known destination city when available, so Atlas has the literal URL to output rather than trying to construct one itself.
+   **Destination extraction (best-effort, safe-degrade):** `pageContext` is free-text prose built client-side (see `AssistantChat.tsx:640-741`), not a structured field — there is no reliable `ctx.destination` to read (this corrects an earlier draft of this plan that assumed one existed). Write a small internal helper that applies a best-effort regex against `pageContext` (e.g. matching `trip to <place>` / `destination: <place>` / similar phrasing already used when the client builds that string — read `AssistantChat.tsx:640-741` to match the actual phrasing) to extract a city name. If no match is found, **omit the partner link entirely and give prose-only guidance** — no link is the honest, safe default per D3; do not guess a destination.
+
+   **Markdown-link requirement (mandatory — this is a correctness fix, not a style preference):** `AssistantChat.tsx`'s markdown renderer (`renderMarkdownLite`, around `AssistantChat.tsx:396-405`) only linkifies text in the exact form `[label](https://...)` — a bare URL renders as inert text the user can't click. When a destination is identified, do not just interpolate the raw URL and hope the model reproduces it correctly (an LLM reproducing a long, nested-`encodeURIComponent` CJ or Klook URL character-for-character from memory is a real corruption risk — a single mangled character silently kills affiliate attribution with no error). Instead, pre-build the **entire ready-to-paste markdown line** in code (e.g. `` `[Search hotels in ${city} on Hotels.com](${CJ_LINKS.hotelsCity(city)})` ``) and instruct the model explicitly: *"When recommending hotels/activities/restaurants for a known destination, end your response with exactly this line, copied verbatim and unmodified: <the pre-built markdown line>."* This reduces the model's job from "reconstruct a URL" to "paste this exact line," which is far more reliable.
 
 2. **D7 partner set:** Remove any mention of partners outside the locked D7 set (Klook, Tiqets, Kiwi.com, Kiwitaxi, CJ/Hotels.com). Since Tiqets/Kiwi.com/Kiwitaxi configs don't exist yet in `affiliates.ts` (Phase 3 adds them), do not reference them in the prompt text yet — only reference Klook and Hotels.com/CJ, which do exist today.
 
 3. Keep the no-fabrication rule for `no_data: true` flight/deal results unchanged from the Python version — it's already correct.
+
+**Note on scope vs. `docs/product/IMPLEMENTATION_PLAN.md`:** that doc's Phase 2 task 7 says "partner-search handoff **tools**" — this plan implements the handoff as a pre-built markdown line injected into the system prompt rather than as a callable tool, specifically to avoid adding `search_hotels`/`search_activities`/`search_restaurants`-shaped tool names back into `TOOLS` (which would risk re-triggering `AssistantChat.tsx`'s `TRIP_TOOLS` modal/card path — the exact thing D3 forbids). This is a deliberate, reviewed deviation from the doc's literal wording, not an oversight — call it out in the PR description when this phase is done, so Jose can ratify or override it before Phase 3.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -366,15 +414,20 @@ import { buildAtlasSystemPrompt } from "./system-prompt";
 
 describe("buildAtlasSystemPrompt", () => {
   it("includes the D3 no-fabrication rule for hotels/activities/restaurants", () => {
-    const prompt = buildAtlasSystemPrompt({ destination: "Miami" });
+    const prompt = buildAtlasSystemPrompt({ pageContext: "Active trip to Miami, Florida" });
     expect(prompt).toMatch(/never invent|do not invent|must not invent/i);
     expect(prompt.toLowerCase()).toContain("hotel");
     expect(prompt.toLowerCase()).toContain("restaurant");
   });
 
-  it("includes a real Hotels.com link for a known destination, not a placeholder", () => {
-    const prompt = buildAtlasSystemPrompt({ destination: "Miami" });
-    expect(prompt).toContain("dpbolvw.net"); // CJ_LINKS.hotelsCity domain
+  it("includes a ready-to-paste markdown link to a real Hotels.com URL when a destination is identified", () => {
+    const prompt = buildAtlasSystemPrompt({ pageContext: "Active trip to Miami, Florida" });
+    expect(prompt).toMatch(/\[[^\]]+\]\(https:\/\/www\.dpbolvw\.net[^)]+\)/); // CJ_LINKS.hotelsCity domain, markdown form
+  });
+
+  it("omits the partner link entirely when no destination can be identified (safe degrade)", () => {
+    const prompt = buildAtlasSystemPrompt({ pageContext: "General travel questions" });
+    expect(prompt).not.toContain("dpbolvw.net");
   });
 
   it("includes the no-fabrication rule for empty flight data", () => {
@@ -383,7 +436,7 @@ describe("buildAtlasSystemPrompt", () => {
   });
 
   it("does not mention Tiqets, Kiwi.com, or Kiwitaxi (not yet configured)", () => {
-    const prompt = buildAtlasSystemPrompt({ destination: "Miami" });
+    const prompt = buildAtlasSystemPrompt({ pageContext: "Active trip to Miami, Florida" });
     expect(prompt).not.toMatch(/tiqets/i);
     expect(prompt).not.toMatch(/kiwitaxi/i);
   });
@@ -392,7 +445,7 @@ describe("buildAtlasSystemPrompt", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/system-prompt.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/system-prompt.test.ts`
 Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Implement `src/lib/atlas/system-prompt.ts`**
@@ -401,8 +454,8 @@ Port the Python prompt text, add the D3 section described above, interpolate rea
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/system-prompt.test.ts`
-Expected: PASS (4/4)
+Run: `npm run test:unit -- src/lib/atlas/system-prompt.test.ts`
+Expected: PASS (5/5)
 
 - [ ] **Step 5: Commit**
 
@@ -422,7 +475,7 @@ git commit -m "feat(atlas): port system prompt builder with D3 partner-handoff r
 **Interfaces:**
 - Produces: `getArticleTool(query: string): { articles: { slug: string; title: string; excerpt: string; url: string }[] }`
 
-Reimplement against TPI's own article index instead of the Python `articles-index.json`. Use `getAllArticles()` from `@/lib/articles` (already read — returns `Article[]` with `title`, `excerpt`, `categories`, `search_location`). Do a simple case-insensitive substring match across `title`, `excerpt`, and `search_location` against the query; return up to 5 matches sorted by relevance (title match first, then excerpt/location match). Build `url` as `/guides/${slug}` (verify the actual article route prefix by checking `src/app/[locale]/` routing before hardcoding — grep for how article pages are linked elsewhere in the codebase, e.g. in `AssistantChat.tsx` or a guides listing page, and match that exact path pattern).
+Reimplement against TPI's own article index instead of the Python `articles-index.json`. Use `getAllArticles()` from `@/lib/articles` (already read — returns `Article[]` with `title`, `excerpt`, `categories`, `search_location`). Do a simple case-insensitive substring match across `title`, `excerpt`, and `search_location` against the query; return up to 5 matches sorted by relevance (title match first, then excerpt/location match). Build `url` as `/${slug}` — confirmed against `src/app/[locale]/[slug]/page.tsx`, which calls `getArticle(slug)` (`src/lib/articles.ts:43`) directly off the locale-prefixed root, **not** a `/guides/` prefix (there is no such route). Locale prefixing is handled by Next's routing automatically; do not add the locale segment yourself.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -455,14 +508,14 @@ describe("getArticleTool", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/tools/get-article.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/tools/get-article.test.ts`
 Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Implement `src/lib/atlas/tools/get-article.ts`**
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/tools/get-article.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/tools/get-article.test.ts`
 Expected: PASS (2/2)
 
 - [ ] **Step 5: Commit**
@@ -481,8 +534,8 @@ git commit -m "feat(atlas): reimplement get_article against TPI's own article in
 - Test: `src/lib/atlas/tool-loop.test.ts`
 
 **Interfaces:**
-- Consumes: `searchFlights`/`getDeals` from Task 3, `getArticleTool` from Task 5, `buildAtlasSystemPrompt` from Task 4, `recordAssistantSpend`/`getAssistantMonthlySpendUsd`/`ASSISTANT_SPEND_CAP_USD` from Task 2.
-- Produces: `async function* runAtlasTurn(params: { message: string; history: Anthropic.MessageParam[]; destination?: string }): AsyncGenerator<string>` — yields raw SSE `data: ...\n\n` frame strings (including the trailing `data: [DONE]\n\n` frame at the end). This is the function `chat/route.ts` (Task 7) calls and forwards directly to the client, replacing the current FastAPI-proxy fetch+reader loop.
+- Consumes: `searchFlights`/`getDeals`/`getPopularRoutes` from Task 3, `getArticleTool` from Task 5, `buildAtlasSystemPrompt` from Task 4, `recordAssistantSpend`/`getAssistantMonthlySpendUsd`/`ASSISTANT_SPEND_CAP_USD` from Task 2.
+- Produces: `async function* runAtlasTurn(params: { message: string; history: Anthropic.MessageParam[]; pageContext?: string; preferencesJson?: string; memoryContext?: string }): AsyncGenerator<string>` — yields raw SSE `data: ...\n\n` frame strings (including the trailing `data: [DONE]\n\n` frame at the end). This is the function `chat/route.ts` (Task 7) calls and forwards directly to the client, replacing the current FastAPI-proxy fetch+reader loop. `pageContext`/`preferencesJson`/`memoryContext` are passed straight through to `buildAtlasSystemPrompt()` — do not drop them; the Python original's registered-user memory (H5/D4) and nearby-airport/budget-tier prompt behavior depend on `preferences_json` and `memory_context` reaching the system prompt (`assistant.py:857-897`, `:1149-1151`).
 
 Tool definitions (only these four — no hotel/activity/restaurant tools):
 
@@ -520,19 +573,36 @@ const TOOLS: Anthropic.Tool[] = [
       required: ["query"],
     },
   },
+  {
+    name: "surprise_me",
+    description: "Get real popular flight routes/destinations from an origin airport, for a user who wants an open-ended destination suggestion rather than a specific one. Call this for 'surprise me' / 'where should I go' style requests.",
+    input_schema: {
+      type: "object",
+      properties: { origin: { type: "string", description: "Origin airport IATA code" } },
+      required: ["origin"],
+    },
+  },
 ];
 ```
 
-Loop shape (mirror `_stream_anthropic()` in `command-post/routers/assistant.py` — read it for the exact control flow before writing this):
+The Python system prompt this plan ports in Task 4 references a `surprise_me` tool by name (`assistant.py:887,897`) — without this tool definition and its dispatch below, every Surprise Me trip would make Atlas call a nonexistent tool and hit an unhandled-tool-name error on every request. This tool is mandatory, not optional, for Task 4's prompt to work correctly.
 
-1. Before the first API call, check `getAssistantMonthlySpendUsd() >= ASSISTANT_SPEND_CAP_USD`. If over cap, yield a single honest `data: {"error": "Atlas has reached its monthly usage limit. Please try again next month."}\n\n` frame plus `data: [DONE]\n\n`, and return — do not call the API at all.
-2. `MAX_TOOL_ITERATIONS = 5` (match the Python constant).
+Loop shape (mirror `_stream_anthropic()` in `command-post/routers/assistant.py:1162-1268` — read that exact range for the real control flow before writing this; an earlier draft of this plan cited the wrong line range, this one is verified):
+
+1. Before the first API call, check `getAssistantMonthlySpendUsd() >= ASSISTANT_SPEND_CAP_USD`. If over cap, yield a single honest `data: {"error": "Atlas has reached its monthly usage limit. Please try again next month."}\n\n` frame plus `data: [DONE]\n\n`, and return — do not call the API at all. (Note: this is a check-then-act race under concurrent requests — a handful of simultaneous requests can push spend slightly over the cap before any of them observes it. This matches the existing Python behavior and is an acceptable, non-blocking imperfection at this traffic volume; leave a one-line code comment noting it rather than adding synchronization.)
+2. `MAX_TOOL_ITERATIONS = 5` (verified: `assistant.py:1128`).
 3. Loop: call `client.messages.create({ model: "claude-sonnet-5", max_tokens: 4096, thinking: { type: "disabled" }, system: buildAtlasSystemPrompt(...), tools: TOOLS, messages })`.
 4. After every call, call `recordAssistantSpend("claude-sonnet-5", { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens })` — record spend on every iteration, including ones that end in tool_use, matching the Python behavior of accounting for every API call, not just the final one.
-5. If `response.stop_reason === "tool_use"`: for each `tool_use` block, dispatch to the matching handler (`search_flights` → `searchFlights()`, `get_deals` → `getDeals()`, `get_article` → `getArticleTool()`), yield `data: [TOOL:${name}]${JSON.stringify(result)}\n\n` for each, append the assistant message and a user message with `tool_result` blocks (all results in one user message, per Anthropic's parallel-tool-use contract), and continue the loop.
+5. If `response.stop_reason === "tool_use"`: for each `tool_use` block, dispatch to the matching handler:
+   - `search_flights` → `searchFlights(input.origin, input.destination, input.depart_date, input.return_date)`
+   - `get_deals` → `getDeals(input.origin)`
+   - `get_article` → `getArticleTool(input.query)`
+   - `surprise_me` → `getPopularRoutes(input.origin)`
+
+   Yield `data: [TOOL:${name}]${JSON.stringify(result)}\n\n` for each, append the assistant message and a user message with `tool_result` blocks (all results in one user message, per Anthropic's parallel-tool-use contract), and continue the loop.
 6. If `response.stop_reason !== "tool_use"`: extract the final text block, split on whitespace preserving spaces (or word-by-word same as Python), yield `data: ${token}\n\n` per token with a small delay (`await new Promise(r => setTimeout(r, 10))`, matching Python's `asyncio.sleep(0.01)`), then yield `data: [DONE]\n\n` and return.
-7. If the loop exhausts `MAX_TOOL_ITERATIONS` without a final text response, yield an honest error frame stating Atlas could not complete the request, plus `[DONE]`.
-8. Wrap the whole function body in a try/catch; on any Anthropic SDK error (rate limit, 5xx, network), yield `data: {"error": "Atlas is taking a nap. Please try again in a moment."}\n\n` plus `[DONE]` — same user-facing copy as the existing `chat/route.ts` connection-failure branch, so behavior is consistent regardless of which layer fails.
+7. **Iteration exhaustion — match the Python behavior, not an error frame.** If the loop reaches `MAX_TOOL_ITERATIONS` without a final text response, do what the Python original does (`assistant.py:1173,1186-1191`): make one **final call with `tools` omitted entirely**, forcing a text-only answer so the user gets a graceful response instead of a bare error. Record spend for this final call too. Only if that final tool-free call itself throws should you fall back to the honest error frame in step 8.
+8. Wrap the whole function body in a try/catch; on any Anthropic SDK error (rate limit, 5xx, network), yield `data: {"error": "Atlas is taking a nap. Please try again in a moment."}\n\n` plus `[DONE]` — same user-facing copy as the existing `chat/route.ts` connection-failure branch, so behavior is consistent regardless of which layer fails. (Per the Global Constraints note on deliberate deviations, this plan does not port the Python's OpenAI `gpt-4o-mini` rate-limit fallback — an Anthropic rate limit degrades to this same honest error frame rather than switching providers.)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -553,6 +623,7 @@ vi.mock("./spend", async (importOriginal) => {
 vi.mock("./travelpayouts-client", () => ({
   searchFlights: vi.fn(async () => ({ flights: [], no_data: true, reason: "test" })),
   getDeals: vi.fn(async () => ({ deals: [], no_data: true, reason: "test" })),
+  getPopularRoutes: vi.fn(async () => ({ routes: [], no_data: true, reason: "test" })),
 }));
 vi.mock("./tools/get-article", () => ({ getArticleTool: vi.fn(() => ({ articles: [] })) }));
 
@@ -609,14 +680,14 @@ describe("runAtlasTurn", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm run test -- src/lib/atlas/tool-loop.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/tool-loop.test.ts`
 Expected: FAIL — module does not exist.
 
 - [ ] **Step 3: Implement `src/lib/atlas/tool-loop.ts`** per the loop shape above.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm run test -- src/lib/atlas/tool-loop.test.ts`
+Run: `npm run test:unit -- src/lib/atlas/tool-loop.test.ts`
 Expected: PASS (3/3)
 
 - [ ] **Step 5: Commit**
@@ -637,7 +708,7 @@ git commit -m "feat(atlas): implement in-app Anthropic tool-use loop, no fabrica
 Read the full current file before editing (299 lines, already summarized above). Preserve **every line of behavior** except the one section that proxies to FastAPI:
 
 - Keep: auth via `getUserId()`, request parsing, rate limiting (`rateLimitMap`), session ownership validation, preferences loading, memory-context loading (last-50 `user_memory` split into facts/summaries), fire-and-forget background summarization call, user-message insert, last-20 history load (`historyWithoutCurrent`).
-- Replace: the `backendChatUrl` fetch-and-forward-SSE section with a call to `runAtlasTurn({ message, history: historyWithoutCurrent, destination: page_context?.destination })` (adapt the exact param based on what `page_context` actually contains — check its shape in the current file before assuming a field name), streaming its yielded frames directly to the client `ReadableStream` in place of the forwarded backend frames.
+- Replace: the `backendChatUrl` fetch-and-forward-SSE section with a call to `runAtlasTurn({ message, history: historyWithoutCurrent, pageContext: page_context, preferencesJson: JSON.stringify(preferences), memoryContext })`, using whatever variable names the existing code already has in scope for `page_context` (already a plain string per `AssistantChat.tsx:734-742`, do not treat it as an object), the loaded `preferences` object, and the already-assembled `memoryContext` string (facts + `conversation_summary_*` rows) — these three are already being loaded by the code you're keeping above; this task's only change is to route them into `runAtlasTurn` instead of into the FastAPI request body. Stream `runAtlasTurn`'s yielded frames directly to the client `ReadableStream` in place of the forwarded backend frames.
 - Keep: the `fullResponse` accumulation logic (skip `[DONE]`/`[TOOL:`/error frames) and the `finally` block that persists the assistant reply to `chat_messages` — this logic doesn't care whether the frames came from a proxied fetch or a local generator, so it should need minimal adaptation, just re-pointed at the new frame source.
 - Remove: the `getFastApiBaseUrl()` import/call and the outer connection-failure catch's `"Atlas is taking a nap"` message — that message now lives inside `runAtlasTurn` itself (Task 6, step 8), so a thrown error from `runAtlasTurn` should be treated the same way (still wrap in try/catch for defense in depth, since a bug in the generator shouldn't crash the whole request handler).
 
@@ -674,7 +745,7 @@ Keep the 45-second TTL + single-flight in-memory cache and `__resetAssistantHeal
 - [ ] **Step 1:** Update `assistant-health.test.ts`: replace the FastAPI-probe-mocking tests with tests that mock `getAssistantMonthlySpendUsd` from `./atlas/spend` to return under/over the cap, and assert `spendCapOk`/`healthy` accordingly. Keep the TTL/single-flight/travelpayouts-independence tests — they don't need to change, just verify they still target real behavior.
 - [ ] **Step 2:** Run the updated tests, confirm they fail against the old implementation (still probing FastAPI).
 - [ ] **Step 3:** Implement the change in `src/lib/assistant-health.ts` per the spec above.
-- [ ] **Step 4:** Run `npm run test -- src/lib/assistant-health.test.ts`, confirm PASS.
+- [ ] **Step 4:** Run `npm run test:unit -- src/lib/assistant-health.test.ts`, confirm PASS.
 - [ ] **Step 5:** Check `src/hooks/useAssistantHealth.ts` and any UI code that reads `backendReachable` by name (grep for it) — update field references to `spendCapOk`. The gating behavior in `AssistantChat.tsx` and `page.tsx` reads `.healthy` only, per the Phase 0 implementation, so those call sites should need no change — verify this by grepping for `backendReachable` across `src/` and confirming the only hits are inside `assistant-health.ts`/`.test.ts` before considering this task done.
 - [ ] **Step 6: Commit**
 
@@ -692,9 +763,10 @@ git commit -m "feat(atlas): redefine health check for post-D2 in-app brain (spen
 
 This task is explicitly called out in `IMPLEMENTATION_PLAN.md`'s Phase 2 acceptance criteria ("Add tests for no-data flight behavior, D3 no-fabrication behavior, and health gating") — health gating is covered by Task 8; this task covers the other two, at a level broader than Task 6's and Task 3's already-covered unit cases, verifying the properties end-to-end:
 
-- [ ] Add a test asserting that `TOOLS` (exported from `tool-loop.ts` for testability, or re-derived via a small exported constant) contains no tool named `search_hotels`, `search_activities`, or `search_restaurants` — a structural guarantee that D3-forbidden tools can never be reintroduced by accident. This test should fail loudly if anyone adds one of those tool names back.
-- [ ] Add a test asserting `buildAtlasSystemPrompt()`'s output never contains a hardcoded specific hotel/restaurant/activity name (i.e., grep the prompt text itself for suspicious patterns is overkill — instead assert the prompt contains the explicit prohibition text from Task 4 and contains no property-name-shaped strings you did not put there intentionally as instructions).
-- [ ] Run `npm run test -- src/lib/atlas/no-fabrication.test.ts`, confirm PASS.
+- [ ] Add a test asserting that `TOOLS` (export it from `tool-loop.ts` for testability) contains exactly four tool names — `search_flights`, `get_deals`, `get_article`, `surprise_me` — and specifically does **not** contain `search_hotels`, `search_activities`, or `search_restaurants`. This is a structural guarantee that D3-forbidden tools can never be reintroduced by accident; it should fail loudly if anyone adds one of those tool names back.
+- [ ] Add a test asserting `buildAtlasSystemPrompt()`'s output contains the explicit D3 prohibition text (from Task 4: the "must not invent" language covering hotels/restaurants/activities).
+- [ ] Add a test asserting that when a destination is identified, `buildAtlasSystemPrompt()`'s output contains a well-formed markdown link (`/\[[^\]]+\]\(https:\/\/[^)]+\)/`) pointing at the real `CJ_LINKS.hotelsCity` domain (`dpbolvw.net`) — this is the concrete, non-circular version of "verify no fabricated inventory," since it directly checks the mechanism Task 4 relies on (a pre-built real link, not an LLM-reconstructed one) rather than trying to prove a negative about arbitrary text.
+- [ ] Run `npm run test:unit -- src/lib/atlas/no-fabrication.test.ts`, confirm PASS.
 - [ ] Commit: `git commit -m "test(atlas): structural guarantees against D3-forbidden tools and prompt fabrication"`
 
 ---
@@ -729,7 +801,7 @@ npm run test
 npm run build
 ```
 
-All three must exit 0. Then start the dev server and manually verify (Playwright or curl) that:
+`npm run test` runs `test:unit && test:e2e` (per `package.json`) — the e2e half requires a running dev/preview server per `playwright.config.ts` (no `webServer` auto-start configured), so start `npm run dev` in the background first, exactly as Phase 0 did. All three commands must exit 0. Then start the dev server and manually verify (Playwright or curl) that:
 - A guest chat session gets a streamed text reply from the in-app brain (no FastAPI dependency — kill `command-post` first if it happens to be running locally, to prove independence).
 - A flight search for a real route/date returns either a real Aviasales-linked result or an honest `no_data` response — never a fabricated price.
 - A hotel/activity/restaurant request returns prose + a real partner link, never a named invented property.
