@@ -94,7 +94,50 @@ Optional verification-only variable:
   - Used by Playwright config for test targeting; default is `http://localhost:3001`.
   - This is not the main application runtime contract, but it is useful for post-deploy checks.
 
-## 5. SQLite storage and permissions
+## 5. Atlas brain (Phase 2)
+
+Phase 2 moves Atlas's brain into the Next.js app, so production Atlas no longer depends on the workstation-only `command-post` FastAPI service.
+
+Required new VPS env vars:
+
+- `ANTHROPIC_API_KEY`
+  - Required by the in-app Atlas brain for Anthropic Messages API calls.
+  - **NOT YET PROVISIONED on the VPS today.** Jose must add this manually before any real production smoke test.
+- `TRAVELPAYOUTS_TOKEN`
+  - Required by the in-app Atlas brain for real Travelpayouts / Aviasales flight and deal data.
+  - **NOT YET PROVISIONED on the VPS today.** Jose must add this manually before any real production smoke test.
+
+Provision these through the same VPS env file mechanism used for the existing runtime inputs above (`NEXTAUTH_URL`, `APP_BASE_URL`, API credentials, etc.). This is a manual pre-deploy / pre-smoke-test gate for Jose; do not treat production assistant verification as valid until both values are present in the PM2 runtime environment.
+
+Database note:
+
+- `data/tpi.db` gets the new `assistant_cost` table automatically on the next app start through the existing `getDb()` migration-on-load pattern.
+- No manual SQLite migration step is required.
+
+Production smoke test commands:
+
+```bash
+npm run lint && npm run test && npm run build
+curl -sL https://travelplaninfo.com/api/assistant/health | jq .
+BASE_URL=https://travelplaninfo.com npx playwright test tests/e2e/planner-trust.spec.ts
+```
+
+Manual gate:
+
+- Guest session -> create a MIA/Cancun (or similar) trip -> consent to Atlas.
+- Verify a streamed reply.
+- Verify a real flight/deal card with an Aviasales marker link.
+- Verify a spend row appears in `assistant_cost` on the VPS:
+
+```bash
+sqlite3 data/tpi.db "select * from assistant_cost order by id desc limit 5;"
+```
+
+- Ask Atlas about hotels for the trip's destination and confirm the reply is prose + a real Hotels.com link, with no named hotel, rating, or price.
+
+Confirm this production smoke test with the workstation off or unreachable. The point of Phase 2 is that Atlas no longer needs `command-post` running.
+
+## 6. SQLite storage and permissions
 
 The app opens SQLite at:
 
@@ -113,7 +156,7 @@ Recommended expectation on the VPS:
 - ensure `data/` exists before first start
 - ensure the app user owns or can write the repo-local `data/` directory
 
-## 6. Local verification before deploy
+## 7. Local verification before deploy
 
 From the repo root:
 
@@ -136,7 +179,7 @@ If testing assistant-related flows locally, remember the current defaults:
 - authenticated self-calls fall back to `APP_BASE_URL`, then `NEXTAUTH_URL`, then `http://localhost:3000`
 - FastAPI-backed assistant flows use `FASTAPI_URL` or fall back to `http://localhost:8766`
 
-## 7. VPS deployment steps
+## 8. VPS deployment steps
 
 Assumptions:
 
@@ -183,7 +226,7 @@ curl -I http://127.0.0.1:3001/
 8. Reload Nginx after validating config.
 9. Run the post-deploy verification commands below.
 
-## 8. Nginx contract
+## 9. Nginx contract
 
 Nginx should proxy the public site to the local Next.js process:
 
@@ -194,7 +237,7 @@ Nginx should proxy the public site to the local Next.js process:
 
 Important: this document assumes Nginx fronts port 3001, not port 3000.
 
-## 9. Rollback steps
+## 10. Rollback steps
 
 If the new deploy is bad but the previous VPS release is still available:
 
@@ -219,7 +262,7 @@ If rollback involves database risk:
 - confirm the runtime user can still write `data/`
 - do not delete `data/tpi.db` as part of a routine code rollback
 
-## 10. Post-deploy verification commands
+## 11. Post-deploy verification commands
 
 Run these after each VPS deploy:
 
@@ -245,7 +288,7 @@ If validating assistant-adjacent behavior, also verify dependency reachability w
 curl -I http://127.0.0.1:8766/ || true
 ```
 
-## 11. Related documents
+## 12. Related documents
 
 - Active operations runbook: `docs/deployment/local-to-vps.md`
 - Historical Vercel-era archive: `docs/MIGRATION_PLAN.md`
