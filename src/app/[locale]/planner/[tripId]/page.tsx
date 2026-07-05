@@ -10,6 +10,7 @@ import ItineraryBuilder from "@/components/ItineraryBuilder";
 import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 import TripContextStrip from "@/components/TripContextStrip";
 import SurpriseMeSection from "@/components/SurpriseMeSection";
+import { getAssistantHealth } from "@/lib/assistant-health";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -46,6 +47,7 @@ export default async function TripDetail({ params }: Props) {
   const nearbyAirports: string[] = JSON.parse(trip.nearby_airports || "[]");
   const t = await getTranslations("tripDetail");
   const dateFmt = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" });
+  const assistantHealth = await getAssistantHealth();
 
   // Parse vibes and pure interests from the combined interests array
   const vibes = interests.filter(i => i.startsWith("vibe:")).map(i => i.replace(/^vibe:(custom:)?/, ""));
@@ -129,7 +131,7 @@ export default async function TripDetail({ params }: Props) {
                   )}
                 </div>
               )}
-              {items.length === 0 && (
+              {items.length === 0 && assistantHealth.healthy && (
                 <div
                   data-testid="atlas-ready-hint"
                   className="rounded-xl border border-orange-200 bg-orange-50 p-5 text-sm text-orange-900"

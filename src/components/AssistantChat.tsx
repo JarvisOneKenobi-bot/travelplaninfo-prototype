@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useAtlasBubble } from "@/hooks/useAtlasBubble";
+import { useAssistantHealth } from "@/hooks/useAssistantHealth";
 import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
 import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
@@ -504,6 +505,7 @@ export default function AssistantChat() {
 
   // ── Talk bubble ──────────────────────────────────────────────────────────
   const { currentBubble, dismissBubble } = useAtlasBubble(isOpen);
+  const { healthy: assistantHealthy } = useAssistantHealth();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -959,7 +961,7 @@ export default function AssistantChat() {
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-[90]">
           {/* Talk Bubble */}
-          {currentBubble && (
+          {currentBubble && assistantHealthy && (
             <div
               data-atlas-bubble
               onClick={() => { dismissBubble(); setIsOpen(true); }}
@@ -1601,7 +1603,7 @@ export default function AssistantChat() {
       )}
 
       {/* Atlas smart search consent chip — portaled into the trip page slot */}
-      {atlasTrigger.status === 'awaiting_consent' && tripCtx.destination && slot && createPortal(
+      {atlasTrigger.status === 'awaiting_consent' && assistantHealthy && tripCtx.destination && slot && createPortal(
         <AtlasSmartSearchChip
           destination={tripCtx.destination}
           onConsent={atlasTrigger.requestConsent}
