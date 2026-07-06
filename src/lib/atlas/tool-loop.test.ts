@@ -150,4 +150,33 @@ describe("runAtlasTurn", () => {
       .join("");
     expect(text).toBe("First paragraph.\n\nSecond line");
   });
+
+  it("emits an error frame instead of a blank reply on refusal", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "refusal",
+      content: [],
+      usage: { input_tokens: 10, output_tokens: 0 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    expect(frames.some((f) => f.includes('"error"'))).toBe(true);
+    expect(frames.at(-1)).toBe("data: [DONE]\n\n");
+  });
+
+  it("surfaces a cut-short error when max_tokens truncates a pending tool call", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "max_tokens",
+      content: [
+        { type: "text", text: "Let me check" },
+        { type: "tool_use", id: "t1", name: "search_flights", input: {} },
+      ],
+      usage: { input_tokens: 10, output_tokens: 4096 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const joined = frames.join("");
+    // Words stream one per frame, so assert a single word — the phrase
+    // "Let me check" is never contiguous in the joined frame bytes.
+    expect(joined).toContain("check");
+    expect(joined).toContain("cut short");
+    expect(frames.at(-1)).toBe("data: [DONE]\n\n");
+  });
 });

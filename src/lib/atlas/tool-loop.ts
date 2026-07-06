@@ -11,6 +11,10 @@ const MODEL = "claude-sonnet-5";
 const MAX_TOOL_ITERATIONS = 5;
 const MAX_TOKENS = 4096;
 const ERROR_FRAME = 'data: {"error": "Atlas is taking a nap. Please try again in a moment."}\n\n';
+const REFUSAL_FRAME =
+  'data: {"error": "Atlas can\'t help with that request. Try rephrasing or asking something else."}\n\n';
+const CUTOFF_FRAME =
+  'data: {"error": "Atlas\'s reply was cut short. Please try again."}\n\n';
 const DONE_FRAME = "data: [DONE]\n\n";
 
 export const TOOLS: Tool[] = [
@@ -167,14 +171,41 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
         continue;
       }
 
-      for (const block of response.content) {
-        if (block.type !== "text" || !block.text) continue;
+      const textBlocks = response.content.filter(
+        (block): block is Extract<ContentBlock, { type: "text" }> =>
+          block.type === "text" && Boolean(block.text)
+      );
+
+      if (
+        response.stop_reason === "max_tokens" &&
+        response.content.some(isToolUseBlock) &&
+        textBlocks.length === 0
+      ) {
+        // Cut off while assembling a tool call, with nothing streamable —
+        // "cut short" is the accurate message, not a refusal.
+        yield CUTOFF_FRAME;
+        yield DONE_FRAME;
+        return;
+      }
+
+      if (response.stop_reason === "refusal" || textBlocks.length === 0) {
+        yield REFUSAL_FRAME;
+        yield DONE_FRAME;
+        return;
+      }
+
+      for (const block of textBlocks) {
         const words = block.text.split(" ");
         for (let i = 0; i < words.length; i += 1) {
           const token = i === 0 ? words[i] : ` ${words[i]}`;
           yield encodeSseData(token);
           await sleep(10);
         }
+      }
+
+      if (response.stop_reason === "max_tokens" && response.content.some(isToolUseBlock)) {
+        // The model was cut off while assembling a tool call that will never run.
+        yield CUTOFF_FRAME;
       }
 
       yield DONE_FRAME;
