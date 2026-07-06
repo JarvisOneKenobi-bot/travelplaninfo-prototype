@@ -292,6 +292,10 @@ function getTextSummary(parts: ToolResult[]): string {
 // ── Tool card renderers using dedicated card components ──────────────────────
 
 function ToolResultCards({ toolName, data }: { toolName: string; data: Record<string, unknown> }) {
+  // Contained tool failures (is_error results from executeToolSafely) are
+  // explained by Atlas's own follow-up text — don't render a raw JSON card.
+  if (data.is_error) return null;
+
   if (toolName === "search_flights" && data.flights) {
     const flights = data.flights as Array<Record<string, string>>;
     return (
@@ -792,9 +796,10 @@ export default function AssistantChat() {
             if (data.startsWith("{\"error\"")) {
               try {
                 const errObj = JSON.parse(data);
-                fullText += errObj.error || "An error occurred.";
+                const errText = errObj.error || "An error occurred.";
+                fullText += (fullText && !/\s$/.test(fullText) ? "\n\n" : "") + errText;
               } catch {
-                fullText += data;
+                fullText += (fullText && !/\s$/.test(fullText) ? "\n\n" : "") + data;
               }
               continue;
             }

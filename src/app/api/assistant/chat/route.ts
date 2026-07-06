@@ -204,13 +204,14 @@ GROUP BY cs.id
           if (data === null) continue;
 
           // Accumulate text (skip control messages and tool markers)
-          if (
-            data !== "[DONE]" &&
-            !data.startsWith("[TOOL:") &&
-            !data.startsWith('{"error"')
-          ) {
-            fullResponse += data;
+          if (data === "[DONE]" || data.startsWith('{"error"')) continue;
+          if (data.startsWith("[TOOL:")) {
+            // Tool-turn preamble and the final reply are separate paragraphs —
+            // keep the persisted transcript readable and history-safe.
+            if (fullResponse && !/\s$/.test(fullResponse)) fullResponse += "\n\n";
+            continue;
           }
+          fullResponse += data;
         }
       } catch (err) {
         console.error("Atlas in-app brain error:", err);
