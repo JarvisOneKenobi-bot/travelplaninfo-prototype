@@ -262,6 +262,12 @@ function formatDateOffset(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function nextMonthUtc(): string {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return next.toISOString().slice(0, 7);
+}
+
 function addDays(dateString: string, days: number): string | undefined {
   const [year, month, day] = dateString.split("-").map(Number);
   if (!year || !month || !day) return undefined;
@@ -565,11 +571,14 @@ export async function getPopularRoutes(
   if (!cleanOrigin) {
     return { suggestions: [], no_data: true, reason: INVALID_IATA_REASON };
   }
+  const month = nextMonthUtc();
   const params = {
     origin: cleanOrigin,
+    departure_at: month,
+    return_at: month, // round-trip pricing, matching the Python original
     sorting: "price",
     currency: "usd",
-    limit: 100,
+    limit: 5, // server sorts by price; we only ever used the first 5 of 100
   };
 
   const result = await tpGet("/aviasales/v3/prices_for_dates", params);

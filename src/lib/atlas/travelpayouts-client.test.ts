@@ -93,6 +93,18 @@ describe("getPopularRoutes", () => {
     const result = await getPopularRoutes("MIA");
     expect(result).toMatchObject({ suggestions: [], no_data: true });
   });
+
+  it("queries popular routes for next month, round-trip priced, limit 5", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+    const { getPopularRoutes } = await import("./travelpayouts-client");
+    await getPopularRoutes("MIA");
+    const requestedUrl = String(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toMatch(/departure_at=\d{4}-\d{2}(?!-)/);
+    expect(requestedUrl).toMatch(/return_at=\d{4}-\d{2}(?!-)/);
+    expect(requestedUrl).toContain("limit=5");
+  });
 });
 
 describe("failure-cause reporting", () => {
