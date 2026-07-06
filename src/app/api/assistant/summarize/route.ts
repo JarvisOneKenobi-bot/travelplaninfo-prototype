@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicApiKey } from "@/lib/server-config";
-import { recordAssistantSpend } from "@/lib/atlas/spend";
+import { isSpendCapReached, recordAssistantSpend } from "@/lib/atlas/spend";
 
 // ── POST handler ────────────────────────────────────────────────────────────
 
@@ -78,6 +78,17 @@ export async function POST(req: NextRequest) {
       ok: true,
       memories_saved: 0,
       message: "Not enough messages to summarize",
+    });
+  }
+
+  // Respect the shared monthly assistant spend cap — summarization is a
+  // nice-to-have and must not keep spending after chat has been capped.
+  if (isSpendCapReached()) {
+    return NextResponse.json({
+      ok: true,
+      memories_saved: 0,
+      skipped: "spend_cap",
+      message: "Monthly assistant spend cap reached — summarization skipped",
     });
   }
 

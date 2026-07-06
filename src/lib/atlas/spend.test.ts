@@ -8,7 +8,7 @@ vi.mock("@/lib/db", () => ({
   getDb: () => memDb,
 }));
 
-import { recordAssistantSpend, getAssistantMonthlySpendUsd, ASSISTANT_SPEND_CAP_USD } from "./spend";
+import { recordAssistantSpend, getAssistantMonthlySpendUsd, ASSISTANT_SPEND_CAP_USD, isSpendCapReached } from "./spend";
 
 describe("assistant spend tracking", () => {
   beforeEach(() => {
@@ -43,5 +43,25 @@ describe("assistant spend tracking", () => {
   it("exposes the spend cap constant", () => {
     expect(typeof ASSISTANT_SPEND_CAP_USD).toBe("number");
     expect(ASSISTANT_SPEND_CAP_USD).toBeGreaterThan(0);
+  });
+
+  it("prices claude-sonnet-4-6 at its own rate, not Sonnet 5's", () => {
+    recordAssistantSpend("claude-sonnet-4-6", { inputTokens: 1_000_000, outputTokens: 1_000_000 });
+    // $3/MTok in + $15/MTok out = $18.00
+    expect(getAssistantMonthlySpendUsd()).toBeCloseTo(18.0, 5);
+  });
+
+  it("prices unknown models at the most expensive known rate and warns", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    recordAssistantSpend("claude-future-9", { inputTokens: 1_000_000, outputTokens: 1_000_000 });
+    expect(getAssistantMonthlySpendUsd()).toBeCloseTo(18.0, 5);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("exposes isSpendCapReached against the cap constant", () => {
+    expect(isSpendCapReached()).toBe(false);
+    recordAssistantSpend("claude-sonnet-5", { inputTokens: 0, outputTokens: 1_100_000 }); // $11 > $10
+    expect(isSpendCapReached()).toBe(true);
   });
 });

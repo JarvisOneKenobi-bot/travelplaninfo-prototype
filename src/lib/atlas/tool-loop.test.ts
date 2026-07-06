@@ -8,7 +8,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
 }));
 vi.mock("./spend", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./spend")>();
-  return { ...actual, getAssistantMonthlySpendUsd: vi.fn(() => 0), recordAssistantSpend: vi.fn() };
+  return { ...actual, isSpendCapReached: vi.fn(() => false), recordAssistantSpend: vi.fn() };
 });
 vi.mock("./travelpayouts-client", () => ({
   searchFlights: vi.fn(async () => ({ flights: [], no_data: true, reason: "test" })),
@@ -18,7 +18,7 @@ vi.mock("./travelpayouts-client", () => ({
 vi.mock("./tools/get-article", () => ({ getArticleTool: vi.fn(() => ({ articles: [] })) }));
 
 import { runAtlasTurn } from "./tool-loop";
-import { getAssistantMonthlySpendUsd, recordAssistantSpend } from "./spend";
+import { isSpendCapReached, recordAssistantSpend } from "./spend";
 import { getPopularRoutes } from "./travelpayouts-client";
 
 async function collect(gen: AsyncGenerator<string>): Promise<string[]> {
@@ -30,7 +30,7 @@ async function collect(gen: AsyncGenerator<string>): Promise<string[]> {
 describe("runAtlasTurn", () => {
   beforeEach(() => {
     createMock.mockReset();
-    vi.mocked(getAssistantMonthlySpendUsd).mockReturnValue(0);
+    vi.mocked(isSpendCapReached).mockReturnValue(false);
     vi.mocked(recordAssistantSpend).mockReset();
     vi.mocked(getPopularRoutes).mockClear();
   });
@@ -58,7 +58,7 @@ describe("runAtlasTurn", () => {
   });
 
   it("short-circuits with an honest cap-exceeded message when over the monthly spend cap", async () => {
-    vi.mocked(getAssistantMonthlySpendUsd).mockReturnValueOnce(999);
+    vi.mocked(isSpendCapReached).mockReturnValue(true);
     const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
     expect(frames[0]).toMatch(/monthly usage limit/i);
     expect(frames.at(-1)).toBe("data: [DONE]\n\n");

@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, MessageParam, Tool, ToolResultBlockParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
 import { getAnthropicApiKey } from "@/lib/server-config";
 import { buildAtlasSystemPrompt } from "./system-prompt";
-import { ASSISTANT_SPEND_CAP_USD, getAssistantMonthlySpendUsd, recordAssistantSpend } from "./spend";
+import { isSpendCapReached, recordAssistantSpend } from "./spend";
 import { encodeSseData } from "./sse";
 import { getDeals, getPopularRoutes, searchFlights } from "./travelpayouts-client";
 import { getArticleTool } from "./tools/get-article";
@@ -113,7 +113,7 @@ async function executeTool(name: string, input: ToolInput): Promise<unknown> {
 export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<string> {
   try {
     // Check-then-act can race under concurrent requests; this mirrors the Python backend behavior at expected traffic volume.
-    if (getAssistantMonthlySpendUsd() >= ASSISTANT_SPEND_CAP_USD) {
+    if (isSpendCapReached()) {
       yield 'data: {"error": "Atlas has reached its monthly usage limit. Please try again next month."}\n\n';
       yield DONE_FRAME;
       return;
