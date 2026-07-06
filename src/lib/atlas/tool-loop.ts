@@ -3,6 +3,7 @@ import type { ContentBlock, MessageParam, Tool, ToolResultBlockParam, ToolUseBlo
 import { getAnthropicApiKey } from "@/lib/server-config";
 import { buildAtlasSystemPrompt } from "./system-prompt";
 import { ASSISTANT_SPEND_CAP_USD, getAssistantMonthlySpendUsd, recordAssistantSpend } from "./spend";
+import { encodeSseData } from "./sse";
 import { getDeals, getPopularRoutes, searchFlights } from "./travelpayouts-client";
 import { getArticleTool } from "./tools/get-article";
 
@@ -168,7 +169,7 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
         const words = block.text.split(" ");
         for (let i = 0; i < words.length; i += 1) {
           const token = i === 0 ? words[i] : ` ${words[i]}`;
-          yield `data: ${token}\n\n`;
+          yield encodeSseData(token);
           await sleep(10);
         }
       }

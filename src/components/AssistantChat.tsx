@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useAtlasBubble } from "@/hooks/useAtlasBubble";
 import { useAssistantHealth } from "@/hooks/useAssistantHealth";
 import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
+import { decodeSseData } from "@/lib/atlas/sse";
 import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
@@ -782,8 +783,8 @@ export default function AssistantChat() {
           buffer = frames.pop() || "";
 
           for (const frame of frames) {
-            if (!frame.startsWith("data: ")) continue;
-            const data = frame.slice(6);
+            const data = decodeSseData(frame);
+            if (data === null) continue;
 
             if (data === "[DONE]") continue;
 

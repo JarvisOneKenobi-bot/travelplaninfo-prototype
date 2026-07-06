@@ -3,6 +3,7 @@ import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { getAuthenticatedAppBaseUrl } from "@/lib/server-config";
 import { runAtlasTurn } from "@/lib/atlas/tool-loop";
+import { decodeSseData } from "@/lib/atlas/sse";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
@@ -196,8 +197,8 @@ GROUP BY cs.id
         for await (const frame of atlasFrames) {
           controller.enqueue(encoder.encode(frame));
 
-          if (!frame.startsWith("data: ")) continue;
-          const data = frame.slice(6).trimEnd();
+          const data = decodeSseData(frame);
+          if (data === null) continue;
 
           // Accumulate text (skip control messages and tool markers)
           if (

@@ -127,4 +127,27 @@ describe("runAtlasTurn", () => {
     expect(finalCall.tools).toBeDefined();
     expect(finalCall.tool_choice).toEqual({ type: "none" });
   });
+
+  it("carries newlines in model text losslessly via multi-line SSE events", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: "First paragraph.\n\nSecond line" }],
+      usage: { input_tokens: 10, output_tokens: 5 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    // Every non-empty line of every frame must be `data: `-prefixed (valid SSE).
+    for (const frame of frames) {
+      for (const line of frame.split("\n")) {
+        if (line !== "") expect(line.startsWith("data: ")).toBe(true);
+      }
+    }
+    // Decoding and concatenating the token frames must reproduce the text exactly.
+    const { decodeSseData } = await import("./sse");
+    const text = frames
+      .slice(0, -1) // drop [DONE]
+      .map((f) => decodeSseData(f))
+      .filter((d): d is string => d !== null)
+      .join("");
+    expect(text).toBe("First paragraph.\n\nSecond line");
+  });
 });
