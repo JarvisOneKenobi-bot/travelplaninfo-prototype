@@ -84,3 +84,40 @@ describe("getPopularRoutes", () => {
     expect(result).toMatchObject({ suggestions: [], no_data: true });
   });
 });
+
+describe("failure-cause reporting", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllEnvs();
+  });
+
+  // NOTE: each test below uses a route no other test in this file touches —
+  // tpGet's module-level 5-minute cache persists across tests, and reusing a
+  // route another test has already cached would mask the failure path.
+  it("reports 'not configured' — never 'no flights' — when the token is missing", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", ""); // don't depend on the host env being unset
+    const { searchFlights } = await import("./travelpayouts-client");
+    const result = await searchFlights("BOS", "SEA", "2026-09-01");
+    expect(result).toMatchObject({ flights: [], no_data: true });
+    expect((result as { reason: string }).reason).toMatch(/not configured/i);
+    expect((result as { reason: string }).reason).not.toMatch(/no flights for this route/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a temporary-unavailability reason on network failure, not an empty-route reason", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockRejectedValue(new Error("network down"));
+    const { getDeals } = await import("./travelpayouts-client");
+    const result = await getDeals("DEN");
+    expect(result).toMatchObject({ deals: [], no_data: true });
+    expect((result as { reason: string }).reason).toMatch(/timed out|unavailable/i);
+  });
+
+  it("keeps the honest empty-result reason when the API succeeds with no data", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+    const { searchFlights } = await import("./travelpayouts-client");
+    const result = await searchFlights("PHX", "BNA", "2026-09-01");
+    expect((result as { reason: string }).reason).toMatch(/no flights for this route/i);
+  });
+});

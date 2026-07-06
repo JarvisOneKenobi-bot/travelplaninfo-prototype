@@ -29,4 +29,10 @@ describe("buildAtlasSystemPrompt", () => {
     expect(prompt).not.toMatch(/tiqets/i);
     expect(prompt).not.toMatch(/kiwitaxi/i);
   });
+
+  it("instructs Atlas to distinguish 'search could not run' from 'no flights exist'", () => {
+    const prompt = buildAtlasSystemPrompt({});
+    expect(prompt).toMatch(/temporarily unavailable/i);
+    expect(prompt).toMatch(/does not mean there are no flights/i);
+  });
 });
