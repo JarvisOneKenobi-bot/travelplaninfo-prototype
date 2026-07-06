@@ -121,3 +121,16 @@ describe("failure-cause reporting", () => {
     expect((result as { reason: string }).reason).toMatch(/no flights for this route/i);
   });
 });
+
+describe("fan-out bounds", () => {
+  it("fans out over origin-side nearby airports only (Python parity)", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+    const { searchFlights } = await import("./travelpayouts-client");
+    // MIA has 2 nearby origins (FLL, PBI); LAX has 3 nearby (SNA, BUR, LGB) that must NOT be queried.
+    await searchFlights("MIA", "LAX", "2026-09-01");
+    // 3 origins x 1 destination x 2 attempts (specific date + month fallback) = 6, not 24.
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+});

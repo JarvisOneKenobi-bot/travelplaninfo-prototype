@@ -442,7 +442,9 @@ export async function searchFlights(
   }
 
   const airportsToSearch = airportsWithNearby(cleanOrigin);
-  const destinationsToSearch = airportsWithNearby(cleanDestination);
+  // Origin-side fan-out only (matches the Python original): expanding the
+  // destination multiplied TP calls 4x and could exhaust the 200/hr budget.
+  const destinationsToSearch = [cleanDestination];
   const failures: TpFailure[] = [];
   const results = await Promise.all(
     airportsToSearch.flatMap((airport) =>
