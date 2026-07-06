@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { getAuthenticatedAppBaseUrl } from "@/lib/server-config";
 import { runAtlasTurn } from "@/lib/atlas/tool-loop";
 import { decodeSseData } from "@/lib/atlas/sse";
+import { trimHistoryToUserStart } from "@/lib/atlas/history";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
@@ -178,7 +179,9 @@ GROUP BY cs.id
   // The conversation history already includes the user message we just saved (step 6),
   // so we send it as-is. The tool loop appends `message` separately, so we must exclude
   // the latest user message from conversation_history to avoid duplication.
-  const historyWithoutCurrent = conversationHistory.slice(0, -1) as MessageParam[];
+  const historyWithoutCurrent = trimHistoryToUserStart(
+    conversationHistory.slice(0, -1) as MessageParam[]
+  );
 
   let fullResponse = "";
   const encoder = new TextEncoder();
