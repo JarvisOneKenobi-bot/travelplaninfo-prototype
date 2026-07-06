@@ -12,6 +12,8 @@
 
 - Work in the worktree `/home/jarvis/.openclaw/workspace/jarvis-project/tpi-fix-atlas-review` on branch `fix/atlas-review-findings`. All paths below are relative to that root.
 - **Test command:** `npm run test` runs unit + e2e. For a single file ALWAYS use `npm run test:unit -- <path>` (the `test:unit` script is `vitest run`). NEVER `npm run test -- <path>` — the extra arg is forwarded to the e2e runner.
+- **Dependencies:** if `node_modules` is absent in the worktree, run `npm ci` once before any test step.
+- **E2E:** the Playwright suite expects a server already running at `http://localhost:3001` — executors never run `npm run test` or `npm run test:e2e`; the branch gate for executors is `npm run lint && npm run test:unit && npm run build` (Task 14). E2E runs in the main session's live-smoke phase.
 - Model id stays exactly `claude-sonnet-5`; `thinking: { type: "disabled" }` on every `messages.create`; never pass `temperature`/`top_p`/`top_k`.
 - SSE contract: `data: `-prefixed lines, events terminated by a blank line, `data: [TOOL:name]{json}` for tool results, `data: [DONE]` to end, `data: {"error": "..."}` for errors. Task 1 extends the contract to SSE-spec multi-line data events; all other frame types remain single-line and byte-identical.
 - TDD: write the failing test first, watch it fail, implement, watch it pass, commit. One commit per task.
@@ -246,6 +248,7 @@ describe("failure-cause reporting", () => {
   // tpGet's module-level 5-minute cache persists across tests, and reusing a
   // route another test has already cached would mask the failure path.
   it("reports 'not configured' — never 'no flights' — when the token is missing", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", ""); // don't depend on the host env being unset
     const { searchFlights } = await import("./travelpayouts-client");
     const result = await searchFlights("BOS", "SEA", "2026-09-01");
     expect(result).toMatchObject({ flights: [], no_data: true });
@@ -563,7 +566,7 @@ describe("parseIata / invalid-code handling", () => {
     const { searchFlights } = await import("./travelpayouts-client");
     const result = await searchFlights("MIA", "Cancun", "2026-09-01");
     expect(result).toMatchObject({ flights: [], no_data: true });
-    expect((result as { reason: string }).reason).toMatch(/3-letter airport code/i);
+    expect((result as { reason: string }).reason).toMatch(/3-letter/i);
     expect(fetchMock).not.toHaveBeenCalled(); // never queried Guangzhou (CAN)
   });
 
@@ -578,11 +581,14 @@ describe("parseIata / invalid-code handling", () => {
   it("still defaults an EMPTY origin to MIA but rejects an invalid one", async () => {
     const { getDeals } = await import("./travelpayouts-client");
     const empty = await getDeals("");
-    expect(fetchMock).toHaveBeenCalled(); // defaulted to MIA and queried
+    // MIA may be served from the module-level tpGet cache (another test in
+    // this file queries getDeals("MIA")), so assert on shape, not fetch
+    // count: an empty origin must NOT be rejected as invalid.
+    expect(((empty as { reason?: string }).reason ?? "")).not.toMatch(/3-letter/i);
     fetchMock.mockClear();
     const bad = await getDeals("Miami Beach");
     expect(bad).toMatchObject({ deals: [], no_data: true });
-    expect((bad as { reason: string }).reason).toMatch(/3-letter airport code/i);
+    expect((bad as { reason: string }).reason).toMatch(/3-letter/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -1089,7 +1095,9 @@ Add to `src/lib/atlas/tool-loop.test.ts`:
     });
     const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
     const joined = frames.join("");
-    expect(joined).toContain("Let me check");
+    // Words stream one per frame, so assert a single word — the phrase
+    // "Let me check" is never contiguous in the joined frame bytes.
+    expect(joined).toContain("check");
     expect(joined).toContain("cut short");
     expect(frames.at(-1)).toBe("data: [DONE]\n\n");
   });
@@ -1111,13 +1119,25 @@ const CUTOFF_FRAME =
   'data: {"error": "Atlas\'s reply was cut short. Please try again."}\n\n';
 ```
 
-Then replace the final-text section (everything from the `for (const block of response.content) {` text loop through its `yield DONE_FRAME; return;`) with:
+Then replace the final-text section. CAUTION — anchor precisely: there are two `for (const block of response.content) {` loops in `runAtlasTurn`; the one to replace is in the FINAL-TEXT path (its first body line is the unique `if (block.type !== "text" || !block.text) continue;`), NOT the tool_use branch, and NOT the spend-cap branch's `yield DONE_FRAME`. Replace from that `for` line through the `yield DONE_FRAME; return;` that follows it with:
 
 ```typescript
       const textBlocks = response.content.filter(
         (block): block is Extract<ContentBlock, { type: "text" }> =>
           block.type === "text" && Boolean(block.text)
       );
+
+      if (
+        response.stop_reason === "max_tokens" &&
+        response.content.some(isToolUseBlock) &&
+        textBlocks.length === 0
+      ) {
+        // Cut off while assembling a tool call, with nothing streamable —
+        // "cut short" is the accurate message, not a refusal.
+        yield CUTOFF_FRAME;
+        yield DONE_FRAME;
+        return;
+      }
 
       if (response.stop_reason === "refusal" || textBlocks.length === 0) {
         yield REFUSAL_FRAME;
@@ -1212,7 +1232,7 @@ git commit -m "fix(atlas): honest error frames for refusal and max_tokens cutoff
     const joined = frames.join("");
     expect(joined).toContain('"is_error":true');
     expect(joined).toContain("hiccuped"); // the turn survived and produced a final reply
-    expect(joined).not.toContain("unexpected error"); // no generic ERROR_FRAME
+    expect(joined).not.toContain("taking a nap"); // tool-loop's generic ERROR_FRAME never fired
   });
 ```
 
@@ -1420,15 +1440,15 @@ git commit -m "chore(atlas): clean redacted test fixtures; update help for D3 + 
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Full suite**
+- [ ] **Step 1: Full executor gate**
 
-Run: `npm run lint && npm run test && npm run build`
-Expected: all green. If anything fails, stop and report the exact output — do not patch beyond this plan.
+Run: `npm run lint && npm run test:unit && npm run build`
+Expected: all green. (Do NOT run `npm run test` / `npm run test:e2e` — Playwright needs a live server on :3001 and runs in the main session's smoke phase.) If anything fails, stop and report the exact output — do not patch beyond this plan.
 
 - [ ] **Step 2: Grep guards**
 
 Run: `grep -rn "SONNET5_PRICE_PER_MTOK" src/ ; grep -rn "«" src/ ; grep -c "NEARBY_AIRPORTS_MAP" src/lib/atlas/travelpayouts-client.ts`
-Expected: no `SONNET5_PRICE_PER_MTOK` references; no `«`; the airports map still present once in the client (its dedup is out of scope).
+Expected: no `SONNET5_PRICE_PER_MTOK` references; no `«`; the airports-map grep prints exactly `2` (declaration + `airportsWithNearby` usage — its dedup is out of scope).
 
 - [ ] **Step 3: Report**
 

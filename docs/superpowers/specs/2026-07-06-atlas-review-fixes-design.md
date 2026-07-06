@@ -110,4 +110,6 @@ Ordered so blockers land first; each task = TDD + commit + consensus + Fable ver
 
 ## Out of scope (verified in review, deferred to backlog)
 
+Also deferred (recorded 2026-07-06 during plan review): the `help-content.ts` **Auto-search** and **Trip Results Modal** entries describe the modal auto-search flow, which rides on the deferred `/api/surprise-me`/FastAPI migration — those entries get rewritten together with that migration. F15 covers the two chat-behavior entries only ("Adding items", "Atlas chat").
+
 `/api/surprise-me` still proxies FastAPI (workstation-independence gap); health endpoint 500s instead of degrading on DB errors; prompt caching (`cache_control`) for the tool loop; one-way/round-trip `search_flights` schema contradiction (inherited from Python); `NEARBY_AIRPORTS_MAP`/`todayUtc`/aviasales-link/IATA-cleaner duplication; env-preflight module unwired; dead exported types + `DestinationSuggestion` name collision; TP cache unbounded growth + empty-success caching; `LIKE`-based month query; runbook FASTAPI_URL contradictions in `docs/deployment/local-to-vps.md`; `get_article` multi-word recall (PLAUSIBLE only).
