@@ -179,4 +179,49 @@ describe("runAtlasTurn", () => {
     expect(joined).toContain("cut short");
     expect(frames.at(-1)).toBe("data: [DONE]\n\n");
   });
+
+  it("streams preamble text that accompanies tool calls, before the tool frames", async () => {
+    createMock
+      .mockResolvedValueOnce({
+        stop_reason: "tool_use",
+        content: [
+          { type: "text", text: "Checking live prices now." },
+          { type: "tool_use", id: "t1", name: "surprise_me", input: { origin: "MIA" } },
+        ],
+        usage: { input_tokens: 10, output_tokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "Done." }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+      });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const preambleIdx = frames.findIndex((f) => f.includes("Checking"));
+    const toolIdx = frames.findIndex((f) => f.includes("[TOOL:surprise_me]"));
+    expect(preambleIdx).toBeGreaterThanOrEqual(0);
+    expect(toolIdx).toBeGreaterThan(preambleIdx);
+  });
+
+  it("contains a throwing tool as an is_error tool_result instead of killing the turn", async () => {
+    const { getArticleTool } = await import("./tools/get-article");
+    vi.mocked(getArticleTool).mockImplementationOnce(() => {
+      throw new TypeError("boom");
+    });
+    createMock
+      .mockResolvedValueOnce({
+        stop_reason: "tool_use",
+        content: [{ type: "tool_use", id: "t1", name: "get_article", input: { query: "miami" } }],
+        usage: { input_tokens: 10, output_tokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "Sorry, the guide lookup hiccuped." }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+      });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const joined = frames.join("");
+    expect(joined).toContain('"is_error":true');
+    expect(joined).toContain("hiccuped"); // the turn survived and produced a final reply
+    expect(joined).not.toContain("taking a nap"); // tool-loop's generic ERROR_FRAME never fired
+  });
 });

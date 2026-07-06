@@ -114,6 +114,35 @@ async function executeTool(name: string, input: ToolInput): Promise<unknown> {
   }
 }
 
+const TOOL_TIMEOUT_MS = 30_000;
+
+async function* streamTextAsTokens(text: string): AsyncGenerator<string> {
+  const words = text.split(" ");
+  for (let i = 0; i < words.length; i += 1) {
+    const token = i === 0 ? words[i] : ` ${words[i]}`;
+    yield encodeSseData(token);
+    await sleep(10);
+  }
+}
+
+async function executeToolSafely(name: string, input: ToolInput): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`timed out after ${TOOL_TIMEOUT_MS / 1000}s`)),
+        TOOL_TIMEOUT_MS
+      );
+    });
+    return await Promise.race([executeTool(name, input), timeout]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { error: `Tool ${name} failed: ${message}`, is_error: true };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<string> {
   try {
     // Check-then-act can race under concurrent requests; this mirrors the Python backend behavior at expected traffic volume.
@@ -152,11 +181,18 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
       });
 
       if (useTools && response.stop_reason === "tool_use") {
+        // Stream any preamble text the model wrote alongside its tool calls —
+        // it is part of the assistant's visible reply.
+        for (const block of response.content) {
+          if (block.type !== "text" || !block.text) continue;
+          yield* streamTextAsTokens(block.text);
+        }
+
         const toolResults: ToolResultBlockParam[] = [];
 
         for (const block of response.content) {
           if (!isToolUseBlock(block)) continue;
-          const result = await executeTool(block.name, block.input as ToolInput);
+          const result = await executeToolSafely(block.name, block.input as ToolInput);
           yield `data: [TOOL:${block.name}]${JSON.stringify(result)}\n\n`;
           toolResults.push({
             type: "tool_result",
@@ -195,12 +231,7 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
       }
 
       for (const block of textBlocks) {
-        const words = block.text.split(" ");
-        for (let i = 0; i < words.length; i += 1) {
-          const token = i === 0 ? words[i] : ` ${words[i]}`;
-          yield encodeSseData(token);
-          await sleep(10);
-        }
+        yield* streamTextAsTokens(block.text);
       }
 
       if (response.stop_reason === "max_tokens" && response.content.some(isToolUseBlock)) {
