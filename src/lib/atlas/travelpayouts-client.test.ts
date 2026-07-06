@@ -57,6 +57,16 @@ describe("travelpayouts-client", () => {
     }
   });
 
+  it("passes a validated destination filter through to the TP request", async () => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+    const { getDeals } = await import("./travelpayouts-client");
+    await getDeals("MIA", "cun");
+    const requestedUrl = String(fetchMock.mock.calls[0][0]);
+    expect(requestedUrl).toContain("destination=CUN");
+  });
+
   it("returns honest no_data:true when the API returns nothing, never a fabricated price", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
     const result = await searchFlights("XXX", "YYY", "2026-09-01");

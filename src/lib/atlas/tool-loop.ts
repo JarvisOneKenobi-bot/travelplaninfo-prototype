@@ -31,10 +31,13 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "get_deals",
-    description: "Get current cheap flight deals from an origin airport.",
+    description: "Get current cheap flight deals from an origin airport, optionally filtered to a destination.",
     input_schema: {
       type: "object",
-      properties: { origin: { type: "string" } },
+      properties: {
+        origin: { type: "string", description: "Origin airport IATA code" },
+        destination: { type: "string", description: "Destination airport IATA code — include it when the user asks about deals to a specific place" },
+      },
       required: ["origin"],
     },
   },
@@ -97,7 +100,7 @@ async function executeTool(name: string, input: ToolInput): Promise<unknown> {
         stringInput(input, "return_date") || undefined
       );
     case "get_deals":
-      return getDeals(stringInput(input, "origin"));
+      return getDeals(stringInput(input, "origin"), stringInput(input, "destination") || undefined);
     case "get_article":
       return getArticleTool(stringInput(input, "query"));
     case "surprise_me":

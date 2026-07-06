@@ -511,15 +511,23 @@ export async function searchFlights(
 }
 
 export async function getDeals(
-  origin: string
+  origin: string,
+  destination?: string
 ): Promise<{ deals: DealCardOption[] } | { deals: []; no_data: true; reason: string }> {
   const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
   if (!cleanOrigin) {
     return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
   }
+  let cleanDestination: string | undefined;
+  if (destination?.trim()) {
+    const parsed = parseIata(destination);
+    if (!parsed) return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
+    cleanDestination = parsed;
+  }
   const today = new Date().toISOString().slice(0, 7);
   const params = {
     origin: cleanOrigin,
+    ...(cleanDestination ? { destination: cleanDestination } : {}),
     departure_at: today,
     sorting: "price",
     currency: "usd",
