@@ -134,3 +134,41 @@ describe("fan-out bounds", () => {
     expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 });
+
+describe("parseIata / invalid-code handling", () => {
+  beforeEach(() => {
+    vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: [] }) });
+  });
+
+  it("rejects city names instead of truncating them to a wrong airport", async () => {
+    const { searchFlights } = await import("./travelpayouts-client");
+    const result = await searchFlights("MIA", "Cancun", "2026-09-01");
+    expect(result).toMatchObject({ flights: [], no_data: true });
+    expect((result as { reason: string }).reason).toMatch(/3-letter/i);
+    expect(fetchMock).not.toHaveBeenCalled(); // never queried Guangzhou (CAN)
+  });
+
+  it("accepts valid codes case-insensitively with whitespace", async () => {
+    const { parseIata } = await import("./travelpayouts-client");
+    expect(parseIata(" cun ")).toBe("CUN");
+    expect(parseIata("CANCUN")).toBeNull();
+    expect(parseIata("mi'a")).toBeNull();
+    expect(parseIata("")).toBeNull();
+  });
+
+  it("still defaults an EMPTY origin to MIA but rejects an invalid one", async () => {
+    const { getDeals } = await import("./travelpayouts-client");
+    const empty = await getDeals("");
+    // MIA may be served from the module-level tpGet cache (another test in
+    // this file queries getDeals("MIA")), so assert on shape, not fetch
+    // count: an empty origin must NOT be rejected as invalid.
+    expect(((empty as { reason?: string }).reason ?? "")).not.toMatch(/3-letter/i);
+    fetchMock.mockClear();
+    const bad = await getDeals("Miami Beach");
+    expect(bad).toMatchObject({ deals: [], no_data: true });
+    expect((bad as { reason: string }).reason).toMatch(/3-letter/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

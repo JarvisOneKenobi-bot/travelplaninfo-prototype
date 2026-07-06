@@ -248,6 +248,14 @@ function cleanIata(value: string): string {
   return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 }
 
+export function parseIata(value: string): string | null {
+  const cleaned = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(cleaned) ? cleaned : null;
+}
+
+const INVALID_IATA_REASON =
+  "origin and destination must be 3-letter IATA airport codes (e.g. CUN for Cancún, MIA for Miami) — pass the airport code, not a city name.";
+
 function formatDateOffset(days: number): string {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() + days);
@@ -417,16 +425,16 @@ export async function searchFlights(
   | { flights: FlightCardOption[]; airports_searched: string[]; destinations_searched: string[]; origin: string; destination: string }
   | { flights: []; no_data: true; reason: string; origin: string; destination: string; airports_searched: string[]; destinations_searched: string[] }
 > {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
-  const cleanDestination = cleanIata(destination);
-  if (!cleanDestination) {
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  const cleanDestination = destination?.trim() ? parseIata(destination) : null;
+  if (!cleanOrigin || !cleanDestination) {
     return {
       flights: [],
       no_data: true,
-      reason: "destination is required",
-      origin: cleanOrigin,
-      destination: cleanDestination,
-      airports_searched: [cleanOrigin],
+      reason: INVALID_IATA_REASON,
+      origin: cleanOrigin ?? "",
+      destination: cleanDestination ?? "",
+      airports_searched: cleanOrigin ? [cleanOrigin] : [],
       destinations_searched: [],
     };
   }
@@ -505,7 +513,10 @@ export async function searchFlights(
 export async function getDeals(
   origin: string
 ): Promise<{ deals: DealCardOption[] } | { deals: []; no_data: true; reason: string }> {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  if (!cleanOrigin) {
+    return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
+  }
   const today = new Date().toISOString().slice(0, 7);
   const params = {
     origin: cleanOrigin,
@@ -542,7 +553,10 @@ export async function getDeals(
 export async function getPopularRoutes(
   origin: string
 ): Promise<{ suggestions: DestinationSuggestion[] } | { suggestions: []; no_data: true; reason: string }> {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  if (!cleanOrigin) {
+    return { suggestions: [], no_data: true, reason: INVALID_IATA_REASON };
+  }
   const params = {
     origin: cleanOrigin,
     sorting: "price",
