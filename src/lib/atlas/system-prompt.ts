@@ -53,7 +53,7 @@ function extractDestination(pageContext?: string): string | null {
   for (const pattern of patterns) {
     const match = pageContext.match(pattern);
     const candidate = match?.[1] ? cleanupDestination(match[1]) : "";
-    if (candidate) return candidate;
+    if (candidate && !/^surprise me$/i.test(candidate)) return candidate;
   }
 
   return null;
