@@ -65,6 +65,21 @@ export interface DestinationSuggestion {
 
 type TpResponse = { success?: boolean; data?: unknown };
 type CacheEntry = { data: TpResponse; expiresAt: number };
+type TpFailure = "no_token" | "rate_limited" | "http_error" | "timeout";
+type TpResult = { data: TpResponse } | { failure: TpFailure };
+
+const FAILURE_REASONS: Record<TpFailure, string> = {
+  no_token:
+    "Live flight search is not configured (missing Travelpayouts token). The search could not run — this does NOT mean no flights exist.",
+  rate_limited:
+    "Live flight search is temporarily rate-limited. The search could not run — this does NOT mean no flights exist. Try again shortly.",
+  http_error:
+    "The flight data service returned an error. The search could not run — this does NOT mean no flights exist.",
+  timeout:
+    "The flight data service timed out. The search could not run — this does NOT mean no flights exist.",
+};
+
+let warnedNoToken = false;
 
 type TpFlightItem = {
   origin?: string;
@@ -233,10 +248,24 @@ function cleanIata(value: string): string {
   return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 }
 
+export function parseIata(value: string): string | null {
+  const cleaned = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(cleaned) ? cleaned : null;
+}
+
+const INVALID_IATA_REASON =
+  "origin and destination must be 3-letter IATA airport codes (e.g. CUN for Cancún, MIA for Miami) — pass the airport code, not a city name.";
+
 function formatDateOffset(days: number): string {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function nextMonthUtc(): string {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return next.toISOString().slice(0, 7);
 }
 
 function addDays(dateString: string, days: number): string | undefined {
@@ -294,16 +323,26 @@ function checkRateLimit(): boolean {
   return requestTimestamps.length < RATE_LIMIT;
 }
 
-async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResponse | null> {
+async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResult> {
   const key = cacheKey(path, params);
   const cached = cache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (cached && cached.expiresAt > Date.now()) return { data: cached.data };
   if (cached) cache.delete(key);
 
-  if (!checkRateLimit()) return null;
-
   const token = process.env.TRAVELPAYOUTS_TOKEN?.trim();
-  if (!token) return null;
+  if (!token) {
+    if (!warnedNoToken) {
+      warnedNoToken = true;
+      console.error("TRAVELPAYOUTS_TOKEN is not set — Atlas flight/deal tools cannot run.");
+    }
+    return { failure: "no_token" };
+  }
+
+  if (!checkRateLimit()) return { failure: "rate_limited" };
+  // Count the attempt BEFORE the fetch so concurrent bursts and failed
+  // requests both consume the window (the old success-only counting made the
+  // limiter inert exactly when TP was rejecting).
+  requestTimestamps.push(Date.now());
 
   const url = new URL(path, BASE_URL);
   url.search = sortedParams(params).toString();
@@ -314,17 +353,16 @@ async function tpGet(path: string, params: Record<string, string | number>): Pro
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
-    if (!response.ok) return null;
+    if (!response.ok) return { failure: "http_error" };
     const data = (await response.json()) as TpResponse;
-    requestTimestamps.push(Date.now());
     cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
-    return data;
+    return { data };
   } catch {
-    return null;
+    return { failure: "timeout" };
   }
 }
 
-function rawItems(data: TpResponse | null): TpFlightItem[] {
+function rawItems(data: TpResponse): TpFlightItem[] {
   if (!data?.success || !Array.isArray(data.data)) return [];
   return data.data as TpFlightItem[];
 }
@@ -354,7 +392,7 @@ async function rawSearchFlights(
   destination: string,
   departDate: string,
   returnDate?: string
-): Promise<FlightOption[]> {
+): Promise<{ flights: FlightOption[]; failure?: TpFailure }> {
   const params: Record<string, string | number> = {
     origin,
     destination,
@@ -365,17 +403,23 @@ async function rawSearchFlights(
   };
   if (returnDate) params.return_at = returnDate;
 
-  let items = rawItems(await tpGet("/aviasales/v3/prices_for_dates", params));
-  if (items.length > 0) return normalizeFlights(items, origin, destination, departDate, returnDate);
+  const first = await tpGet("/aviasales/v3/prices_for_dates", params);
+  if ("failure" in first) return { flights: [], failure: first.failure };
+  let items = rawItems(first.data);
+  if (items.length > 0)
+    return { flights: normalizeFlights(items, origin, destination, departDate, returnDate) };
 
   if (departDate.length === 10) {
     params.departure_at = departDate.slice(0, 7);
     if (returnDate && returnDate.length === 10) params.return_at = returnDate.slice(0, 7);
-    items = rawItems(await tpGet("/aviasales/v3/prices_for_dates", params));
-    if (items.length > 0) return normalizeFlights(items, origin, destination, departDate, returnDate);
+    const second = await tpGet("/aviasales/v3/prices_for_dates", params);
+    if ("failure" in second) return { flights: [], failure: second.failure };
+    items = rawItems(second.data);
+    if (items.length > 0)
+      return { flights: normalizeFlights(items, origin, destination, departDate, returnDate) };
   }
 
-  return [];
+  return { flights: [] };
 }
 
 export async function searchFlights(
@@ -387,16 +431,16 @@ export async function searchFlights(
   | { flights: FlightCardOption[]; airports_searched: string[]; destinations_searched: string[]; origin: string; destination: string }
   | { flights: []; no_data: true; reason: string; origin: string; destination: string; airports_searched: string[]; destinations_searched: string[] }
 > {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
-  const cleanDestination = cleanIata(destination);
-  if (!cleanDestination) {
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  const cleanDestination = destination?.trim() ? parseIata(destination) : null;
+  if (!cleanOrigin || !cleanDestination) {
     return {
       flights: [],
       no_data: true,
-      reason: "destination is required",
-      origin: cleanOrigin,
-      destination: cleanDestination,
-      airports_searched: [cleanOrigin],
+      reason: INVALID_IATA_REASON,
+      origin: cleanOrigin ?? "",
+      destination: cleanDestination ?? "",
+      airports_searched: cleanOrigin ? [cleanOrigin] : [],
       destinations_searched: [],
     };
   }
@@ -412,12 +456,17 @@ export async function searchFlights(
   }
 
   const airportsToSearch = airportsWithNearby(cleanOrigin);
-  const destinationsToSearch = airportsWithNearby(cleanDestination);
+  // Origin-side fan-out only (matches the Python original): expanding the
+  // destination multiplied TP calls 4x and could exhaust the 200/hr budget.
+  const destinationsToSearch = [cleanDestination];
+  const failures: TpFailure[] = [];
   const results = await Promise.all(
     airportsToSearch.flatMap((airport) =>
       destinationsToSearch.map(async (dest) => {
         try {
-          return await rawSearchFlights(airport, dest, effectiveDepartDate, effectiveReturnDate);
+          const r = await rawSearchFlights(airport, dest, effectiveDepartDate, effectiveReturnDate);
+          if (r.failure) failures.push(r.failure);
+          return r.flights;
         } catch {
           return [];
         }
@@ -444,7 +493,13 @@ export async function searchFlights(
     return {
       flights: [],
       no_data: true,
-      reason: "TP API returned no flights for this route and date range (specific-date + month fallback both empty)",
+      reason: failures.length > 0
+        ? FAILURE_REASONS[
+            (["no_token", "rate_limited", "timeout", "http_error"] as TpFailure[]).find((f) =>
+              failures.includes(f)
+            ) ?? failures[0]
+          ]
+        : "TP API returned no flights for this route and date range (specific-date + month fallback both empty)",
       origin: cleanOrigin,
       destination: cleanDestination,
       airports_searched: airportsToSearch,
@@ -462,19 +517,34 @@ export async function searchFlights(
 }
 
 export async function getDeals(
-  origin: string
+  origin: string,
+  destination?: string
 ): Promise<{ deals: DealCardOption[] } | { deals: []; no_data: true; reason: string }> {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  if (!cleanOrigin) {
+    return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
+  }
+  let cleanDestination: string | undefined;
+  if (destination?.trim()) {
+    const parsed = parseIata(destination);
+    if (!parsed) return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
+    cleanDestination = parsed;
+  }
   const today = new Date().toISOString().slice(0, 7);
   const params = {
     origin: cleanOrigin,
+    ...(cleanDestination ? { destination: cleanDestination } : {}),
     departure_at: today,
     sorting: "price",
     currency: "usd",
     limit: 5,
   };
 
-  const items = rawItems(await tpGet("/aviasales/v3/prices_for_dates", params));
+  const result = await tpGet("/aviasales/v3/prices_for_dates", params);
+  if ("failure" in result) {
+    return { deals: [], no_data: true, reason: FAILURE_REASONS[result.failure] };
+  }
+  const items = rawItems(result.data);
   if (items.length === 0) {
     return { deals: [], no_data: true, reason: "TP API returned no deals for this origin" };
   }
@@ -497,15 +567,25 @@ export async function getDeals(
 export async function getPopularRoutes(
   origin: string
 ): Promise<{ suggestions: DestinationSuggestion[] } | { suggestions: []; no_data: true; reason: string }> {
-  const cleanOrigin = cleanIata(origin || "MIA") || "MIA";
+  const cleanOrigin = origin?.trim() ? parseIata(origin) : "MIA";
+  if (!cleanOrigin) {
+    return { suggestions: [], no_data: true, reason: INVALID_IATA_REASON };
+  }
+  const month = nextMonthUtc();
   const params = {
     origin: cleanOrigin,
+    departure_at: month,
+    return_at: month, // round-trip pricing, matching the Python original
     sorting: "price",
     currency: "usd",
-    limit: 100,
+    limit: 5, // server sorts by price; we only ever used the first 5 of 100
   };
 
-  const items = rawItems(await tpGet("/aviasales/v3/prices_for_dates", params));
+  const result = await tpGet("/aviasales/v3/prices_for_dates", params);
+  if ("failure" in result) {
+    return { suggestions: [], no_data: true, reason: FAILURE_REASONS[result.failure] };
+  }
+  const items = rawItems(result.data);
   if (items.length === 0) {
     return { suggestions: [], no_data: true, reason: "TP API returned no popular routes for this origin" };
   }

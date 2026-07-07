@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, MessageParam, Tool, ToolResultBlockParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
 import { getAnthropicApiKey } from "@/lib/server-config";
 import { buildAtlasSystemPrompt } from "./system-prompt";
-import { ASSISTANT_SPEND_CAP_USD, getAssistantMonthlySpendUsd, recordAssistantSpend } from "./spend";
+import { isSpendCapReached, recordAssistantSpend } from "./spend";
+import { encodeSseData } from "./sse";
 import { getDeals, getPopularRoutes, searchFlights } from "./travelpayouts-client";
 import { getArticleTool } from "./tools/get-article";
 
@@ -10,6 +11,10 @@ const MODEL = "claude-sonnet-5";
 const MAX_TOOL_ITERATIONS = 5;
 const MAX_TOKENS = 4096;
 const ERROR_FRAME = 'data: {"error": "Atlas is taking a nap. Please try again in a moment."}\n\n';
+const REFUSAL_FRAME =
+  'data: {"error": "Atlas can\'t help with that request. Try rephrasing or asking something else."}\n\n';
+const CUTOFF_FRAME =
+  'data: {"error": "Atlas\'s reply was cut short. Please try again."}\n\n';
 const DONE_FRAME = "data: [DONE]\n\n";
 
 export const TOOLS: Tool[] = [
@@ -30,10 +35,13 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "get_deals",
-    description: "Get current cheap flight deals from an origin airport.",
+    description: "Get current cheap flight deals from an origin airport, optionally filtered to a destination.",
     input_schema: {
       type: "object",
-      properties: { origin: { type: "string" } },
+      properties: {
+        origin: { type: "string", description: "Origin airport IATA code" },
+        destination: { type: "string", description: "Destination airport IATA code — include it when the user asks about deals to a specific place" },
+      },
       required: ["origin"],
     },
   },
@@ -96,7 +104,7 @@ async function executeTool(name: string, input: ToolInput): Promise<unknown> {
         stringInput(input, "return_date") || undefined
       );
     case "get_deals":
-      return getDeals(stringInput(input, "origin"));
+      return getDeals(stringInput(input, "origin"), stringInput(input, "destination") || undefined);
     case "get_article":
       return getArticleTool(stringInput(input, "query"));
     case "surprise_me":
@@ -106,10 +114,39 @@ async function executeTool(name: string, input: ToolInput): Promise<unknown> {
   }
 }
 
+const TOOL_TIMEOUT_MS = 30_000;
+
+async function* streamTextAsTokens(text: string): AsyncGenerator<string> {
+  const words = text.split(" ");
+  for (let i = 0; i < words.length; i += 1) {
+    const token = i === 0 ? words[i] : ` ${words[i]}`;
+    yield encodeSseData(token);
+    await sleep(10);
+  }
+}
+
+async function executeToolSafely(name: string, input: ToolInput): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`timed out after ${TOOL_TIMEOUT_MS / 1000}s`)),
+        TOOL_TIMEOUT_MS
+      );
+    });
+    return await Promise.race([executeTool(name, input), timeout]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { error: `Tool ${name} failed: ${message}`, is_error: true };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<string> {
   try {
     // Check-then-act can race under concurrent requests; this mirrors the Python backend behavior at expected traffic volume.
-    if (getAssistantMonthlySpendUsd() >= ASSISTANT_SPEND_CAP_USD) {
+    if (isSpendCapReached()) {
       yield 'data: {"error": "Atlas has reached its monthly usage limit. Please try again next month."}\n\n';
       yield DONE_FRAME;
       return;
@@ -144,11 +181,18 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
       });
 
       if (useTools && response.stop_reason === "tool_use") {
+        // Stream any preamble text the model wrote alongside its tool calls —
+        // it is part of the assistant's visible reply.
+        for (const block of response.content) {
+          if (block.type !== "text" || !block.text) continue;
+          yield* streamTextAsTokens(block.text);
+        }
+
         const toolResults: ToolResultBlockParam[] = [];
 
         for (const block of response.content) {
           if (!isToolUseBlock(block)) continue;
-          const result = await executeTool(block.name, block.input as ToolInput);
+          const result = await executeToolSafely(block.name, block.input as ToolInput);
           yield `data: [TOOL:${block.name}]${JSON.stringify(result)}\n\n`;
           toolResults.push({
             type: "tool_result",
@@ -163,14 +207,36 @@ export async function* runAtlasTurn(params: RunAtlasTurnParams): AsyncGenerator<
         continue;
       }
 
-      for (const block of response.content) {
-        if (block.type !== "text" || !block.text) continue;
-        const words = block.text.split(" ");
-        for (let i = 0; i < words.length; i += 1) {
-          const token = i === 0 ? words[i] : ` ${words[i]}`;
-          yield `data: ${token}\n\n`;
-          await sleep(10);
-        }
+      const textBlocks = response.content.filter(
+        (block): block is Extract<ContentBlock, { type: "text" }> =>
+          block.type === "text" && Boolean(block.text)
+      );
+
+      if (
+        response.stop_reason === "max_tokens" &&
+        response.content.some(isToolUseBlock) &&
+        textBlocks.length === 0
+      ) {
+        // Cut off while assembling a tool call, with nothing streamable —
+        // "cut short" is the accurate message, not a refusal.
+        yield CUTOFF_FRAME;
+        yield DONE_FRAME;
+        return;
+      }
+
+      if (response.stop_reason === "refusal" || textBlocks.length === 0) {
+        yield REFUSAL_FRAME;
+        yield DONE_FRAME;
+        return;
+      }
+
+      for (const block of textBlocks) {
+        yield* streamTextAsTokens(block.text);
+      }
+
+      if (response.stop_reason === "max_tokens" && response.content.some(isToolUseBlock)) {
+        // The model was cut off while assembling a tool call that will never run.
+        yield CUTOFF_FRAME;
       }
 
       yield DONE_FRAME;

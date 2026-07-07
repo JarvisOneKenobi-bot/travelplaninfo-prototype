@@ -14,7 +14,7 @@ describe("checkAtlasEnvPreflight", () => {
   });
 
   it("reports ok:true when both anthropic key and travelpayouts token are present", () => {
-    vi.mocked(getAnthropicApiKey).mockReturnValue("«redacted:sk-…»");
+    vi.mocked(getAnthropicApiKey).mockReturnValue("sk-ant-fake-key");
     vi.stubEnv("TRAVELPAYOUTS_TOKEN", "fake-token");
     const result = checkAtlasEnvPreflight();
     expect(result).toEqual({ ok: true, missing: [] });
@@ -28,7 +28,7 @@ describe("checkAtlasEnvPreflight", () => {
   });
 
   it("lists TRAVELPAYOUTS_TOKEN as missing when unset", () => {
-    vi.mocked(getAnthropicApiKey).mockReturnValue("«redacted:sk-…»");
+    vi.mocked(getAnthropicApiKey).mockReturnValue("sk-ant-fake-key");
     const result = checkAtlasEnvPreflight();
     expect(result.ok).toBe(false);
     expect(result.missing).toContain("TRAVELPAYOUTS_TOKEN");

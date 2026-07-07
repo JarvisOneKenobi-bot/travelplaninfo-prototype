@@ -3,6 +3,8 @@ import { getUserId } from "@/lib/guest";
 import { getDb } from "@/lib/db";
 import { getAuthenticatedAppBaseUrl } from "@/lib/server-config";
 import { runAtlasTurn } from "@/lib/atlas/tool-loop";
+import { decodeSseData } from "@/lib/atlas/sse";
+import { trimHistoryToUserStart } from "@/lib/atlas/history";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
@@ -177,7 +179,9 @@ GROUP BY cs.id
   // The conversation history already includes the user message we just saved (step 6),
   // so we send it as-is. The tool loop appends `message` separately, so we must exclude
   // the latest user message from conversation_history to avoid duplication.
-  const historyWithoutCurrent = conversationHistory.slice(0, -1) as MessageParam[];
+  const historyWithoutCurrent = trimHistoryToUserStart(
+    conversationHistory.slice(0, -1) as MessageParam[]
+  );
 
   let fullResponse = "";
   const encoder = new TextEncoder();
@@ -196,17 +200,18 @@ GROUP BY cs.id
         for await (const frame of atlasFrames) {
           controller.enqueue(encoder.encode(frame));
 
-          if (!frame.startsWith("data: ")) continue;
-          const data = frame.slice(6).trimEnd();
+          const data = decodeSseData(frame);
+          if (data === null) continue;
 
           // Accumulate text (skip control messages and tool markers)
-          if (
-            data !== "[DONE]" &&
-            !data.startsWith("[TOOL:") &&
-            !data.startsWith('{"error"')
-          ) {
-            fullResponse += data;
+          if (data === "[DONE]" || data.startsWith('{"error"')) continue;
+          if (data.startsWith("[TOOL:")) {
+            // Tool-turn preamble and the final reply are separate paragraphs —
+            // keep the persisted transcript readable and history-safe.
+            if (fullResponse && !/\s$/.test(fullResponse)) fullResponse += "\n\n";
+            continue;
           }
+          fullResponse += data;
         }
       } catch (err) {
         console.error("Atlas in-app brain error:", err);

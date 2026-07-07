@@ -19,7 +19,7 @@ const mockMonthlySpend = vi.mocked(getAssistantMonthlySpendUsd);
 beforeEach(() => {
   __resetAssistantHealthCacheForTests();
   vi.clearAllMocks();
-  mockAnthropicKey.mockReturnValue('«redacted:sk-…»');
+  mockAnthropicKey.mockReturnValue('sk-ant-fake-key');
   mockMonthlySpend.mockReturnValue(0);
   vi.unstubAllEnvs();
 });

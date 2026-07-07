@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useAtlasBubble } from "@/hooks/useAtlasBubble";
 import { useAssistantHealth } from "@/hooks/useAssistantHealth";
 import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
+import { decodeSseData } from "@/lib/atlas/sse";
 import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
@@ -291,6 +292,10 @@ function getTextSummary(parts: ToolResult[]): string {
 // ── Tool card renderers using dedicated card components ──────────────────────
 
 function ToolResultCards({ toolName, data }: { toolName: string; data: Record<string, unknown> }) {
+  // Contained tool failures (is_error results from executeToolSafely) are
+  // explained by Atlas's own follow-up text — don't render a raw JSON card.
+  if (data.is_error) return null;
+
   if (toolName === "search_flights" && data.flights) {
     const flights = data.flights as Array<Record<string, string>>;
     return (
@@ -782,8 +787,8 @@ export default function AssistantChat() {
           buffer = frames.pop() || "";
 
           for (const frame of frames) {
-            if (!frame.startsWith("data: ")) continue;
-            const data = frame.slice(6);
+            const data = decodeSseData(frame);
+            if (data === null) continue;
 
             if (data === "[DONE]") continue;
 
@@ -791,9 +796,10 @@ export default function AssistantChat() {
             if (data.startsWith("{\"error\"")) {
               try {
                 const errObj = JSON.parse(data);
-                fullText += errObj.error || "An error occurred.";
+                const errText = errObj.error || "An error occurred.";
+                fullText += (fullText && !/\s$/.test(fullText) ? "\n\n" : "") + errText;
               } catch {
-                fullText += data;
+                fullText += (fullText && !/\s$/.test(fullText) ? "\n\n" : "") + data;
               }
               continue;
             }

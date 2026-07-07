@@ -8,7 +8,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
 }));
 vi.mock("./spend", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./spend")>();
-  return { ...actual, getAssistantMonthlySpendUsd: vi.fn(() => 0), recordAssistantSpend: vi.fn() };
+  return { ...actual, isSpendCapReached: vi.fn(() => false), recordAssistantSpend: vi.fn() };
 });
 vi.mock("./travelpayouts-client", () => ({
   searchFlights: vi.fn(async () => ({ flights: [], no_data: true, reason: "test" })),
@@ -18,7 +18,7 @@ vi.mock("./travelpayouts-client", () => ({
 vi.mock("./tools/get-article", () => ({ getArticleTool: vi.fn(() => ({ articles: [] })) }));
 
 import { runAtlasTurn } from "./tool-loop";
-import { getAssistantMonthlySpendUsd, recordAssistantSpend } from "./spend";
+import { isSpendCapReached, recordAssistantSpend } from "./spend";
 import { getPopularRoutes } from "./travelpayouts-client";
 
 async function collect(gen: AsyncGenerator<string>): Promise<string[]> {
@@ -30,7 +30,7 @@ async function collect(gen: AsyncGenerator<string>): Promise<string[]> {
 describe("runAtlasTurn", () => {
   beforeEach(() => {
     createMock.mockReset();
-    vi.mocked(getAssistantMonthlySpendUsd).mockReturnValue(0);
+    vi.mocked(isSpendCapReached).mockReturnValue(false);
     vi.mocked(recordAssistantSpend).mockReset();
     vi.mocked(getPopularRoutes).mockClear();
   });
@@ -58,7 +58,7 @@ describe("runAtlasTurn", () => {
   });
 
   it("short-circuits with an honest cap-exceeded message when over the monthly spend cap", async () => {
-    vi.mocked(getAssistantMonthlySpendUsd).mockReturnValueOnce(999);
+    vi.mocked(isSpendCapReached).mockReturnValue(true);
     const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
     expect(frames[0]).toMatch(/monthly usage limit/i);
     expect(frames.at(-1)).toBe("data: [DONE]\n\n");
@@ -126,5 +126,102 @@ describe("runAtlasTurn", () => {
     const finalCall = createMock.mock.calls[5][0];
     expect(finalCall.tools).toBeDefined();
     expect(finalCall.tool_choice).toEqual({ type: "none" });
+  });
+
+  it("carries newlines in model text losslessly via multi-line SSE events", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: "First paragraph.\n\nSecond line" }],
+      usage: { input_tokens: 10, output_tokens: 5 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    // Every non-empty line of every frame must be `data: `-prefixed (valid SSE).
+    for (const frame of frames) {
+      for (const line of frame.split("\n")) {
+        if (line !== "") expect(line.startsWith("data: ")).toBe(true);
+      }
+    }
+    // Decoding and concatenating the token frames must reproduce the text exactly.
+    const { decodeSseData } = await import("./sse");
+    const text = frames
+      .slice(0, -1) // drop [DONE]
+      .map((f) => decodeSseData(f))
+      .filter((d): d is string => d !== null)
+      .join("");
+    expect(text).toBe("First paragraph.\n\nSecond line");
+  });
+
+  it("emits an error frame instead of a blank reply on refusal", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "refusal",
+      content: [],
+      usage: { input_tokens: 10, output_tokens: 0 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    expect(frames.some((f) => f.includes('"error"'))).toBe(true);
+    expect(frames.at(-1)).toBe("data: [DONE]\n\n");
+  });
+
+  it("surfaces a cut-short error when max_tokens truncates a pending tool call", async () => {
+    createMock.mockResolvedValueOnce({
+      stop_reason: "max_tokens",
+      content: [
+        { type: "text", text: "Let me check" },
+        { type: "tool_use", id: "t1", name: "search_flights", input: {} },
+      ],
+      usage: { input_tokens: 10, output_tokens: 4096 },
+    });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const joined = frames.join("");
+    // Words stream one per frame, so assert a single word — the phrase
+    // "Let me check" is never contiguous in the joined frame bytes.
+    expect(joined).toContain("check");
+    expect(joined).toContain("cut short");
+    expect(frames.at(-1)).toBe("data: [DONE]\n\n");
+  });
+
+  it("streams preamble text that accompanies tool calls, before the tool frames", async () => {
+    createMock
+      .mockResolvedValueOnce({
+        stop_reason: "tool_use",
+        content: [
+          { type: "text", text: "Checking live prices now." },
+          { type: "tool_use", id: "t1", name: "surprise_me", input: { origin: "MIA" } },
+        ],
+        usage: { input_tokens: 10, output_tokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "Done." }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+      });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const preambleIdx = frames.findIndex((f) => f.includes("Checking"));
+    const toolIdx = frames.findIndex((f) => f.includes("[TOOL:surprise_me]"));
+    expect(preambleIdx).toBeGreaterThanOrEqual(0);
+    expect(toolIdx).toBeGreaterThan(preambleIdx);
+  });
+
+  it("contains a throwing tool as an is_error tool_result instead of killing the turn", async () => {
+    const { getArticleTool } = await import("./tools/get-article");
+    vi.mocked(getArticleTool).mockImplementationOnce(() => {
+      throw new TypeError("boom");
+    });
+    createMock
+      .mockResolvedValueOnce({
+        stop_reason: "tool_use",
+        content: [{ type: "tool_use", id: "t1", name: "get_article", input: { query: "miami" } }],
+        usage: { input_tokens: 10, output_tokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "Sorry, the guide lookup hiccuped." }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+      });
+    const frames = await collect(runAtlasTurn({ message: "hi", history: [] }));
+    const joined = frames.join("");
+    expect(joined).toContain('"is_error":true');
+    expect(joined).toContain("hiccuped"); // the turn survived and produced a final reply
+    expect(joined).not.toContain("taking a nap"); // tool-loop's generic ERROR_FRAME never fired
   });
 });

@@ -29,4 +29,19 @@ describe("buildAtlasSystemPrompt", () => {
     expect(prompt).not.toMatch(/tiqets/i);
     expect(prompt).not.toMatch(/kiwitaxi/i);
   });
+
+  it("instructs Atlas to distinguish 'search could not run' from 'no flights exist'", () => {
+    const prompt = buildAtlasSystemPrompt({});
+    expect(prompt).toMatch(/temporarily unavailable/i);
+    expect(prompt).toMatch(/does not mean there are no flights/i);
+  });
+
+  it("never emits partner links for a Surprise Me trip (safe degrade)", () => {
+    const prompt = buildAtlasSystemPrompt({
+      pageContext: "Trip planner.\n\nActive trip: Surprise Me, flexible to flexible, 2 adults, budget: mid",
+    });
+    expect(prompt).not.toContain("dpbolvw.net");
+    expect(prompt).not.toMatch(/Search hotels in Surprise Me/i);
+    expect(prompt).toContain("not identified from the page context");
+  });
 });
