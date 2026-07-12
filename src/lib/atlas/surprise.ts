@@ -46,7 +46,7 @@ type RouteCandidate = {
   destination: string;
   price: TpFlightItem["price"] | null;
   airline: string;
-  transfers: number;
+  transfers: number | null;
   link: string;
 };
 
@@ -135,7 +135,7 @@ export async function getSurpriseDestinations(params: {
         destination,
         price: route.price ?? null,
         airline: route.airline ?? "",
-        transfers: route.transfers ?? 0,
+        transfers: route.transfers ?? null,
         link: buildAviasalesLink(origin, destination, route.departure_at ?? ""),
       };
     });
@@ -204,7 +204,7 @@ export async function getSurpriseDestinations(params: {
             destination: code,
             price: cheapest.price ?? null,
             airline: cheapest.airline ?? "",
-            transfers: cheapest.transfers ?? 0,
+            transfers: cheapest.transfers ?? null,
             link: cheapest.link ?? "",
           };
         } catch {
@@ -227,7 +227,7 @@ export async function getSurpriseDestinations(params: {
           name: cityName,
           flightPrice: priceLabel(route.price, isRoundTrip),
           airline: route.airline ?? "",
-          nonstop: (route.transfers ?? 0) === 0,
+          nonstop: route.transfers === 0,
           link: route.link ?? "",
         });
       } else {

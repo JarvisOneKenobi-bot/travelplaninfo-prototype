@@ -38,6 +38,12 @@ function item(destination: string, price: number | null, extras: Partial<TpFligh
   };
 }
 
+function itemWithoutTransfers(destination: string, price: number | null, extras: Partial<TpFlightItem> = {}): TpFlightItem {
+  const route = item(destination, price, extras);
+  delete route.transfers;
+  return route;
+}
+
 describe("getSurpriseDestinations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,6 +72,21 @@ describe("getSurpriseDestinations", () => {
     });
     expect(result.destinations.every((d) => d.link.includes("aviasales.com/search/"))).toBe(true);
     expect(result.degraded).toBeUndefined();
+  });
+
+  it("NONSTOP: popular routes only claim nonstop when transfers is explicitly zero", async () => {
+    popular([
+      item("CUN", 120, { transfers: 0 }),
+      item("MBJ", 180, { transfers: 1 }),
+      itemWithoutTransfers("TPA", 90),
+    ]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+
+    expect(result.destinations).toHaveLength(3);
+    expect(result.destinations[0]).toMatchObject({ name: "Cancún, Mexico", nonstop: true });
+    expect(result.destinations[1]).toMatchObject({ name: "Montego Bay, Jamaica", nonstop: false });
+    expect(result.destinations[2]).toMatchObject({ name: "Tampa, Florida", nonstop: false });
   });
 
   it("FLEXIBLE SENTINEL: behaves like absent vibes when popular routes exist", async () => {
@@ -225,6 +246,27 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations).toHaveLength(3);
     expect(result.destinations[1]).toMatchObject({ flightPrice: "$210", airline: "B6", nonstop: true });
     expect(result.destinations[2].flightPrice).toBe("$220");
+  });
+
+  it("NONSTOP: enrichment does not claim nonstop when transfers are absent", async () => {
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockImplementation(async (_origin, destination) => ({
+      flights: [
+        {
+          origin: "JFK",
+          destination,
+          price: 210,
+          airline: "AA",
+          departure_at: "2026-08-01",
+          link: `https://www.aviasales.com/search/JFK${destination}`,
+        } as Awaited<ReturnType<typeof rawSearchFlights>>["flights"][number],
+      ],
+    }));
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "tropical,beach", departMonth: "2026-08" });
+
+    expect(result.destinations).toHaveLength(3);
+    expect(result.destinations.every((destination) => destination.nonstop === false)).toBe(true);
   });
 
   it("FILLER DOES NOT ENGAGE WITHOUT VIBES", async () => {
