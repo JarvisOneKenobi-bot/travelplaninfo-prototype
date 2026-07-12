@@ -86,7 +86,7 @@ When a search yields nothing, the user gets a degraded banner. Honest — but a 
 **Keep the live chip values as canonical.** No gratuitous renames: `big_city`/`cultural`/`foodie` are internal *values* whose user-facing *labels* are already "Big City"/"Cultural"/"Food". Renaming them buys nothing and churns 133 tags. Fix only what is actually broken, then expose the data we already have.
 
 ```
-CANONICAL_VIBES = tropical · mountains · big_city · beach · winter ·
+CANONICAL_VIBES = tropical · mountains · big_city · beach · winter ("Winter Escapade") ·
                   cultural · adventure · foodie · romantic · nightlife · family
 ```
 
@@ -95,7 +95,7 @@ Changes required:
 | change | why |
 |---|---|
 | taxonomy `mountain` → **`mountains`** (5 dests) | one-letter mismatch with the live chip. This alone fixes the Mountains chip. |
-| **add `winter` tags** | the "Winter Escape" chip has *zero* backing destinations. Tag genuine snow/ski destinations (the existing `mountain` set is the natural seed: Denver, Salt Lake, Zurich, Geneva, Aspen…). Without this the chip must be removed — a chip that can never return a result is worse than no chip. |
+| **relabel the chip → "Winter Escapade" + add `winter` tags** | **Jose, 2026-07-12.** "Winter Escape ❄️" was ambiguous — *escape to* winter (ski) or *escape from* winter (somewhere warm)? The label and the icon disagreed. **"Winter Escapade"** resolves it: an escapade is something you go *on*, so the chip unambiguously means a **snow/ski adventure**, and ❄️ is now correct. Internal value stays `winter`; only the label changes (+ i18n ×6).<br>The chip has *zero* backing destinations today. ⚠ **The existing `mountain` tags are NOT a usable seed** — they are `DEN, SEA, PHX, BOG, MDE` (Phoenix and Bogotá are not snow destinations; `mountain` here means "mountainous", not "snowy"). Genuine ski destinations must be **added** to the taxonomy (Vancouver, Salt Lake, Zurich, Geneva, Munich…); TravelPayouts does return them (`SLC`, `EGE`, `FCA` all appear in live results). Every `winter` destination must be a real snow/ski destination — **no warm-weather destination may be tagged `winter`** merely to reach the coverage floor. |
 | **expose `foodie`, `romantic`, `nightlife` as chips** | 39/24/21 destinations already carry these tags and **no user can select them**. Pure upside: the data works the moment the chips exist. |
 | **add `family` chip + tags** | requested by Jose (2026-07-12). Tagged editorially — theme parks, beaches with calm water, zoos/aquaria cities (ORL is the archetype). |
 
