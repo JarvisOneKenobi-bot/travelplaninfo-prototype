@@ -3,7 +3,7 @@
 **Date:** 2026-07-11
 **Repo:** `travelplaninfo-prototype`
 **Branch:** `feat/surprise-me-workstation-independence` (worktree off `main` @ `4d5a1e7`)
-**Status:** Spec — pending plan
+**Status:** Spec — plan written; revised 2026-07-11 to fold adversarial-review findings (`docs/superpowers/reviews/2026-07-11-surprise-me-plan-review.md`)
 
 ---
 
@@ -93,9 +93,9 @@ Single exported entry point; all Surprise Me logic lives here, testable without 
 ```ts
 export interface SurpriseDestination {
   name: string;        // IATA_TO_CITY[code] ?? code
-  flightPrice: string; // "$127" | "$127 rt" | "—"   (never invented)
+  flightPrice: string; // "$142" | "$142 rt" | "—"   (never invented)
   airline: string;     // TP airline code | ""
-  nonstop: boolean;    // transfers === 0
+  nonstop: boolean;    // transfers === 0 (absent transfers defaults to 0 — deliberate Python parity)
   link: string;        // TP deep link | ""
 }
 
@@ -113,19 +113,21 @@ export async function getSurpriseDestinations(params: {
 }): Promise<SurpriseResult>;
 ```
 
+The `flightPrice` doc-comment example is deliberately `$142` — a value NOT in §5's banned fabricated tuple. Using `$127` (one of the fabricated `V1_FALLBACK` prices) as the example would make §5's tripwire fail against this module's own contract comment.
+
 **Algorithm** — a faithful port of `routers/assistant.py:surprise_destinations`:
 
 1. **Validate origin** via the existing strict `parseIata` (F7 — no truncation, no `Cancun→CAN`). Invalid → `degraded` with `INVALID_IATA_REASON`. **Never** substitute `MIA`.
 2. **Default `departMonth`** to next month (UTC) when absent. Reuse the existing `nextMonthUtc` helper.
-3. **Round-trip pricing:** if `tripLength` maps through `TRIP_LENGTH_DAYS` (`weekend:2, week:7, 10_14_days:12, 2_weeks:14, 3_weeks:21` — port verbatim from `assistant.py:848`), compute `return_at` and set `isRoundTrip`, which suffixes prices with `" rt"`.
+3. **Round-trip pricing:** if `tripLength` maps through `TRIP_LENGTH_DAYS` (`weekend:2, week:7, 10_14_days:12, 2_weeks:14, 3_weeks:21` — port verbatim from `assistant.py:848`), compute `return_at` and set `isRoundTrip`, which suffixes prices with `" rt"`. Round-trip is computed only when `departMonth` matches `/^\d{4}-\d{2}$/` — a malformed month (a full date like `2026-08-15`, garbage like `2026-13`) skips round-trip pricing, mirroring Python's `try/except ValueError` skip.
 4. **Fetch** popular routes (`prices_for_dates`, `sorting=price`, `currency=usd`, `limit=100`). On failure, map the `tpGet` failure cause through the existing `FAILURE_REASONS` table (F2 — distinguishes `no_token` / `rate_limited` / `http_error` / `timeout`; a missing token must never read as "no flights exist").
 5. **Candidates:** drop routes back to the origin, dedupe by destination keeping the first (API is price-ascending → keeps cheapest).
 6. **Vibe ranking:** if vibes requested, `min_overlap = 2 if vibes.size >= 2 else 1`; keep candidates whose `DESTINATION_VIBES` tags meet the threshold; sort by overlap descending (stable — preserves price-ascending within equal overlap).
 7. **Map** top 3 to `SurpriseDestination`. `hotelPrice` does not exist in the type — it cannot be fabricated.
-8. **Curated filler** (only when `destinations.length < 3` **and** vibes were requested): walk `DESTINATION_VIBES` sorted by overlap desc, skipping the origin, entries with overlap `< 2`, and cities already shown. For codes absent from the live result set, enrich with **bounded-parallel** `searchFlights` calls (**cap 3**, matching the Python `slots_remaining` bound) to get a real price. Enrichment failure → `flightPrice: "—"`, `airline: ""`, `nonstop: false`, `link: ""`. **Never a number.**
-9. **Empty** → `degraded: { reason }` with the honest reason from step 4.
+8. **Curated filler** (only when `destinations.length < 3` **and** vibes were requested): walk `DESTINATION_VIBES` sorted by overlap desc, skipping the origin, entries with overlap `< 2`, and cities already shown. For codes absent from the live result set, enrich with **bounded-parallel** `rawSearchFlights` calls (**cap 3**, matching the Python `slots_remaining` bound) to get a real price. `rawSearchFlights` — the module-private single-pair helper in `travelpayouts-client.ts`, exported by the plan's Task 1 — is the faithful equivalent of Python `client.search_flights` (one origin→destination pair, numeric price, one month-granularity retry). The *public* `searchFlights` must **NOT** be used here: it fans out over nearby airports (`airportsWithNearby` — LAX becomes 4 origins ⇒ up to 8 HTTP calls per enrichment ⇒ worst case 25 total, blowing the ≤8 F6 budget) and returns display strings, not numbers. Enrichment failure → `flightPrice: "—"`, `airline: ""`, `nonstop: false`, `link: ""`. **Never a number.**
+9. **Empty** → `degraded: { reason }`, selected by one rule: the step-4 failure reason if the TP fetch failed; otherwise `NO_VIBE_MATCH_REASON` if vibes were requested (this covers both "fetch succeeded with zero routes while vibes were requested" and "routes existed but none survived vibes + filler"); otherwise `NO_ROUTES_REASON`. The discriminator is whether vibes were requested, not whether routes existed. Edge case: routes existed but all were the origin itself and no vibes were requested → `NO_ROUTES_REASON` — honest enough, intended. Both new reasons follow the F2 style ("this does NOT mean no flights exist"). Never degraded when `destinations.length > 0`.
 
-**Rate-limit interaction (must not regress F6):** worst case is 1 popular-routes call + 3 enrichment calls = **4 TP calls**, within the ≤8 budget F6 established. The limiter counts attempts *pre-fetch*; the enrichment cap must be enforced before dispatch, not after.
+**Rate-limit interaction (must not regress F6):** each `rawSearchFlights` enrichment can issue up to **2** HTTP requests (specific-date attempt, then one month-granularity fallback — Python `client.search_flights` has the identical property), so the true worst case is 1 popular-routes call + 3×2 enrichment requests = **7 HTTP requests**, within the ≤8 budget F6 established. The limiter counts attempts *pre-fetch*; the enrichment cap must be enforced before dispatch, not after.
 
 ### 4.2 New data: `src/lib/atlas/destination-vibes.ts`
 
@@ -136,9 +138,9 @@ A unit test asserts the entry count and spot-checks known tags, so a truncated p
 ### 4.3 Route: `src/app/api/surprise-me/route.ts`
 
 - Drop the `getFastApiBaseUrl` import and the `fetch` proxy.
-- Call `getSurpriseDestinations`.
+- Call `getSurpriseDestinations`, **wrapped in try/catch**: the engine shouldn't throw (TP failures come back as values), but an unexpected throw must return an in-body degraded response (`destinations: []`, honest F2-style reason, HTTP 200, never cached) rather than a 500 — degradation is uniformly in-body.
 - **Delete `FALLBACK`.**
-- Keep the existing 1-hour in-memory cache and its key (`origin|vibes|month|tripLength`), the input clamps, and `MAX_CACHE_ENTRIES` pruning. **Only cache successful, non-empty results** — a degraded response must never be cached for an hour (this also closes the "empty-success caching" item flagged in the xhigh review).
+- Keep the existing 1-hour in-memory cache and its key shape (`origin|vibes|month|tripLength`) — but `encodeURIComponent` each component before joining, so a `|` inside `vibes` cannot make the key ambiguous and collide with another parameter combination. Keep the input clamps and `MAX_CACHE_ENTRIES` pruning. **Only cache successful, non-empty results** — a degraded response must never be cached for an hour (this also closes the "empty-success caching" item flagged in the xhigh review).
 - Return `{ origin, destinations, degraded? }`. Always HTTP 200; degradation is in the body, so the client can render a reason rather than guess from a status code.
 
 ### 4.4 Client: `src/components/SurpriseMeSection.tsx`
@@ -148,10 +150,11 @@ A unit test asserts the entry count and spot-checks known tags, so a truncated p
 - Render three states: **destinations** (1–3 real cards), **degraded** (honest message + `Retry` + existing Ask-Atlas escape hatch), **originUnknown** (existing behaviour, preserved).
 - The degraded copy surfaces `degraded.reason` verbatim — the F2 strings already say things like "not configured … this does NOT mean no flights exist."
 - Fewer than 3 real cards renders 1–2 cards. It never pads.
+- **i18n:** delete the dead `atlasHero` keys from all 6 locales — `fallbackTitle`/`fallbackBody` (the "example destinations" copy is now a lie) **and** the never-consumed `hotelsFrom`/`flightsFrom` price-template keys (zero consumers in `src/`; they are the exact hotel-price-fabrication shape this change outlaws, one `t("hotelsFrom")` call away from resurrection). Add honest degraded-state copy in their place.
 
 ### 4.5 Cleanup
 
-`getFastApiBaseUrl` and `DEFAULT_FASTAPI_BASE_URL` become unused. Delete them from `src/lib/server-config.ts` (and the assertion in `server-config.test.ts`), plus the `FASTAPI_URL` env references. This also resolves the `FASTAPI_URL` contradictions in `docs/deployment/local-to-vps.md` flagged in the xhigh review backlog.
+`getFastApiBaseUrl` and `DEFAULT_FASTAPI_BASE_URL` become unused. Delete them from `src/lib/server-config.ts` (and the assertion in `server-config.test.ts`), plus the `FASTAPI_URL` env references. This also resolves the `FASTAPI_URL` contradictions in `docs/deployment/local-to-vps.md` flagged in the xhigh review backlog — including the stale sidecar health-check instructions: the deploy-verification step `curl -I http://127.0.0.1:8766/ || true` at `docs/deployment/local-to-vps.md:288` and the matching prose at `docs/product/ARCHITECTURE.md:163` both instruct operators to probe a FastAPI sidecar that no longer exists in any code path, and must be removed/rewritten in the same cleanup.
 
 **Gate:** `grep -rn "getFastApiBaseUrl\|FASTAPI_URL" src/` must return **zero** hits. If any other consumer surfaces, stop and reassess rather than deleting the helper out from under it.
 
@@ -165,15 +168,17 @@ A unit test asserts the entry count and spot-checks known tags, so a truncated p
 - Self-origin dropped; duplicate destinations deduped keeping cheapest.
 - `min_overlap` is 2 for 2+ vibes, 1 for a single vibe.
 - Filler engages when live matches < 3 **and** vibes present; does **not** engage with no vibes.
-- Enrichment capped at 3 calls (assert call count — guards F6).
+- Enrichment capped at 3 calls (assert call count — guards F6 at the function layer).
+- Worst-case HTTP budget pinned at the wire: with the TP token stubbed and `global.fetch` mocked to success-empty, a full filler run issues **≤ 7** fetch calls (1 popular + 3 enrichments × 2 month-fallback attempts) — the F6 budget asserted at the HTTP layer, not just the function-call layer.
 - Enrichment failure → `"—"`, never a number.
 - TP failure → `degraded.reason` distinguishes `no_token` from "no routes".
+- Degraded-reason selection follows §4.1 step 9: failure reason if the TP call failed, else `NO_VIBE_MATCH_REASON` when vibes were requested, else `NO_ROUTES_REASON`.
 - Invalid origin → degraded; origin is **never** rewritten to `MIA`.
-- **Anti-fabrication guard:** the repo contains no `$89`/`$95`/`$75`/`$127`/`$159`/`$189` literals and no `hotelPrice` key (extends the existing `no-fabrication.test.ts`).
+- **Anti-fabrication guard** (extends the existing `no-fabrication.test.ts`), scoped to the Surprise Me file set — the route, `SurpriseMeSection.tsx`, `AtlasHeroSection.tsx`, `DestinationCard.tsx`, `surprise.ts`, `destination-vibes.ts`: none of those six files contains the fabricated literals `$89`/`$95`/`$75`/`$127`/`$159`/`$189`, `/night` formatting, a `hotelPrice` key, or the invented airlines. **Deliberately NOT repo-wide:** unrelated pre-existing literals live in `src/config/affiliates.ts` (`$899`, `$159`) and the static `src/app/[locale]/destinations/page.tsx` marketing page (`$89`, `$75/night`, …), so a repo-wide ban can never pass.
 
 **Vibe map** (`destination-vibes.test.ts`): 82 entries; spot-check `CUN`, `SJU`, `PUJ`.
 
-**Route** (`route.test.ts`): no FastAPI fetch; degraded responses are not cached; successful ones are.
+**Route** (`route.test.ts`): no FastAPI fetch; degraded responses are not cached; successful ones are; an unexpected engine throw degrades in-body (HTTP 200), never a 500.
 
 **E2E:** existing Playwright suite must stay 41/41.
 
@@ -186,7 +191,7 @@ A unit test asserts the entry count and spot-checks known tags, so a truncated p
 | Risk | Mitigation |
 |---|---|
 | Filler ported subtly wrong → silently fewer cards | Unit tests assert engagement + call cap; live smoke on a known 0-match combo |
-| Extra TP calls regress the F6 rate budget | Hard cap of 3 enrichment calls; worst case 4 total vs ≤8 budget; asserted in test |
+| Extra TP calls regress the F6 rate budget | Hard cap of 3 enrichment calls; worst case 7 HTTP requests (1 popular + 3×2 month-fallback) vs ≤8 budget; asserted in tests at both the function layer and the fetch layer |
 | Deleting `getFastApiBaseUrl` breaks an unseen consumer | `grep` gate must show zero hits before deletion |
 | Diff sits under a pending deploy | Isolated worktree; `main` stays at verified `4d5a1e7` until Jose green-lights the merge |
 | Vibe map truncated during port | Test asserts exactly 82 entries |
