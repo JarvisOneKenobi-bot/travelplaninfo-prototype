@@ -131,7 +131,7 @@ This test must **fail against today's `main`** (on `mountains`, on `winter`, and
 
 ### 3.4 Destination tagging (G5)
 
-Tag the high-frequency city codes TP actually returns. Initial set (frequency-ordered): `NYC, CHI, ORL, WAS, PAR, LON, YTO, HOU, PIT, MOW, RDU, ANC, BEG` — plus `family`/`wellness`/`nature` tags across the existing 82.
+Tag the high-frequency city codes TP actually returns. Initial set (frequency-ordered): `NYC, CHI, ORL, WAS, PAR, LON, YTO, HOU, PIT, MOW, RDU, ANC, BEG` — plus `family` and `winter` tags across the existing 82.
 
 Examples: `NYC → city, culture, food, nightlife, romantic` · `CHI → city, culture, food, nightlife` · `ORL → family, adventure` · `PAR → romantic, culture, food, city` · `ANC → nature, adventure`.
 
@@ -183,7 +183,7 @@ This is what "make sure Atlas has the user's intention defined" means concretely
 | Risk | Mitigation |
 |---|---|
 | Tag migration silently drops a destination's tags | Test: every destination retains ≥1 tag; total tag count per destination never decreases |
-| Editorial `family`/`wellness`/`nature` tagging is subjective | Coverage floor test (≥8 per vibe); tags reviewed in the plan review |
+| Editorial `family` + `winter` tagging is subjective | Coverage floor test (≥8 per vibe); tags reviewed in the plan review |
 | 290 KB name table bloats the client bundle | Server-side only (API route); test asserts it is not imported by any client component |
 | The `(all airports)` suffix reads oddly | Applied only to genuine multi-airport cities; verified visually |
 | Pre-flight fires an LLM call per empty search | Deterministic by construction — pure set math, no model call; asserted by test |
