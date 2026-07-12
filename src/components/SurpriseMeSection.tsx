@@ -10,7 +10,6 @@ interface Destination {
   name: string;
   airline: string;
   flightPrice: string;
-  hotelPrice?: string;
   nonstop: boolean;
   link?: string;   // TP API booking URL — preserved so Phase 2 can render a "Book" CTA
 }
@@ -24,12 +23,6 @@ interface SurpriseMeSectionProps {
   tripLength?: string | null;      // "weekend" | "week" | "10_14_days" | "2_weeks" | etc.
   startDate?: string | null;       // ISO date if specific dates were set
 }
-
-const V1_FALLBACK: Destination[] = [
-  { name: "Cancún, Mexico", airline: "Spirit NK", flightPrice: "$127", hotelPrice: "$89/night", nonstop: true },
-  { name: "San Juan, Puerto Rico", airline: "JetBlue", flightPrice: "$159", hotelPrice: "$95/night", nonstop: true },
-  { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
-];
 
 // Convert flexible_window value to a YYYY-MM departure month
 function deriveDepartMonth(
@@ -81,11 +74,11 @@ export default function SurpriseMeSection({
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [originUnknown, setOriginUnknown] = useState(false);
-  const [fallbackUsed, setFallbackUsed] = useState(false);
+  const [degradedReason, setDegradedReason] = useState<string | null>(null);
 
   const fetchSuggestions = useCallback((signal?: AbortSignal) => {
     setLoading(true);
-    setFallbackUsed(false);
+    setDegradedReason(null);
 
     const departMonth = deriveDepartMonth(flexibleWindow, startDate);
     const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
@@ -101,21 +94,22 @@ export default function SurpriseMeSection({
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
+          setDegradedReason(null);
         } else {
-          setDestinations(V1_FALLBACK);
-          setFallbackUsed(true);
+          setDestinations([]);
+          setDegradedReason(data?.degraded?.reason ?? t("degradedNetworkBody"));
         }
       })
       .catch((e) => {
         if ((e as { name?: string })?.name === "AbortError") return;
         console.warn("[SurpriseMeSection] fetch failed", e);
-        setDestinations(V1_FALLBACK);
-        setFallbackUsed(true);
+        setDestinations([]);
+        setDegradedReason(t("degradedNetworkBody"));
       })
       .finally(() => {
         if (!signal?.aborted) setLoading(false);
       });
-  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength, t]);
 
   useEffect(() => {
     if (originCode === "???") {
@@ -197,14 +191,6 @@ export default function SurpriseMeSection({
           <button onClick={() => setResolveError(null)} className="ml-2 underline">Dismiss</button>
         </div>
       )}
-      {fallbackUsed && (
-        <PlannerErrorBanner
-          testId="surprise-fallback-banner"
-          title={t("fallbackTitle")}
-          body={t("fallbackBody")}
-          onRetry={() => fetchSuggestions()}
-        />
-      )}
       {loading ? (
         /* Loading skeleton — 3 placeholder cards */
         <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 animate-pulse">
@@ -226,6 +212,22 @@ export default function SurpriseMeSection({
               </div>
             ))}
           </div>
+        </div>
+      ) : degradedReason ? (
+        <div className="space-y-4">
+          <PlannerErrorBanner
+            testId="surprise-fallback-banner"
+            title={t("degradedTitle")}
+            body={degradedReason}
+            onRetry={() => fetchSuggestions()}
+          />
+          <button
+            type="button"
+            onClick={handleChatWithAtlas}
+            className="inline-flex items-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 transition-colors"
+          >
+            {t("chatWithAtlas")}
+          </button>
         </div>
       ) : (
         <AtlasHeroSection

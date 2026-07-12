@@ -7,7 +7,6 @@ interface Destination {
   name: string;
   airline: string;
   flightPrice: string;
-  hotelPrice?: string;
   nonstop: boolean;
 }
 
@@ -63,7 +62,6 @@ export default function AtlasHeroSection({
             destination={dest.name}
             airline={dest.airline}
             flightPrice={dest.flightPrice}
-            hotelPrice={dest.hotelPrice}
             nonstop={dest.nonstop}
             isTopPick={i === 0}
             onTellMeMore={() => onTellMeMore(i)}

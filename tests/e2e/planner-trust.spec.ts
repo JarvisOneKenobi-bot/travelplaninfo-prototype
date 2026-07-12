@@ -118,6 +118,18 @@ test('Path B → "Plan a trip to X" CTA resolves trip and renders Path A', async
     data: { name: 'CTA test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA' },
   });
   const trip = await post.json();
+  await context.route('/api/surprise-me*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      origin: 'MIA',
+      destinations: [
+        { name: 'Cancún, Mexico', flightPrice: '$142', airline: 'NK', nonstop: true, link: 'https://www.aviasales.com/search/MIA0108CUN1?marker=164743' },
+        { name: 'San Juan, Puerto Rico', flightPrice: '$168', airline: 'B6', nonstop: true, link: '' },
+        { name: 'Punta Cana, Dominican Republic', flightPrice: '$203', airline: 'NK', nonstop: false, link: '' },
+      ],
+    }),
+  }));
   await page.goto(`/planner/${trip.id}`);
 
   // Wait for SurpriseMeSection to load destinations
