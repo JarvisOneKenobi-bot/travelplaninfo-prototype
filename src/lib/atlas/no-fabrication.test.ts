@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TOOLS } from "./tool-loop";
 import { buildAtlasSystemPrompt } from "./system-prompt";
@@ -26,5 +28,46 @@ describe("Atlas D3 no-fabrication guarantees", () => {
     const prompt = buildAtlasSystemPrompt({ pageContext: "Active trip to Miami, Florida" });
 
     expect(prompt).toMatch(/\[[^\]]+\]\(https:\/\/www\.dpbolvw\.net[^)]+\)/);
+  });
+});
+
+const SURPRISE_PATH_FILES = [
+  "src/app/api/surprise-me/route.ts",
+  "src/components/SurpriseMeSection.tsx",
+  "src/components/AtlasHeroSection.tsx",
+  "src/components/DestinationCard.tsx",
+  "src/lib/atlas/surprise.ts",
+  "src/lib/atlas/destination-vibes.ts",
+];
+
+const BANNED_SUBSTRINGS = [
+  "$89",
+  "$95",
+  "$75",
+  "$127",
+  "$159",
+  "$189",
+  "/night",
+  "hotelPrice",
+  "Spirit NK",
+  "JetBlue",
+  "V1_FALLBACK",
+  "FALLBACK",
+];
+
+describe("Surprise Me fabrication tripwire", () => {
+  it.each(SURPRISE_PATH_FILES)("%s contains no banned Surprise Me fabricated literals", (file) => {
+    const content = readFileSync(resolve(process.cwd(), file), "utf-8");
+
+    for (const literal of BANNED_SUBSTRINGS) {
+      expect(content, `${file} must not contain ${literal}`).not.toContain(literal);
+    }
+  });
+
+  it("does not bake MIA origin substitution into the Surprise Me engine", () => {
+    const file = "src/lib/atlas/surprise.ts";
+    const content = readFileSync(resolve(process.cwd(), file), "utf-8");
+
+    expect(content, `${file} must not contain MIA`).not.toContain("MIA");
   });
 });
