@@ -2,27 +2,64 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Spec:** `docs/superpowers/specs/2026-07-12-vibe-vocabulary-and-atlas-preflight-design.md` (approved — this plan implements it, it does not redesign it)
+**Spec:** `docs/superpowers/specs/2026-07-12-vibe-vocabulary-and-atlas-preflight-design.md` (CORRECTED 2026-07-12 — this plan implements the corrected spec; it does not redesign it).
 
-**Goal:** Make every user-selectable vibe actually matchable (one canonical vocabulary, guarded by tests), name every destination a user sees (no raw IATA codes, ever), and replace the dead-end empty-result banner with a deterministic, zero-LLM pre-flight clarification card.
+> **RE-AUTHORED 2026-07-12.** The previous revision of this plan was built on a wrong premise: it treated the dead
+> `PRESET_VIBES` (`SurpriseMeQuiz`/`EntryTabs`, zero importers, rejected 2026-04-10) as the live picker and planned a
+> 95-entry mass rename to a `city/culture/food/nature/wellness` vocabulary. **The live picker is `TripForm.tsx`
+> (`VIBES`, line 27)** and its values are kept as canonical. No mass rename. Fix only what is broken, expose the data
+> that already exists, and delete the dead code so a third vocabulary cannot re-emerge.
 
-**Architecture:** The picker's words become the canonical vocabulary; the 95-destination taxonomy is migrated/extended editorially (full table below — it is the deliverable, not an exercise for the implementer). A `server-only` generated name table (from TravelPayouts' own city/airport/country data) backs a `resolveCityName()` lookup with the curated 127-entry table as primary. A pure `preflightVibes()` module short-circuits the TravelPayouts fetch when the request can never match, and the UI turns that into an interactive clarification card in all six locales.
+> **REVISED 2026-07-12 (post-review).** Folds in every finding of the adversarial review
+> (`docs/superpowers/reviews/2026-07-12-vibe-plan-review.md`): the winter chip relabels to **"Winter Escapade"**
+> everywhere (B1, Jose's binding decision), AGP (Málaga) loses its `winter` tag (B2, winter coverage 10 → 9),
+> G4 is scoped by Jose's decision "Name everything on-screen; let Atlas speak naturally" (I1/I4/I6 — see the
+> **G4 Scope** section below), the three route-test assertions that `matchMode` breaks are updated in Task 5 (I2),
+> the clarification card/Atlas seed derive the REAL search month via `deriveDepartMonth` (I3), the curated-filler
+> origin-city exclusion gains a pinning test (I5), and the NITs are fixed or flagged for Jose (N1–N8).
 
-**Tech Stack:** Next.js (App Router), TypeScript, next-intl, vitest + RTL, Playwright, better-sqlite3. No new npm dependencies (`server-only` is provided by Next.js itself and is already used by `src/lib/assistant-health.ts`; vitest already aliases it to `src/test/stubs/server-only-stub.ts`).
+**Goal:** Make every user-selectable vibe actually matchable (one 11-word canonical vocabulary guarded by a test that fails the build on drift), name everything a user sees on-screen — destination, origin, vibe — with no raw IATA code or internal enum value in any rendered UI (Atlas's conversational chat prose is a Jose-approved exception, see **G4 Scope** below), and replace the dead-end empty-result banner with a deterministic, zero-LLM pre-flight clarification card.
+
+**Architecture:** The live picker's chip values ARE the canonical vocabulary (`tropical, mountains, big_city, beach, winter, cultural, adventure` + newly exposed `foodie, romantic, nightlife` + new `family`). One exported `VIBE_OPTIONS` in `trip-types.ts` drives the picker, the context strip, and the regression guard; the taxonomy is typed against `CanonicalVibe` so a stray tag is a compile error. The taxonomy gets one rename (`mountain → mountains`), editorial `winter`/`family` tagging, 6 new destinations (5 genuine ski/winter + Málaga, which carries NO `winter` tag), and 13 TravelPayouts metro CITY codes. A `server-only` generated name table (from TravelPayouts' own city/airport/country data) backs `resolveCityName()` with the curated table as primary. A pure `preflightVibes()` module short-circuits the TravelPayouts fetch when a request can never match, and the UI turns that into an interactive clarification card in six locales.
+
+**Tech Stack:** Next.js (App Router), TypeScript, next-intl, vitest + RTL (`fireEvent` — `@testing-library/user-event` is NOT installed), Playwright, better-sqlite3. No new npm dependencies (`server-only` is provided by Next.js and already stubbed for vitest at `src/test/stubs/server-only-stub.ts` via the alias in `vitest.config.ts`; `resolveJsonModule` is already on in `tsconfig.json`).
 
 ## Global Constraints
 
-- **Worktree:** `/home/jarvis/.openclaw/workspace/jarvis-project/travelplaninfo-prototype/.worktrees/surprise-me`, branch `feat/surprise-me-workstation-independence`. All paths below are relative to it. All commands run from it.
-- **Zero fabrication on every path** (spec G7). Never invent a destination, price, airline, or name. If a code cannot be named, DROP the destination. Never map `CHI → ORD`.
-- **Canonical vibes (exactly 10):** `beach, city, adventure, food, culture, nature, nightlife, wellness, family, romantic`.
+- **Worktree:** `/home/jarvis/.openclaw/workspace/jarvis-project/travelplaninfo-prototype/.worktrees/surprise-me`, branch `feat/surprise-me-workstation-independence`. All paths relative to it; all commands run from it.
+- **Zero fabrication on every path** (spec G7). Never invent a destination, price, airline, or name. If a code cannot be named, DROP the destination. **NEVER map `CHI → ORD`** — that is fabrication.
+- **Canonical vibes (exactly 11, these exact internal values):** `tropical, mountains, big_city, beach, winter, cultural, adventure, foodie, romantic, nightlife, family`. No renames of `big_city`/`cultural`/`foodie` — their user-facing labels are already "Big City"/"Cultural"/"Food".
+- **No stored-trip migration needed:** the live picker's values never change, so every existing trip's `vibe:*` interests remain canonical. (`vibe:custom:*` free text is handled by the pre-flight, not migrated.)
 - **Zero LLM calls in the pre-flight** (Atlas has a $10/mo cap). `vibe-preflight.ts` is pure set math + string distance. No imports from `tool-loop`, `spend`, or any Anthropic SDK path.
-- **`min_overlap` semantics preserved:** 2 when 2+ vibes and matchMode `all` (default); 1 for a single vibe; 1 when matchMode `any`.
-- **Generated name table is server-side only.** It must never be imported by a client component (`import "server-only"` guard + build gate).
-- **All new user-facing copy in all six locales** (`en, es, pt, fr, de, it`), genuinely translated (exact strings provided below — do not re-translate, do not paste English into non-EN files). No API jargon, no "IATA", no parameter names in any user-facing string.
-- **Do not use the word `FALLBACK` (or the other literals banned by `src/lib/atlas/no-fabrication.test.ts`: `$89`, `$95`, `$75`, `$127`, `$159`, `$189`, `/night`, `hotelPrice`, `Spirit NK`, `JetBlue`, `V1_FALLBACK`) anywhere in the surprise-path source files, including comments.** The tripwire scans file text.
-- **Fresh-measured baselines (2026-07-12, HEAD `470b86a`):** `npm run lint` → 0 errors / 30 warnings · `npm run test:unit` → 21 files, 156 tests, all pass · `npx playwright test --list` → 41 tests in 8 files · `npm run build` → clean.
-- **Playwright needs a dev server on :3001** (`playwright.config.ts` has NO `webServer` block): start it with `npm run dev -- -p 3001` in a separate shell/background before `npx playwright test`. If ALL tests fail in ~300ms, the server died — restart it, don't debug the tests.
-- **Commit per task** with the messages given. Do not push or merge — this branch is PR #7's branch and Jose reviews before anything ships.
+- **`min_overlap` semantics:** 2 when 2+ vibes and matchMode `all` (default); 1 for a single vibe; 1 when matchMode `any`. The curated filler uses the SAME threshold (today it hardcodes 2, which also starves single-vibe searches — fixed in Task 5).
+- **Generated name table is server-side only** (`import "server-only"` + build gate). Never imported by a client component.
+- **All new user-facing copy in all six locales** (`en, es, pt, fr, de, it`), genuinely translated — exact strings are provided below; do not re-translate, do not paste English into non-EN files. No jargon, no "IATA", no parameter names in any user-facing string. Audience is an average/older traveller (Jose, 2026-07-12: "we must decodify for the user").
+- **Fabrication tripwire:** `src/lib/atlas/no-fabrication.test.ts` scans these files for the banned literals `"$89"`, `"$95"`, `"$75"`, `"$127"`, `"$159"`, `"$189"`, `"/night"`, `"hotelPrice"`, `"Spirit NK"` (one single literal — verified against `no-fabrication.test.ts:53`), `"JetBlue"`, `"V1_FALLBACK"`, `"FALLBACK"`: `route.ts, SurpriseMeSection.tsx, AtlasHeroSection.tsx, DestinationCard.tsx, surprise-query.ts, surprise.ts, destination-vibes.ts` — plus the files this plan adds to the list (`vibe-preflight.ts, city-names.ts, SurpriseClarificationCard.tsx`). Do not write any banned literal in those files, **including comments**. Additionally `surprise.ts` must not contain the literal `MIA` and `SurpriseMeSection.tsx` must not contain `new URLSearchParams` and MUST contain `buildSurpriseQuery` (existing tripwires).
+- **Fresh-measured baselines (2026-07-12, HEAD `1f2c54d`; only docs changed since the last code commit):** `npm run test:unit` → 21 files, 156 tests, all pass · `npm run lint` → 0 errors / 30 warnings · `npx playwright test --list` → 41 tests in 8 files · build clean.
+- **Playwright needs a dev server on :3001** (`playwright.config.ts` has NO `webServer` block): start `npm run dev -- -p 3001` in a separate shell/background first. If ALL tests fail in ~300ms, the server died — restart it, don't debug the tests.
+- **Commit per task** with the messages given. Do not push or merge — this is PR #7's branch; Jose reviews before anything ships.
+
+---
+
+## G4 Scope — Jose's Binding Decision (2026-07-12)
+
+> **"Name everything on-screen; let Atlas speak naturally."**
+
+This resolves review findings I1/I4/I6 and scopes goal G4 precisely. Two halves, both binding:
+
+**1. ALL rendered UI must be decoded — no bare `/^[A-Z]{3}$/` and no internal enum value ever reaches a user's screen.** Concretely, this plan fixes every known render-path leak:
+
+- `src/app/[locale]/planner/[tripId]/page.tsx:72` — the trip header renders `· ✈️ from JFK` raw on every Path-A and resolved-surprise trip → renders the decoded label, e.g. **"from New York, New York (JFK)"** (the code alongside the name is fine — it is never *bare*). Fixed in Task 3.
+- `src/components/TripContextStrip.tsx:70-79` — the origin pill renders `✈️ JFK` plus raw `(+ EWR, LGA)` nearby codes → decoded (e.g. "New York, New York (JFK)" + "Newark, New Jersey · New York (LaGuardia)"). Fixed in Task 3.
+- The Atlas hero subtitle (`atlasHero.subtitle`) interpolates **raw internal vibe values** (`big_city`) via `vibesSummary` → renders localized labels ("Big City"); custom free-text vibes echo as the user typed them. An internal enum value on screen is a bug. Fixed in Task 7.
+- **Fallback rule:** `originName ?? originCode` fallbacks (hero subtitle, auto-sent Atlas chat seed, trip header) must **NOT** fall back to a bare code. When the origin cannot be named, **omit the origin phrase entirely** (dedicated no-origin i18n variants — Tasks 6/7) or omit the pill/header fragment (Task 3). "The user typed that code themselves" is an exception Jose's rule does not grant.
+
+**2. Atlas's conversational prose MAY still say "JFK"** — natural language; forcing city names would make the assistant worse at disambiguating JFK vs Newark. Therefore the chat-path code exposure is an **ACCEPTED, DELIBERATE, JOSE-APPROVED GAP** — do NOT "fix" it in this plan:
+
+- `AssistantChat.tsx:701` sends `Departing from: ${origin}` and `:735` sends `Flying from: ${origin}` in the page context given to the model.
+- `getDeals` / tool outputs return raw destination codes to the model, which may echo them into chat text.
+
+This gap must be restated in PR #7's description as explicitly Jose-approved (Task 8 carries the reminder). Any future tightening is a separate follow-up, not silent scope creep here.
 
 ---
 
@@ -30,200 +67,182 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `src/lib/trip-types.ts` | Modify | `PRESET_VIBES` grows to the 10 canonical vibes; typed `VIBE_ICONS` / `VIBE_OPTIONS` (compile-time drift guard for pickers) |
-| `src/lib/atlas/destination-vibes.ts` | Rewrite | 95-destination taxonomy in canonical vocabulary, typed `ReadonlySet<PresetVibe>` |
-| `src/lib/atlas/vibe-vocabulary.guard.test.ts` | Create | THE regression guard: picker ⊆ taxonomy, taxonomy vocabulary == canonical, coverage floor ≥ 8, every taxonomy key nameable |
-| `src/lib/atlas/destination-vibes.test.ts` | Rewrite | Migration no-loss test (frozen old table → mechanical map ⊆ new), spot checks, shape checks |
-| `scripts/generate-city-names.mjs` | Create | Regenerates the name table from TravelPayouts' public data (provenance) |
-| `src/lib/atlas/generated/city-names.json` | Create (generated) | ~9,471 `code → "City, Country"` entries, 545 with `" (all airports)"` |
+| `src/lib/trip-types.ts` | Modify | `CANONICAL_VIBES` (11) + `CanonicalVibe` + `VIBE_ICONS`/`VIBE_LABELS`/`VIBE_OPTIONS` (single source of truth); `PRESET_VIBES` and the quiz-only types DELETED |
+| `src/lib/atlas/destination-vibes.ts` | Rewrite | 101-destination taxonomy typed `ReadonlySet<CanonicalVibe>` (82 existing + 6 new [5 ski/winter + Málaga] + 13 TP city codes) |
+| `src/lib/atlas/vibe-vocabulary.guard.test.ts` | Create | THE regression guard: picker values ⊆ taxonomy, taxonomy vocabulary == picker vocabulary, coverage floor ≥ 8, picker == the 11 canonical, every taxonomy key nameable |
+| `src/lib/atlas/destination-vibes.test.ts` | Rewrite | Migration no-loss test (frozen pre-fix table ⊆ new, with the one rename applied), 101-key count, spot checks |
+| `src/lib/atlas/travelpayouts-client.ts` | Modify | `IATA_TO_CITY` += 4 curated names (`YVR SLC GVA AGP`) for the new taxonomy destinations |
+| `src/components/TripForm.tsx` | Modify | Live picker consumes `VIBE_OPTIONS` (7 → 11 chips) with i18n labels; private `VIBES` deleted |
+| `src/components/TripForm.test.tsx` | Create | 11 chips render with localized labels; new chips are selectable |
+| `src/components/TripContextStrip.tsx` | Modify | Vibe pills use `VIBE_ICONS` + localized labels (raw `big_city` no longer reaches users); custom vibes render as typed; origin pill decoded (`originLabel`/`extraAirportLabels` props — never a bare code) |
+| `src/components/TripContextStrip.test.tsx` | Create | Origin pill renders decoded labels; nothing renders when the origin is unnameable |
+| `src/app/[locale]/planner/[tripId]/page.tsx` | Modify | Resolves the origin server-side (`resolveCityName` — server component, legal); trip header "from …" + context strip receive decoded labels; unnameable origin → phrase omitted, never a bare code (G4 Scope) |
+| `src/components/EntryTabs.tsx`, `SurpriseMeQuiz.tsx`, `DestinationSuggestions.tsx` | **Delete** | Dead code (zero importers, rejected 2026-04-10; `DestinationSuggestions` is only imported by `EntryTabs`) |
+| `messages/{en,es,pt,fr,de,it}/common.json` | Modify | `tripForm.vibes` += 4 keys and `winter` relabeled "Winter Escapade" (B1); `quiz` + `entryTabs` namespaces deleted; `atlasHero` += clarify\* + 2 degraded keys + `subtitleNoOrigin` + `clarifyAtlasSeedNoOrigin` |
+| `scripts/generate-city-names.mjs` | Create | Regenerates the name table from TravelPayouts' public data (provenance; offline `TP_DATA_DIR` fallback) |
+| `src/lib/atlas/generated/city-names.json` | Create (generated) | 9,471 `code → "City, Country"` entries, 545 with `" (all airports)"` (measured 2026-07-12) |
 | `src/lib/atlas/city-names.ts` | Create | `resolveCityName()` — curated `IATA_TO_CITY` first, generated second, `null` = drop; `server-only` |
 | `src/lib/atlas/city-names.test.ts` | Create | Naming behavior + server-only tripwire + generated-table sanity |
-| `src/lib/atlas/vibe-preflight.ts` | Create | Pure `preflightVibes()` + suggestion engine (synonyms + edit distance) |
+| `src/lib/atlas/vibe-preflight.ts` | Create | Pure `preflightVibes()` + `suggestVibes()` (synonyms + edit distance), zero LLM |
 | `src/lib/atlas/vibe-preflight.test.ts` | Create | ok / unknown_vibes / no_match_possible / suggestions / determinism |
-| `src/lib/atlas/surprise.ts` | Modify | preflight short-circuit, `matchMode`, shared `minOverlap`, name resolution + drop, same-city dedupe, `originName` |
-| `src/lib/atlas/surprise.test.ts` | Modify | live-bug pins, preflight short-circuit (zero fetch), matchMode, naming/drop tests; fixture vocab update |
-| `src/lib/atlas/surprise.wire.test.ts`, `surprise.http-budget.test.ts` | Modify | `"tropical,beach"` fixtures → `"beach,romantic"` (same expected counts) |
-| `src/lib/atlas/surprise-degrade.ts` + `.test.ts` | Modify | `unknown_vibes`, `no_match_possible` codes + i18n keys |
+| `src/lib/atlas/surprise.ts` | Modify | Pre-flight short-circuit, `matchMode`, shared `minOverlap`, name resolution + drop, same-city dedupe, `originName` |
+| `src/lib/atlas/surprise.test.ts` | Modify | Live-bug pins (duds + orphans + family), matchMode, naming/drop tests |
+| `src/lib/atlas/surprise.http-budget.test.ts` | Modify | Zero-wire-call assertions for pre-flight short-circuits |
+| `src/lib/atlas/surprise-degrade.ts` + `.test.ts` | Modify | `unknown_vibes`, `no_match_possible` codes + i18n keys + locale parity for clarify keys |
 | `src/lib/atlas/surprise-query.ts` + `.test.ts` | Modify | `matchAny` + `departMonthOverride` in `buildSurpriseQuery` |
 | `src/app/api/surprise-me/route.ts` + `route.test.ts` | Modify | `match` query param, cache key, pass-through |
-| `messages/{en,es,pt,fr,de,it}/common.json` | Modify | `atlasHero.clarify*` + 2 degraded keys; `tripForm.vibes` (10 canonical); `quiz.vibe_*` (10) |
 | `src/components/SurpriseClarificationCard.tsx` + `.test.tsx` | Create | The interactive clarification card |
-| `src/components/SurpriseMeSection.tsx` + `.test.tsx` | Modify | Render card for preflight codes; match-any / month / suggestion / ask-Atlas actions |
-| `src/components/TripForm.tsx` | Modify | Live picker uses canonical `VIBE_OPTIONS` + i18n labels (kills the third vocabulary) |
-| `src/components/TripContextStrip.tsx` | Modify | Vibe icon map keyed on canonical vibes |
-| `src/lib/atlas/no-fabrication.test.ts` | Modify | Tripwire extended to new files + old-vocabulary ban |
-| `src/lib/help-content.ts` | Modify | Feature help reflects new vibes + clarification card (standing rule: `feedback_update_help_with_features`) |
+| `src/components/SurpriseMeSection.tsx` + `.test.tsx` | Modify | Render the card for preflight codes; match-any / month / suggestion / ask-Atlas actions; `originName` capture; hero vibes localized before interpolation; real `deriveDepartMonth` month; no-origin seed variant |
+| `src/components/AtlasHeroSection.tsx` | Modify | `originName` prop replaces `originCode` — subtitle shows "New York, New York" when nameable, the `subtitleNoOrigin` variant otherwise; NEVER a bare code |
+| `src/lib/atlas/no-fabrication.test.ts` | Modify | Tripwire extended to new files + dead-entry-system-stays-dead guard |
+| `src/lib/help-content.ts` | Modify | Vibe examples reflect the 11 chips; "When nothing matches" section (standing rule: `feedback_update_help_with_features`) |
 | `tests/e2e/planner-trust.spec.ts` | Modify | 2 new e2e tests for the clarification card |
 
-**Not touched (explicitly):** `src/components/BootstrapModal.tsx` (`GUEST_INTERESTS` contains `'mountains'` but those are *interests*, not vibes — they never enter the vibe pipeline); `src/components/EntryTabs.tsx` / `SurpriseMeQuiz.tsx` beyond what `PRESET_VIBES` gives them for free (EntryTabs is unmounted, rejected 2026-04-10 — confirmed: nothing imports it); `preferences.climatePlaceholder` i18n string ("warm, tropical, temperate" is prose about climate, not a vibe tag).
+**Not touched (explicitly):** `src/components/BootstrapModal.tsx` — `GUEST_INTERESTS` contains `'mountains'` but those are *interests*, not vibes; they never enter the vibe pipeline. The `surprise_me` Atlas TOOL (`tool-loop.ts` → `getPopularRoutes`) takes no vibes and is out of scope. `preferences.climatePlaceholder` i18n prose is not a vibe tag.
 
 ---
 
-## The Canonical Tag Table (the editorial deliverable)
+## The Editorial Tag Changes (the deliverable — reviewed by Jose with this plan)
 
-Mechanical renames applied everywhere: `big_city→city`, `cultural→culture`, `foodie→food`, `mountain→nature`, `tropical→beach` (fold — every `tropical` destination was already `beach`-tagged, so the fold only removes the duplicate). `romantic` kept. Editorial additions marked **bold**. This table was machine-validated: all tags ⊆ canonical; every destination ≥ 1 tag; every canonical vibe carried by ≥ 8 destinations (actual floor: `wellness` = 11); every entry is a superset of its mechanically-migrated old tags; every code resolves to a display name.
+The taxonomy keeps its current 82 entries **in their current order** (the curated filler iterates insertion order on overlap ties — reordering would silently change which cards users see). Only the changes below are applied; the full resulting table is transcribed verbatim in Task 1 Step 5 and is the single source of truth.
 
-**Coverage after migration (95 destinations):** beach 41 · city 55 · adventure 20 · food 46 · culture 59 · nature 16 · nightlife 30 · wellness 11 · family 18 · romantic 29.
+**1. The one rename:** `mountain → mountains` on `DEN, SEA, PHX, BOG, MDE` (the one-letter mismatch that killed the Mountains chip).
 
-**Known property:** exactly one 2-vibe combination remains unsatisfiable at `min_overlap=2`: **`nature + nightlife`** (no destination carries both). This is intentional — it is a genuinely rare ask, it is the natural real-data fixture for the `no_match_possible` path, and the clarification card handles it. Every other 2-vibe combo (44/45) matches ≥ 1 destination.
+**2. `family` additions to existing destinations (14):**
 
-### Caribbean & Mexico
+| Code | City | Rationale |
+|---|---|---|
+| CUN | Cancún | Family all-inclusives are a core Riviera Maya product |
+| PUJ | Punta Cana | All-inclusive family resorts define the destination |
+| NAS | Nassau | Atlantis water-park resort tourism |
+| GCM | Grand Cayman | Seven Mile Beach + Stingray City are family staples |
+| PLS | Providenciales | Grace Bay family-resort market |
+| MCO | Orlando (airport) | Theme-park capital of the world |
+| FLL | Fort Lauderdale | Family beach market |
+| TPA | Tampa | Busch Gardens + gulf beaches |
+| RSW | Fort Myers | Sanibel shelling, calm gulf water |
+| SAN | San Diego | Zoo, Legoland, family beaches |
+| HNL | Honolulu | Family resort corridor |
+| CPH | Copenhagen | Tivoli Gardens; famously child-friendly |
+| SIN | Singapore | Zoo, Sentosa, Gardens by the Bay |
+| DXB | Dubai | Water-park/aquarium family resort market |
 
-| Code | City (for reviewer orientation) | New tags | Editorial rationale for additions |
-|---|---|---|---|
-| CUN | Cancún | beach, city, nightlife, romantic, **family**, **wellness** | The mass-market do-everything resort hub: family all-inclusives and Riviera Maya spa resorts are both core products |
-| SJU | San Juan | beach, city, culture, nightlife | — |
-| PUJ | Punta Cana | beach, romantic, **family**, **wellness** | All-inclusive family resorts + resort spas are the destination's identity |
-| MBJ | Montego Bay | beach, romantic, adventure | — |
-| NAS | Nassau | beach, romantic, **family** | Atlantis / water-park resort tourism |
-| GCM | Grand Cayman | beach, romantic, **family** | Seven Mile Beach + Stingray City are family staples |
-| BGI | Bridgetown | beach, romantic, culture | — |
-| ANU | Antigua | beach, romantic | — |
-| STT | St. Thomas | beach, romantic, adventure | — |
-| STX | St. Croix | beach, adventure | — |
-| SXM | Sint Maarten | beach, nightlife, romantic | — |
-| PLS | Providenciales | beach, romantic, **family** | Grace Bay family-resort market |
-| SJD | Los Cabos | beach, romantic, adventure, **wellness** | Cabo spa-resort corridor |
-| PVR | Puerto Vallarta | beach, romantic, nightlife | — |
-| CTG | Cartagena | beach, culture, romantic | — |
-| SDQ | Santo Domingo | beach, city | — |
-| ZIH | Zihuatanejo | beach, romantic, **wellness** | Quiet retreat/spa positioning vs. party resorts |
-| HAV | Havana | beach, culture, **nightlife** | Live-music/club scene is a primary draw |
-| MCO | Orlando (airport code) | beach, city, adventure, **family** | Theme-park capital; `beach` retained from the old table (no-loss rule; day-trip coast) |
-| MIA | Miami | beach, city, nightlife | — |
-| FLL | Fort Lauderdale | beach, **family** | Family beach market |
-| TPA | Tampa | beach, **family** | Busch Gardens + gulf beaches |
-| RSW | Fort Myers | beach, **family**, **nature** | Sanibel shelling, Everglades edge |
-| SAN | San Diego | beach, city, food, **family** | Zoo, Legoland, family beaches |
-| HNL | Honolulu | beach, romantic, adventure, **family**, **nature** | Family resort + volcano/trail nature |
+**3. `winter` + `mountains` additions to existing destinations (spec: seed from the ski/mountain set):** `DEN` +winter (Rockies ski gateway) · `KEF` +mountains +winter (glaciers, ice caves, northern-lights winter product) · `SJO` +mountains (Arenal volcano, Monteverde cloud forest — makes `tropical+mountains` honestly satisfiable) · `CPT` +mountains (Table Mountain IS the product).
 
-### US & Canada cities
+**4. Same-city tag alignment (small, deliberate):** `JFK/LGA/EWR` +romantic (their metro code NYC carries it — same city must carry the same tags) · `ORD` +nightlife (aligns with CHI) · `LHR` +nightlife (aligns with LON) · `MDE` +nightlife (Medellín's Parque Lleras nightlife is genuinely famous; also removes a spurious "no destination matches mountains+nightlife" dead end).
 
-| Code | City | New tags | Editorial rationale |
-|---|---|---|---|
-| JFK | New York | city, culture, food, nightlife, **romantic** | Aligned with the NYC city-code entry (same city must carry the same tags) |
-| LGA | New York | city, culture, food, nightlife, **romantic** | Same as JFK |
-| EWR | Newark/NYC | city, culture, food, nightlife, **romantic** | Same as JFK |
-| LAX | Los Angeles | beach, city, culture, food, nightlife | — |
-| ORD | Chicago | city, culture, food, **nightlife** | Aligned with the CHI city-code entry |
-| LAS | Las Vegas | nightlife, city, adventure | — |
-| ATL | Atlanta | city, culture, food | — |
-| DFW | Dallas | city, food | — |
-| DEN | Denver | nature, adventure, city | — |
-| SEA | Seattle | city, culture, food, nature | — |
-| BOS | Boston | city, culture, food | — |
-| SFO | San Francisco | city, culture, food | — |
-| MSY | New Orleans | culture, food, nightlife | — |
-| BNA | Nashville | culture, nightlife, food | — |
-| AUS | Austin | culture, nightlife, food | — |
-| PDX | Portland | food, culture, **nature** | Columbia Gorge / Mt. Hood day-trips |
-| PHX | Phoenix | adventure, nature, **wellness** | Scottsdale/Sedona spa-resort market |
-
-### Europe
-
-| Code | City | New tags | Editorial rationale |
-|---|---|---|---|
-| LHR | London | city, culture, food, **nightlife** | Aligned with the LON city-code entry |
-| CDG | Paris | city, culture, food, romantic | — |
-| FCO | Rome | city, culture, food, romantic | — |
-| BCN | Barcelona | city, beach, culture, food, nightlife | — |
-| MAD | Madrid | city, culture, food, nightlife | — |
-| AMS | Amsterdam | city, culture, nightlife | — |
-| LIS | Lisbon | city, culture, food, beach, romantic | — |
-| ATH | Athens | culture, beach, food, romantic | — |
-| IST | Istanbul | city, culture, food | — |
-| DUB | Dublin | culture, food, **nightlife** | Pub/live-music culture is the headline draw |
-| CPH | Copenhagen | culture, food, city, **family** | Tivoli Gardens; famously child-friendly city |
-| PRG | Prague | culture, romantic, nightlife | — |
-| BUD | Budapest | culture, nightlife, romantic, **wellness** | Thermal-bath city — canonical European wellness |
-| KEF | Reykjavik | adventure, romantic, **nature**, **wellness** | Glaciers/waterfalls; Blue Lagoon hot springs |
-
-### Latin America
-
-| Code | City | New tags | Editorial rationale |
-|---|---|---|---|
-| GIG | Rio de Janeiro | beach, city, culture, nightlife | — |
-| GRU | São Paulo | city, culture, food | — |
-| EZE | Buenos Aires | city, culture, food, nightlife | — |
-| BOG | Bogotá | city, culture, food, nature | — |
-| MDE | Medellín | city, culture, food, nature | — |
-| LIM | Lima | city, culture, food | — |
-| SJO | San José CR | adventure, beach, **nature** | Rainforest/volcano — Costa Rica IS a nature product |
-| PTY | Panama City | city, beach | — |
-| BZE | Belize City | beach, adventure, **nature** | Reef + jungle |
-
-### Asia, Pacific, Middle East, Africa
-
-| Code | City | New tags | Editorial rationale |
-|---|---|---|---|
-| BKK | Bangkok | city, culture, food, nightlife, beach, **wellness** | Thai massage/wellness tourism (beach comes from the tropical fold) |
-| DPS | Bali | beach, culture, romantic, adventure, **wellness**, **nature** | Ubud retreats; rice terraces/volcanoes |
-| SIN | Singapore | city, culture, food, **family** | Zoo, Sentosa, Gardens by the Bay |
-| HKG | Hong Kong | city, culture, food | — |
-| NRT | Tokyo | city, culture, food | — |
-| HND | Tokyo | city, culture, food | — |
-| ICN | Seoul | city, culture, food | — |
-| DXB | Dubai | city, beach, **family** | Water-park/aquarium family resort market |
-| CMB | Colombo | beach, culture, **wellness** | Ayurveda tradition |
-| SYD | Sydney | city, beach, culture, food | — |
-| AKL | Auckland | adventure, culture, **nature** | New Zealand outdoors |
-| CPT | Cape Town | city, beach, adventure, culture, food, **nature** | Table Mountain / Cape Peninsula |
-| NBO | Nairobi | adventure, culture, **nature** | Safari gateway |
-| RAK | Marrakech | culture, food, romantic, **wellness** | Hammam/riad-spa tradition |
-| CAI | Cairo | culture, city | — |
-| HRG | Hurghada | beach, **adventure** | Red Sea diving |
-| SSH | Sharm el-Sheikh | beach, **adventure** | Red Sea diving |
-
-### NEW — high-frequency TravelPayouts CITY codes (spec §3.4; previously untagged, invisible to every vibe search)
+**5. NEW destinations (6) — five genuine snow/ski winter escapes + Málaga (warm-weather, NO `winter` tag).** The spec's seed list (Denver, Salt Lake, Zurich, Geneva…) requires adding destinations; Aspen (ASE) is deliberately omitted — a tiny airport TP rarely prices, and the coverage floor is met without it:
 
 | Code | City | Tags | Rationale |
 |---|---|---|---|
-| NYC | New York (35× in TP samples) | city, culture, food, nightlife, romantic | Spec's own example |
-| CHI | Chicago (24×) | city, culture, food, nightlife | Spec's own example |
-| ORL | Orlando (15×) | family, adventure | Spec's own example (theme parks) |
-| WAS | Washington (5×) | city, culture, family | Smithsonian/National Mall — the classic family city trip |
-| PAR | Paris (4×) | romantic, culture, food, city | Spec's own example |
-| LON | London (3×) | city, culture, food, nightlife | World city; aligned with LHR |
-| YTO | Toronto (2×) | city, culture, food, family | Diverse food city; zoo/Wonderland family draws |
-| HOU | Houston | city, food, family | Space Center Houston; major food city |
-| PIT | Pittsburgh | city, culture | Museum/heritage city |
-| MOW | Moscow | city, culture, nightlife | — |
-| RDU | Raleigh/Durham | city, food | Research-Triangle dining scene |
-| ANC | Anchorage | nature, adventure | Spec's own example (Alaska) |
-| BEG | Belgrade | city, nightlife, culture | Famous river-barge nightlife |
+| YVR | Vancouver | mountains, winter, big_city, beach, foodie, family | Whistler/Grouse skiing + city beaches + aquarium/Stanley Park; the honest `winter+beach` carrier. **⚠ N2 — flagged for Jose:** `beach` is set-math honest (Kitsilano/English Bay) but experientially thin in winter, and YVR is now the ONLY `winter+beach` carrier. If Jose drops YVR's `beach`, `beach+winter` becomes a second impossible pair — the "exactly one impossible pair" test (Task 1 Step 8) must then be updated to expect both. |
+| SLC | Salt Lake City | mountains, winter, adventure, family | Utah ski corridor, heavily family-marketed |
+| ZRH | Zurich | mountains, winter, big_city, cultural | Alps gateway |
+| GVA | Geneva | mountains, winter, romantic, cultural | Lake Geneva, Alps, Montreux |
+| MUC | Munich | big_city, cultural, foodie, winter | Christmas markets + Bavarian Alps gateway |
+| AGP | Málaga | beach, cultural, foodie | Costa del Sol beaches, Picasso museum + old-town culture, tapas food scene. **Deliberately NOT tagged `winter` (review B2):** Málaga is a winter-*sun* destination — exactly the escape-FROM-winter reading Jose rejected, and the amended spec bans tagging any warm-weather destination `winter`. Removal is machine-verified safe: winter coverage 10 → 9 (floor ≥ 8); `tropical+winter` remains the only impossible pair; no test references AGP-winter. |
+
+**6. NEW TravelPayouts metro CITY codes (13, spec §3.4, frequency-ordered).** These are TP's most-returned destinations and today carry NO tags — invisible to every vibe search:
+
+| Code | City (freq) | Tags |
+|---|---|---|
+| NYC | New York (35×) | big_city, cultural, foodie, nightlife, romantic |
+| CHI | Chicago (24×) | big_city, cultural, foodie, nightlife |
+| ORL | Orlando (15×) | family, adventure |
+| WAS | Washington (5×) | big_city, cultural, family |
+| PAR | Paris (4×) | romantic, cultural, foodie, big_city |
+| LON | London (3×) | big_city, cultural, foodie, nightlife |
+| YTO | Toronto (2×) | big_city, cultural, foodie, family |
+| HOU | Houston | big_city, foodie, family |
+| PIT | Pittsburgh | big_city, cultural |
+| MOW | Moscow | big_city, cultural, nightlife, winter |
+| RDU | Raleigh/Durham | big_city, foodie |
+| ANC | Anchorage | mountains, adventure, winter |
+| BEG | Belgrade | big_city, nightlife, cultural |
+
+**⚠ N1 — MOW (Moscow) flagged for Jose:** the spec (§3.4) sanctions MOW, but US–Russia air links remain suspended for the primary US-origin audience — the curated filler can surface an unpriced Moscow card users cannot realistically book. Jose decides keep/drop at this plan's editorial review; dropping MOW entirely would leave winter at 8 (exactly at floor), nightlife 28, big_city 57, cultural 62 — all still passing. Do not decide silently.
+
+**Resulting coverage (101 destinations; machine-validated while planning, re-validated after the B2 AGP-winter removal):** cultural 63 · big_city 58 · foodie 49 · beach 42 · tropical 30 · romantic 30 · nightlife 29 · family 20 · adventure 19 · mountains 13 · **winter 9**. Floor is winter at 9 — above the guard's ≥ 8, with one destination of buffer.
+
+**Known property:** exactly **one** 2-vibe combination remains unsatisfiable at `min_overlap = 2`: **`tropical + winter`** — physically contradictory under the spec's snow/ski reading of Winter Escapade, and therefore the natural real-data fixture for the `no_match_possible` path (the clarification card handles it). Every other 2-vibe combo (54/55) matches ≥ 1 destination. (Re-verified with AGP's `winter` removed: `beach+winter` is still carried by YVR, `cultural+winter` by ZRH/GVA/MUC/MOW, `foodie+winter` by MUC/YVR — no new impossible pair.)
 
 ---
 
-### Task 1: Canonical vocabulary, taxonomy migration, and THE regression guard
+### Task 1: Canonical vocabulary, taxonomy fix, and THE regression guard
 
-The core bug fix. After this task alone, `culture,food`-style searches return real cards. The guard is written first and **must be observed failing against the pre-fix state** (spec requirement) before the migration lands; test + fix commit together so the branch stays green.
+The core bug fix. After this task alone, the Mountains and Winter Escapade chips return real destinations and the orphan data (`foodie`/`romantic`/`nightlife`) plus the new `family` vibe are reachable through the engine. The guard is written against the REAL pre-fix picker (extracted verbatim into `VIBE_OPTIONS` first) and **must be observed failing on all three bug classes** — the dud chips, the orphan tags, and the zero-coverage floor — before the fix lands. Test + fix commit together so the branch stays green.
 
 **Files:**
-- Modify: `src/lib/trip-types.ts` (lines 51–53)
+- Modify: `src/lib/trip-types.ts` (add vibe exports; `PRESET_VIBES` is deleted later, in Task 2)
+- Modify: `src/components/TripForm.tsx` (lines 27–35: private `VIBES` → shared `VIBE_OPTIONS`)
 - Rewrite: `src/lib/atlas/destination-vibes.ts`
+- Modify: `src/lib/atlas/travelpayouts-client.ts` (4 `IATA_TO_CITY` additions)
 - Create: `src/lib/atlas/vibe-vocabulary.guard.test.ts`
 - Rewrite: `src/lib/atlas/destination-vibes.test.ts`
-- Modify: `src/lib/atlas/surprise.test.ts`, `src/lib/atlas/surprise.wire.test.ts`, `src/lib/atlas/surprise.http-budget.test.ts` (fixture vocabulary only)
+- Modify: `src/lib/atlas/surprise.test.ts` (append pins)
 
 **Interfaces:**
-- Produces: `PRESET_VIBES: readonly ["beach","city","adventure","food","culture","nature","nightlife","wellness","family","romantic"]`, `type PresetVibe = (typeof PRESET_VIBES)[number]`, `VIBE_ICONS: Record<PresetVibe, string>`, `VIBE_OPTIONS: { value: PresetVibe; icon: string }[]` (all from `@/lib/trip-types`); `DESTINATION_VIBES: Record<string, ReadonlySet<PresetVibe>>` with 95 keys (from `@/lib/atlas/destination-vibes`). Tasks 3, 4, 7 consume these exact names.
+- Produces (Tasks 2, 4, 7 consume these exact names from `@/lib/trip-types`):
+  - `CANONICAL_VIBES: readonly ["tropical","mountains","big_city","beach","winter","cultural","adventure","foodie","romantic","nightlife","family"]`
+  - `type CanonicalVibe = (typeof CANONICAL_VIBES)[number]`
+  - `VIBE_ICONS: Record<CanonicalVibe, string>`, `VIBE_LABELS: Record<CanonicalVibe, string>`
+  - `VIBE_OPTIONS: { value: CanonicalVibe; label: string; icon: string }[]`
+- Produces: `DESTINATION_VIBES: Record<string, ReadonlySet<CanonicalVibe>>` with 101 keys (from `@/lib/atlas/destination-vibes`).
 
-- [ ] **Step 1: Write the regression guard (failing)**
+- [ ] **Step 1: Extract the live picker into `VIBE_OPTIONS` (pure refactor, zero behavior change)**
+
+In `src/lib/trip-types.ts`, add below `BUDGET_TIERS` (leave `PRESET_VIBES` alone for now — Task 2 deletes it):
+
+```ts
+// The LIVE vibe picker's options, extracted verbatim from TripForm so tests can
+// see exactly what users can click. Grows to the full canonical vocabulary in
+// this same task; see vibe-vocabulary.guard.test.ts.
+export const VIBE_OPTIONS: { value: string; label: string; icon: string }[] = [
+  { value: 'tropical', icon: '🌴', label: 'Tropical' },
+  { value: 'mountains', icon: '🏔️', label: 'Mountains' },
+  { value: 'big_city', icon: '🏙️', label: 'Big City' },
+  { value: 'beach', icon: '🌊', label: 'Beach' },
+  { value: 'winter', icon: '❄️', label: 'Winter Escape' },
+  { value: 'cultural', icon: '🏛️', label: 'Cultural' },
+  { value: 'adventure', icon: '🏕️', label: 'Adventure' },
+];
+```
+
+*(Note: this block deliberately still reads `'Winter Escape'` — it is the VERBATIM pre-fix picker, extracted unchanged so the regression guard fails against the real current state. The relabel to `'Winter Escapade'` — Jose's binding decision, review B1 — lands in Step 5 together with the rest of the canonical vocabulary.)*
+
+In `src/components/TripForm.tsx`: delete the private `VIBES` constant (lines 27–35), add `import { VIBE_OPTIONS } from "@/lib/trip-types";`, and replace the two `VIBES` references: the render loop `{VIBES.map(v => ...)}` → `{VIBE_OPTIONS.map(v => ...)}` (body unchanged — still `{v.icon} {v.label}`), and in `addCustomVibes` (~line 267) `!VIBES.some(v => v.value === i)` → `!VIBE_OPTIONS.some(v => v.value === i)`.
+
+Run: `npm run test:unit` → Expected: 21 files, 156 tests, all pass (nothing observable changed).
+
+- [ ] **Step 2: Write the regression guard (it will fail — that is the point)**
 
 Create `src/lib/atlas/vibe-vocabulary.guard.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
 
-import { PRESET_VIBES } from "@/lib/trip-types";
+import { VIBE_OPTIONS } from "@/lib/trip-types";
 import { DESTINATION_VIBES } from "./destination-vibes";
 
-// The single most important test in this change. The live bug (culture,food -> 0
-// cards, masked for months by a fabricated fallback) was a silent drift between
-// the words users can pick and the words the taxonomy carries. If this file
-// fails, the vibe filter is broken for real users — do not weaken it.
+// THE regression guard (spec §3.2, the most important deliverable). The live
+// bug — the Mountains chip dead on a one-letter mismatch, the winter chip
+// (now "Winter Escapade") backed by zero data, and foodie/romantic/nightlife
+// data no user could
+// select — was a silent drift between the words users can click and the words
+// the taxonomy carries. Because min_overlap=2 for 2+ vibes, one dud chip
+// zeroed 11 of 21 two-vibe combos (52%), and a fabricated fallback masked it
+// for months. If any test in this file fails, the vibe filter is broken for
+// real users: fix the data, never weaken this file.
 
 const COVERAGE_FLOOR = 8;
+
+// The canonical vocabulary this change ships. Sorted for comparison.
+const CANONICAL_TARGET = [
+  "adventure", "beach", "big_city", "cultural", "family", "foodie",
+  "mountains", "nightlife", "romantic", "tropical", "winter",
+];
+
+const pickerValues = () => VIBE_OPTIONS.map((option) => option.value);
 
 function taxonomyVocabulary(): Set<string> {
   const vocabulary = new Set<string>();
@@ -234,216 +253,306 @@ function taxonomyVocabulary(): Set<string> {
 }
 
 describe("vibe vocabulary regression guard", () => {
-  it("every vibe a user can pick exists in the taxonomy", () => {
+  it("every vibe a user can click exists in the taxonomy (no dud chips)", () => {
     const vocabulary = taxonomyVocabulary();
-    for (const vibe of PRESET_VIBES) {
-      expect(vocabulary.has(vibe), `picker vibe "${vibe}" matches nothing in DESTINATION_VIBES`).toBe(true);
+    for (const value of pickerValues()) {
+      expect(vocabulary.has(value), `picker vibe "${value}" matches nothing in DESTINATION_VIBES`).toBe(true);
     }
   });
 
-  it("the taxonomy vocabulary EQUALS the canonical picker set (no orphan tags)", () => {
-    expect([...taxonomyVocabulary()].sort()).toEqual([...PRESET_VIBES].sort());
+  it("the taxonomy vocabulary EQUALS the picker vocabulary (no orphan tags)", () => {
+    expect([...taxonomyVocabulary()].sort()).toEqual([...pickerValues()].sort());
   });
 
-  it(`every canonical vibe is carried by at least ${COVERAGE_FLOOR} destinations`, () => {
-    for (const vibe of PRESET_VIBES) {
-      const carriers = Object.values(DESTINATION_VIBES).filter((tags) => tags.has(vibe)).length;
-      expect(carriers, `"${vibe}" is carried by only ${carriers} destinations`).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+  it(`every pickable vibe is carried by at least ${COVERAGE_FLOOR} destinations (a chip that exists but matches nothing is the bug we shipped)`, () => {
+    for (const value of pickerValues()) {
+      const carriers = Object.values(DESTINATION_VIBES).filter((tags) =>
+        (tags as ReadonlySet<string>).has(value)
+      ).length;
+      expect(carriers, `"${value}" is carried by only ${carriers} destinations`).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
     }
   });
 
-  it("the picker exposes exactly the 10 canonical vibes", () => {
-    expect([...PRESET_VIBES].sort()).toEqual(
-      ["adventure", "beach", "city", "culture", "family", "food", "nature", "nightlife", "romantic", "wellness"]
-    );
+  it("the picker exposes exactly the 11 canonical vibes", () => {
+    expect([...pickerValues()].sort()).toEqual(CANONICAL_TARGET);
+  });
+
+  // TODO(task-3): add the nameability guard here once resolveCityName exists
+  // ("every taxonomy destination resolves to a display name").
+});
+```
+
+- [ ] **Step 3: Write the engine pins (they will also fail)**
+
+Append to `src/lib/atlas/surprise.test.ts` (uses the file's existing `popular()` / `item()` helpers; mocked TP per spec §4):
+
+```ts
+describe("LIVE BUG PINS: the dud chips must return destinations (mocked TP)", () => {
+  // Proven live 2026-07-12 (origin JFK): mountains,cultural -> 0 · winter,beach -> 0 ·
+  // mountains,winter -> 0. Pre-fix these fail because the taxonomy tag was the
+  // singular 'mountain' and no destination carried 'winter' at all.
+  it.each([
+    ["mountains,cultural", "SEA", "Seattle, Washington"],
+    ["winter,beach", "YVR", "Vancouver, Canada"],
+    ["mountains,winter", "DEN", "Denver, Colorado"],
+  ])("vibes=%s returns at least the matching mocked route", async (vibes, code, cityName) => {
+    popular([item(code, 150)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes, departMonth: "2026-08" });
+
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.map((d) => d.name)).toContain(cityName);
+  });
+});
+
+describe("ORPHANS UNLOCKED + NEW VIBES: each newly exposed vibe matches real routes", () => {
+  it.each([
+    ["foodie", "BNA", "Nashville, Tennessee"],
+    ["romantic", "PRG", "Prague, Czech Republic"],
+    ["nightlife", "MSY", "New Orleans, Louisiana"],
+    ["family", "MCO", "Orlando, Florida"],
+    ["winter", "DEN", "Denver, Colorado"],
+  ])("single vibe %s surfaces the matching mocked route", async (vibes, code, cityName) => {
+    popular([item(code, 99)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes, departMonth: "2026-08" });
+
+    expect(result.destinations.map((d) => d.name)).toContain(cityName);
   });
 });
 ```
 
-**Amendment once Task 2 lands** (leave a `TODO(task-2)` comment now, resolve it in Task 2 Step 8): add a fifth guard asserting every taxonomy key is nameable, so a curated destination can never silently vanish from the filler:
+(`foodie`/`romantic`/`nightlife` single-vibe searches already work at the ENGINE level pre-fix — their orphan-ness is that no user could select them, which the guard's equality test pins. `family`, `winter`, and the dud pins fail pre-fix at the engine level too.)
 
-```ts
-  it("every taxonomy destination resolves to a display name (unnameable = invisible to users)", async () => {
-    const { resolveCityName } = await import("./city-names");
-    for (const code of Object.keys(DESTINATION_VIBES)) {
-      expect(resolveCityName(code), `taxonomy code ${code} has no display name`).not.toBeNull();
-    }
-  });
+- [ ] **Step 4: Run the new tests — record the pre-fix failure as evidence**
+
+```bash
+mkdir -p docs/superpowers/evidence/2026-07-12-vibe-fix
+npx vitest run src/lib/atlas/vibe-vocabulary.guard.test.ts src/lib/atlas/surprise.test.ts 2>&1 | tee docs/superpowers/evidence/2026-07-12-vibe-fix/guard-prefix-failure.txt
 ```
 
-- [ ] **Step 2: Run the guard — it MUST fail against the pre-fix state (record this output as evidence)**
+Expected: FAIL, specifically —
+- guard "no dud chips": `mountains` and `winter` missing from the taxonomy (the two dud chips);
+- guard "no orphan tags": vocabulary mismatch listing `foodie`, `romantic`, `nightlife`, `mountain` as taxonomy words no picker exposes;
+- guard floor: `mountains` carried by 0 (singular mismatch), `winter` by 0;
+- guard "exactly 11": picker has 7;
+- pins: `mountains,cultural`, `winter,beach`, `mountains,winter`, `family`, `winter` return 0 destinations.
 
-Run: `npx vitest run src/lib/atlas/vibe-vocabulary.guard.test.ts`
-Expected: FAIL — all four tests. (`city` etc. missing from taxonomy; vocabulary is the old 9-tag set; `PRESET_VIBES` has 8 entries.)
+This file IS the spec-required demonstration that the guard would have failed pre-fix. Keep it — it ships with the evidence in Task 8.
 
-- [ ] **Step 3: Update `src/lib/trip-types.ts`**
+- [ ] **Step 5: Fix `src/lib/trip-types.ts` — the full canonical vocabulary**
 
-Replace lines 51–53 with:
+Replace the Step-1 `VIBE_OPTIONS` block with:
 
 ```ts
-export const PRESET_VIBES = [
-  'beach', 'city', 'adventure', 'food', 'culture', 'nature', 'nightlife', 'wellness', 'family', 'romantic',
+// The canonical vibe vocabulary — the single source of truth for every vibe a
+// user can pick anywhere in the product. The taxonomy in
+// src/lib/atlas/destination-vibes.ts is typed against CanonicalVibe (a stray
+// tag is a compile error) and vibe-vocabulary.guard.test.ts fails the build if
+// picker and taxonomy ever drift apart again.
+export const CANONICAL_VIBES = [
+  'tropical', 'mountains', 'big_city', 'beach', 'winter', 'cultural', 'adventure',
+  'foodie', 'romantic', 'nightlife', 'family',
 ] as const;
 
-export type PresetVibe = (typeof PRESET_VIBES)[number];
+export type CanonicalVibe = (typeof CANONICAL_VIBES)[number];
 
-// Typed against PresetVibe so a picker can never carry a vibe the taxonomy
-// doesn't know: adding/renaming a vibe without updating this map is a compile error.
-export const VIBE_ICONS: Record<PresetVibe, string> = {
+export const VIBE_ICONS: Record<CanonicalVibe, string> = {
+  tropical: '🌴',
+  mountains: '🏔️',
+  big_city: '🏙️',
   beach: '🌊',
-  city: '🏙️',
+  winter: '❄️',
+  cultural: '🏛️',
   adventure: '🏕️',
-  food: '🍜',
-  culture: '🏛️',
-  nature: '🌲',
-  nightlife: '🎶',
-  wellness: '🧘',
-  family: '👨‍👩‍👧‍👦',
+  foodie: '🍜',
   romantic: '💕',
+  nightlife: '🎶',
+  family: '👨‍👩‍👧‍👦',
 };
 
-export const VIBE_OPTIONS: { value: PresetVibe; icon: string }[] = PRESET_VIBES.map((value) => ({
-  value,
-  icon: VIBE_ICONS[value],
-}));
+// English default labels; the UI renders localized labels from
+// messages/*/common.json tripForm.vibes (same keys).
+export const VIBE_LABELS: Record<CanonicalVibe, string> = {
+  tropical: 'Tropical',
+  mountains: 'Mountains',
+  big_city: 'Big City',
+  beach: 'Beach',
+  winter: 'Winter Escapade',
+  cultural: 'Cultural',
+  adventure: 'Adventure',
+  foodie: 'Food',
+  romantic: 'Romantic',
+  nightlife: 'Nightlife',
+  family: 'Family',
+};
+
+export const VIBE_OPTIONS: { value: CanonicalVibe; label: string; icon: string }[] =
+  CANONICAL_VIBES.map((value) => ({ value, label: VIBE_LABELS[value], icon: VIBE_ICONS[value] }));
 ```
 
-- [ ] **Step 4: Rewrite `src/lib/atlas/destination-vibes.ts` with the full canonical table**
+TripForm now renders 11 chips automatically (still English labels — Task 2 localizes them; the current 7 are hardcoded English today, so this is no regression).
 
-Replace the entire file content. Every entry below is the exact set from the Canonical Tag Table above — transcribe it verbatim:
+- [ ] **Step 6: Rewrite `src/lib/atlas/destination-vibes.ts` with the full canonical table**
+
+Replace the entire file. This is the exact table — transcribe verbatim (existing 82 entries keep their current order; edits per the Editorial Tag Changes section; 19 new entries appended at the END so the curated filler's tie order for existing destinations is unchanged):
 
 ```ts
-import type { PresetVibe } from "@/lib/trip-types";
+import type { CanonicalVibe } from "@/lib/trip-types";
 
-// Canonical vibe taxonomy. Vocabulary is exactly PRESET_VIBES — enforced at
-// compile time by PresetVibe and at test time by vibe-vocabulary.guard.test.ts.
-// Keys are the codes TravelPayouts returns: mostly airport codes, plus metro
-// CITY codes (NYC, CHI, ORL, ...) which TP uses for its most popular destinations.
-export const DESTINATION_VIBES: Record<string, ReadonlySet<PresetVibe>> = {
-  // ── Caribbean & Mexico ──────────────────────────────────────────────
-  CUN: new Set<PresetVibe>(['beach', 'city', 'nightlife', 'romantic', 'family', 'wellness']),
-  SJU: new Set<PresetVibe>(['beach', 'city', 'culture', 'nightlife']),
-  PUJ: new Set<PresetVibe>(['beach', 'romantic', 'family', 'wellness']),
-  MBJ: new Set<PresetVibe>(['beach', 'romantic', 'adventure']),
-  NAS: new Set<PresetVibe>(['beach', 'romantic', 'family']),
-  GCM: new Set<PresetVibe>(['beach', 'romantic', 'family']),
-  BGI: new Set<PresetVibe>(['beach', 'romantic', 'culture']),
-  ANU: new Set<PresetVibe>(['beach', 'romantic']),
-  STT: new Set<PresetVibe>(['beach', 'romantic', 'adventure']),
-  STX: new Set<PresetVibe>(['beach', 'adventure']),
-  SXM: new Set<PresetVibe>(['beach', 'nightlife', 'romantic']),
-  PLS: new Set<PresetVibe>(['beach', 'romantic', 'family']),
-  SJD: new Set<PresetVibe>(['beach', 'romantic', 'adventure', 'wellness']),
-  PVR: new Set<PresetVibe>(['beach', 'romantic', 'nightlife']),
-  CTG: new Set<PresetVibe>(['beach', 'culture', 'romantic']),
-  SDQ: new Set<PresetVibe>(['beach', 'city']),
-  ZIH: new Set<PresetVibe>(['beach', 'romantic', 'wellness']),
-  HAV: new Set<PresetVibe>(['beach', 'culture', 'nightlife']),
-  MCO: new Set<PresetVibe>(['beach', 'city', 'adventure', 'family']),
-  MIA: new Set<PresetVibe>(['beach', 'city', 'nightlife']),
-  FLL: new Set<PresetVibe>(['beach', 'family']),
-  TPA: new Set<PresetVibe>(['beach', 'family']),
-  RSW: new Set<PresetVibe>(['beach', 'family', 'nature']),
-  SAN: new Set<PresetVibe>(['beach', 'city', 'food', 'family']),
-  HNL: new Set<PresetVibe>(['beach', 'romantic', 'adventure', 'family', 'nature']),
-  // ── US & Canada ─────────────────────────────────────────────────────
-  JFK: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife', 'romantic']),
-  LGA: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife', 'romantic']),
-  EWR: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife', 'romantic']),
-  LAX: new Set<PresetVibe>(['city', 'beach', 'culture', 'food', 'nightlife']),
-  ORD: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  LAS: new Set<PresetVibe>(['nightlife', 'city', 'adventure']),
-  ATL: new Set<PresetVibe>(['city', 'culture', 'food']),
-  DFW: new Set<PresetVibe>(['city', 'food']),
-  DEN: new Set<PresetVibe>(['nature', 'adventure', 'city']),
-  SEA: new Set<PresetVibe>(['city', 'culture', 'food', 'nature']),
-  BOS: new Set<PresetVibe>(['city', 'culture', 'food']),
-  SFO: new Set<PresetVibe>(['city', 'culture', 'food']),
-  MSY: new Set<PresetVibe>(['culture', 'food', 'nightlife']),
-  BNA: new Set<PresetVibe>(['culture', 'nightlife', 'food']),
-  AUS: new Set<PresetVibe>(['culture', 'nightlife', 'food']),
-  PDX: new Set<PresetVibe>(['food', 'culture', 'nature']),
-  PHX: new Set<PresetVibe>(['adventure', 'nature', 'wellness']),
-  // ── Europe ──────────────────────────────────────────────────────────
-  LHR: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  CDG: new Set<PresetVibe>(['city', 'culture', 'food', 'romantic']),
-  FCO: new Set<PresetVibe>(['city', 'culture', 'food', 'romantic']),
-  BCN: new Set<PresetVibe>(['city', 'beach', 'culture', 'food', 'nightlife']),
-  MAD: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  AMS: new Set<PresetVibe>(['city', 'culture', 'nightlife']),
-  LIS: new Set<PresetVibe>(['city', 'culture', 'food', 'beach', 'romantic']),
-  ATH: new Set<PresetVibe>(['culture', 'beach', 'food', 'romantic']),
-  IST: new Set<PresetVibe>(['city', 'culture', 'food']),
-  DUB: new Set<PresetVibe>(['culture', 'food', 'nightlife']),
-  CPH: new Set<PresetVibe>(['culture', 'food', 'city', 'family']),
-  PRG: new Set<PresetVibe>(['culture', 'romantic', 'nightlife']),
-  BUD: new Set<PresetVibe>(['culture', 'nightlife', 'romantic', 'wellness']),
-  KEF: new Set<PresetVibe>(['adventure', 'romantic', 'nature', 'wellness']),
-  // ── Latin America ───────────────────────────────────────────────────
-  GIG: new Set<PresetVibe>(['beach', 'city', 'culture', 'nightlife']),
-  GRU: new Set<PresetVibe>(['city', 'culture', 'food']),
-  EZE: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  BOG: new Set<PresetVibe>(['city', 'culture', 'food', 'nature']),
-  MDE: new Set<PresetVibe>(['city', 'culture', 'food', 'nature']),
-  LIM: new Set<PresetVibe>(['city', 'culture', 'food']),
-  SJO: new Set<PresetVibe>(['adventure', 'beach', 'nature']),
-  PTY: new Set<PresetVibe>(['city', 'beach']),
-  BZE: new Set<PresetVibe>(['beach', 'adventure', 'nature']),
-  // ── Asia, Pacific, Middle East, Africa ──────────────────────────────
-  BKK: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife', 'beach', 'wellness']),
-  DPS: new Set<PresetVibe>(['beach', 'culture', 'romantic', 'adventure', 'wellness', 'nature']),
-  SIN: new Set<PresetVibe>(['city', 'culture', 'food', 'family']),
-  HKG: new Set<PresetVibe>(['city', 'culture', 'food']),
-  NRT: new Set<PresetVibe>(['city', 'culture', 'food']),
-  HND: new Set<PresetVibe>(['city', 'culture', 'food']),
-  ICN: new Set<PresetVibe>(['city', 'culture', 'food']),
-  DXB: new Set<PresetVibe>(['city', 'beach', 'family']),
-  CMB: new Set<PresetVibe>(['beach', 'culture', 'wellness']),
-  SYD: new Set<PresetVibe>(['city', 'beach', 'culture', 'food']),
-  AKL: new Set<PresetVibe>(['adventure', 'culture', 'nature']),
-  CPT: new Set<PresetVibe>(['city', 'beach', 'adventure', 'culture', 'food', 'nature']),
-  NBO: new Set<PresetVibe>(['adventure', 'culture', 'nature']),
-  RAK: new Set<PresetVibe>(['culture', 'food', 'romantic', 'wellness']),
-  CAI: new Set<PresetVibe>(['culture', 'city']),
-  HRG: new Set<PresetVibe>(['beach', 'adventure']),
-  SSH: new Set<PresetVibe>(['beach', 'adventure']),
-  // ── TravelPayouts metro CITY codes (TP's most-returned destinations) ─
-  NYC: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife', 'romantic']),
-  CHI: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  ORL: new Set<PresetVibe>(['family', 'adventure']),
-  WAS: new Set<PresetVibe>(['city', 'culture', 'family']),
-  PAR: new Set<PresetVibe>(['romantic', 'culture', 'food', 'city']),
-  LON: new Set<PresetVibe>(['city', 'culture', 'food', 'nightlife']),
-  YTO: new Set<PresetVibe>(['city', 'culture', 'food', 'family']),
-  HOU: new Set<PresetVibe>(['city', 'food', 'family']),
-  PIT: new Set<PresetVibe>(['city', 'culture']),
-  MOW: new Set<PresetVibe>(['city', 'culture', 'nightlife']),
-  RDU: new Set<PresetVibe>(['city', 'food']),
-  ANC: new Set<PresetVibe>(['nature', 'adventure']),
-  BEG: new Set<PresetVibe>(['city', 'nightlife', 'culture']),
+// Canonical vibe taxonomy. Vocabulary is exactly CANONICAL_VIBES — enforced at
+// compile time by CanonicalVibe and at test time by
+// vibe-vocabulary.guard.test.ts. Keys are the codes TravelPayouts returns:
+// mostly airport codes, plus metro CITY codes (NYC, CHI, ORL, ...) which TP
+// uses for its most popular destinations. Entry order matters: the curated
+// filler breaks overlap ties by insertion order, so new entries go at the end.
+export const DESTINATION_VIBES: Record<string, ReadonlySet<CanonicalVibe>> = {
+  CUN: new Set<CanonicalVibe>(['tropical', 'beach', 'big_city', 'nightlife', 'romantic', 'family']),
+  SJU: new Set<CanonicalVibe>(['tropical', 'beach', 'big_city', 'cultural', 'nightlife']),
+  PUJ: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'family']),
+  MBJ: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'adventure']),
+  NAS: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'family']),
+  GCM: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'family']),
+  BGI: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'cultural']),
+  ANU: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic']),
+  STT: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'adventure']),
+  STX: new Set<CanonicalVibe>(['tropical', 'beach', 'adventure']),
+  SXM: new Set<CanonicalVibe>(['tropical', 'beach', 'nightlife', 'romantic']),
+  PLS: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'family']),
+  SJD: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'adventure']),
+  PVR: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'nightlife']),
+  CTG: new Set<CanonicalVibe>(['tropical', 'beach', 'cultural', 'romantic']),
+  SDQ: new Set<CanonicalVibe>(['tropical', 'beach', 'big_city']),
+  ZIH: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic']),
+  HAV: new Set<CanonicalVibe>(['tropical', 'beach', 'cultural']),
+  MCO: new Set<CanonicalVibe>(['beach', 'big_city', 'adventure', 'family']),
+  MIA: new Set<CanonicalVibe>(['beach', 'big_city', 'nightlife', 'tropical']),
+  FLL: new Set<CanonicalVibe>(['beach', 'tropical', 'family']),
+  TPA: new Set<CanonicalVibe>(['beach', 'family']),
+  RSW: new Set<CanonicalVibe>(['beach', 'family']),
+  SAN: new Set<CanonicalVibe>(['beach', 'big_city', 'foodie', 'family']),
+  HNL: new Set<CanonicalVibe>(['tropical', 'beach', 'romantic', 'adventure', 'family']),
+  JFK: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife', 'romantic']),
+  LGA: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife', 'romantic']),
+  EWR: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife', 'romantic']),
+  LAX: new Set<CanonicalVibe>(['big_city', 'beach', 'cultural', 'foodie', 'nightlife']),
+  ORD: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  LAS: new Set<CanonicalVibe>(['nightlife', 'big_city', 'adventure']),
+  ATL: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  DFW: new Set<CanonicalVibe>(['big_city', 'foodie']),
+  DEN: new Set<CanonicalVibe>(['mountains', 'adventure', 'big_city', 'winter']),
+  SEA: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'mountains']),
+  BOS: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  SFO: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  MSY: new Set<CanonicalVibe>(['cultural', 'foodie', 'nightlife']),
+  BNA: new Set<CanonicalVibe>(['cultural', 'nightlife', 'foodie']),
+  AUS: new Set<CanonicalVibe>(['cultural', 'nightlife', 'foodie']),
+  PDX: new Set<CanonicalVibe>(['foodie', 'cultural']),
+  PHX: new Set<CanonicalVibe>(['adventure', 'mountains']),
+  LHR: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  CDG: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'romantic']),
+  FCO: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'romantic']),
+  BCN: new Set<CanonicalVibe>(['big_city', 'beach', 'cultural', 'foodie', 'nightlife']),
+  MAD: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  AMS: new Set<CanonicalVibe>(['big_city', 'cultural', 'nightlife']),
+  LIS: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'beach', 'romantic']),
+  ATH: new Set<CanonicalVibe>(['cultural', 'beach', 'foodie', 'romantic']),
+  IST: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  DUB: new Set<CanonicalVibe>(['cultural', 'foodie']),
+  CPH: new Set<CanonicalVibe>(['cultural', 'foodie', 'big_city', 'family']),
+  PRG: new Set<CanonicalVibe>(['cultural', 'romantic', 'nightlife']),
+  BUD: new Set<CanonicalVibe>(['cultural', 'nightlife', 'romantic']),
+  KEF: new Set<CanonicalVibe>(['adventure', 'romantic', 'mountains', 'winter']),
+  GIG: new Set<CanonicalVibe>(['beach', 'big_city', 'cultural', 'nightlife', 'tropical']),
+  GRU: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  EZE: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  BOG: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'mountains']),
+  MDE: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'mountains', 'nightlife']),
+  LIM: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  SJO: new Set<CanonicalVibe>(['adventure', 'tropical', 'beach', 'mountains']),
+  PTY: new Set<CanonicalVibe>(['big_city', 'tropical', 'beach']),
+  BZE: new Set<CanonicalVibe>(['tropical', 'beach', 'adventure']),
+  BKK: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife', 'tropical']),
+  DPS: new Set<CanonicalVibe>(['tropical', 'beach', 'cultural', 'romantic', 'adventure']),
+  SIN: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'family']),
+  HKG: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  NRT: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  HND: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  ICN: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie']),
+  DXB: new Set<CanonicalVibe>(['big_city', 'beach', 'family']),
+  CMB: new Set<CanonicalVibe>(['tropical', 'beach', 'cultural']),
+  SYD: new Set<CanonicalVibe>(['big_city', 'beach', 'cultural', 'foodie']),
+  AKL: new Set<CanonicalVibe>(['adventure', 'cultural']),
+  CPT: new Set<CanonicalVibe>(['big_city', 'beach', 'adventure', 'cultural', 'foodie', 'mountains']),
+  NBO: new Set<CanonicalVibe>(['adventure', 'cultural']),
+  RAK: new Set<CanonicalVibe>(['cultural', 'foodie', 'romantic']),
+  CAI: new Set<CanonicalVibe>(['cultural', 'big_city']),
+  HRG: new Set<CanonicalVibe>(['beach', 'tropical']),
+  SSH: new Set<CanonicalVibe>(['beach', 'tropical']),
+  // ── NEW: genuine snow/ski winter destinations (back the Winter Escapade
+  // chip) + Málaga, which carries NO winter tag (warm-weather; spec bans it) ──
+  YVR: new Set<CanonicalVibe>(['mountains', 'winter', 'big_city', 'beach', 'foodie', 'family']),
+  SLC: new Set<CanonicalVibe>(['mountains', 'winter', 'adventure', 'family']),
+  ZRH: new Set<CanonicalVibe>(['mountains', 'winter', 'big_city', 'cultural']),
+  GVA: new Set<CanonicalVibe>(['mountains', 'winter', 'romantic', 'cultural']),
+  MUC: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'winter']),
+  AGP: new Set<CanonicalVibe>(['beach', 'cultural', 'foodie']),
+  // ── NEW: TravelPayouts metro CITY codes (TP's most-returned destinations) ──
+  NYC: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife', 'romantic']),
+  CHI: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  ORL: new Set<CanonicalVibe>(['family', 'adventure']),
+  WAS: new Set<CanonicalVibe>(['big_city', 'cultural', 'family']),
+  PAR: new Set<CanonicalVibe>(['romantic', 'cultural', 'foodie', 'big_city']),
+  LON: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'nightlife']),
+  YTO: new Set<CanonicalVibe>(['big_city', 'cultural', 'foodie', 'family']),
+  HOU: new Set<CanonicalVibe>(['big_city', 'foodie', 'family']),
+  PIT: new Set<CanonicalVibe>(['big_city', 'cultural']),
+  MOW: new Set<CanonicalVibe>(['big_city', 'cultural', 'nightlife', 'winter']),
+  RDU: new Set<CanonicalVibe>(['big_city', 'foodie']),
+  ANC: new Set<CanonicalVibe>(['mountains', 'adventure', 'winter']),
+  BEG: new Set<CanonicalVibe>(['big_city', 'nightlife', 'cultural']),
 };
 ```
 
-- [ ] **Step 5: Rewrite `src/lib/atlas/destination-vibes.test.ts` (migration no-loss + spot checks)**
+- [ ] **Step 7: Add the 4 curated names to `src/lib/atlas/travelpayouts-client.ts`**
 
-The old file asserts the old vocabulary — replace it entirely. The no-loss test freezes the OLD table as a fixture and asserts the new table is a superset of the mechanically-migrated old tags (renames applied, `tropical` folded). This is the spec-risk mitigation for "tag migration silently drops a destination's tags" — deliberately implemented as *superset of migrated old*, not "count never decreases", because the intentional `tropical→beach` fold reduces raw counts by design (spec §3.1).
+The engine names curated-filler destinations via `IATA_TO_CITY` until Task 3 lands, so the new taxonomy destinations must be curated NOW or a `winter` search would render raw `SLC`/`YVR` codes mid-branch. `ZRH` and `MUC` are already curated. Add, matching each section's style:
+
+In the `// US domestic` block (after `"JAX": "Jacksonville, Florida",`):
+
+```ts
+  "SLC": "Salt Lake City, Utah",
+  // Canada
+  "YVR": "Vancouver, Canada",
+```
+
+In the `// Europe` block (after `"ZRH": "Zurich, Switzerland",`):
+
+```ts
+  "GVA": "Geneva, Switzerland",
+```
+
+and (after `"MAD": "Madrid, Spain",`):
+
+```ts
+  "AGP": "Málaga, Spain",
+```
+
+- [ ] **Step 8: Rewrite `src/lib/atlas/destination-vibes.test.ts` (migration no-loss + spot checks)**
+
+The old file asserts the pre-fix vocabulary (`CLOSED_VOCABULARY` with `mountain`, 82 keys) — replace it entirely. The no-loss test freezes the OLD table and asserts every destination's new tags are a superset of its old tags with the single rename applied (spec §5 risk: "tag migration silently drops a destination's tags"):
 
 ```ts
 import { describe, expect, it } from 'vitest';
 
-import type { PresetVibe } from '@/lib/trip-types';
+import type { CanonicalVibe } from '@/lib/trip-types';
 import { DESTINATION_VIBES } from './destination-vibes';
 
-const RENAMES: Record<string, string> = {
-  big_city: 'city',
-  cultural: 'culture',
-  foodie: 'food',
-  mountain: 'nature',
-  tropical: 'beach',
-};
+// The only rename in the migration. Everything else is purely additive.
+const RENAMES: Record<string, string> = { mountain: 'mountains' };
 
-// Frozen pre-migration table (destination-vibes.ts as of 470b86a). Test fixture
-// only — the legacy tag words below must never appear in product source.
+// Frozen pre-fix table (destination-vibes.ts as of 1f2c54d). Test fixture only —
+// the singular 'mountain' below is the frozen BUG, not product vocabulary.
 const PRE_MIGRATION_TAGS: Record<string, string[]> = {
   CUN: ['tropical', 'beach', 'big_city', 'nightlife', 'romantic'],
   SJU: ['tropical', 'beach', 'big_city', 'cultural', 'nightlife'],
@@ -529,35 +638,36 @@ const PRE_MIGRATION_TAGS: Record<string, string[]> = {
   SSH: ['beach', 'tropical'],
 };
 
-const NEW_CITY_CODES = [
+const NEW_CODES = [
+  'YVR', 'SLC', 'ZRH', 'GVA', 'MUC', 'AGP',
   'NYC', 'CHI', 'ORL', 'WAS', 'PAR', 'LON', 'YTO', 'HOU', 'PIT', 'MOW', 'RDU', 'ANC', 'BEG',
 ];
 
 describe('DESTINATION_VIBES (canonical)', () => {
-  it('contains every pre-migration destination plus the 13 TP city codes (95 total)', () => {
+  it('contains every pre-fix destination plus the 19 new codes (101 total)', () => {
     const keys = Object.keys(DESTINATION_VIBES);
-    expect(keys).toHaveLength(95);
+    expect(keys).toHaveLength(101);
     for (const code of Object.keys(PRE_MIGRATION_TAGS)) {
       expect(keys, `destination ${code} was dropped by the migration`).toContain(code);
     }
-    for (const code of NEW_CITY_CODES) {
-      expect(keys, `new city code ${code} is missing`).toContain(code);
+    for (const code of NEW_CODES) {
+      expect(keys, `new code ${code} is missing`).toContain(code);
     }
   });
 
-  it('no destination lost information: new tags ⊇ mechanically-migrated old tags', () => {
+  it('no destination lost information: new tags ⊇ old tags with the rename applied', () => {
     for (const [code, oldTags] of Object.entries(PRE_MIGRATION_TAGS)) {
-      const migrated = new Set(oldTags.map((tag) => RENAMES[tag] ?? tag));
-      for (const tag of migrated) {
+      for (const oldTag of oldTags) {
+        const migrated = RENAMES[oldTag] ?? oldTag;
         expect(
-          DESTINATION_VIBES[code].has(tag as PresetVibe),
-          `${code} lost migrated tag "${tag}"`
+          DESTINATION_VIBES[code].has(migrated as CanonicalVibe),
+          `${code} lost tag "${oldTag}" (expected "${migrated}")`
         ).toBe(true);
       }
     }
   });
 
-  it('every destination has at least one tag and three-letter uppercase keys', () => {
+  it('every destination has a three-letter uppercase key and at least one tag', () => {
     for (const [code, tags] of Object.entries(DESTINATION_VIBES)) {
       expect(code).toMatch(/^[A-Z]{3}$/);
       expect(tags.size).toBeGreaterThanOrEqual(1);
@@ -566,63 +676,361 @@ describe('DESTINATION_VIBES (canonical)', () => {
 
   it('spot-checks exact editorial tag sets', () => {
     const sorted = (code: string) => [...DESTINATION_VIBES[code]].sort();
-    expect(sorted('CUN')).toEqual(['beach', 'city', 'family', 'nightlife', 'romantic', 'wellness']);
-    expect(sorted('KEF')).toEqual(['adventure', 'nature', 'romantic', 'wellness']);
+    expect(sorted('CUN')).toEqual(['beach', 'big_city', 'family', 'nightlife', 'romantic', 'tropical']);
+    expect(sorted('DEN')).toEqual(['adventure', 'big_city', 'mountains', 'winter']);
+    expect(sorted('KEF')).toEqual(['adventure', 'mountains', 'romantic', 'winter']);
+    expect(sorted('YVR')).toEqual(['beach', 'big_city', 'family', 'foodie', 'mountains', 'winter']);
     expect(sorted('ORL')).toEqual(['adventure', 'family']);
-    expect(sorted('PAR')).toEqual(['city', 'culture', 'food', 'romantic']);
-    expect(sorted('ANC')).toEqual(['adventure', 'nature']);
-    expect(sorted('NYC')).toEqual(['city', 'culture', 'food', 'nightlife', 'romantic']);
+    expect(sorted('PAR')).toEqual(['big_city', 'cultural', 'foodie', 'romantic']);
+    expect(sorted('ANC')).toEqual(['adventure', 'mountains', 'winter']);
+    expect(sorted('NYC')).toEqual(['big_city', 'cultural', 'foodie', 'nightlife', 'romantic']);
+  });
+
+  it('exactly one 2-vibe combination is unsatisfiable at overlap 2: tropical+winter (the designed no-match fixture)', () => {
+    const all = Object.values(DESTINATION_VIBES);
+    const vocabulary = [...new Set(all.flatMap((tags) => [...tags]))].sort();
+    const impossible: string[] = [];
+    for (let i = 0; i < vocabulary.length; i += 1) {
+      for (let j = i + 1; j < vocabulary.length; j += 1) {
+        const a = vocabulary[i] as CanonicalVibe;
+        const b = vocabulary[j] as CanonicalVibe;
+        if (!all.some((tags) => tags.has(a) && tags.has(b))) impossible.push(`${a}+${b}`);
+      }
+    }
+    expect(impossible).toEqual(['tropical+winter']);
   });
 });
 ```
 
-- [ ] **Step 6: Pin the live bug in `src/lib/atlas/surprise.test.ts`**
+- [ ] **Step 9: Run the guard, pins, and full suite**
 
-Append this describe block (uses the file's existing `popular()` / `item()` helpers; mocked TP as spec §4 requires — these four assertions fail pre-fix because the old taxonomy had no `culture`/`food`/`city`/`nature`/`wellness` tags):
+Run: `npx vitest run src/lib/atlas/vibe-vocabulary.guard.test.ts src/lib/atlas/destination-vibes.test.ts src/lib/atlas/surprise.test.ts`
+Expected: PASS (all).
 
-```ts
-describe("LIVE BUG PINS: dead-vibe combinations must return destinations (mocked TP)", () => {
-  it.each([
-    ["culture,food", "FCO", "Rome, Italy"],
-    ["city,food", "SFO", "San Francisco, California"],
-    ["nature,wellness", "KEF", "Reykjavik, Iceland"],
-    ["culture,nightlife", "PRG", "Prague, Czech Republic"],
-  ])("vibes=%s returns at least the matching mocked route", async (vibes, code, cityName) => {
-    popular([item(code, 150)]);
+Then: `npm run test:unit`
+Expected: 0 failures, ≥ 167 tests (156 baseline − 4 replaced destination-vibes tests [the current file has FOUR tests, not three — verified] + ~15 new). The existing `surprise.test.ts` fixtures were checked against the new table during planning — `beach,nightlife`, `beach,romantic`, `tropical,beach,romantic`, and the enrichment/wire/http-budget fixtures produce identical results (all edits are additive and new entries sit after existing ones in iteration order). If an enrichment expectation drifts anyway, fix the FIXTURE to the new deterministic ranking — do NOT touch engine code in this task.
 
-    const result = await getSurpriseDestinations({ origin: "JFK", vibes, departMonth: "2026-08" });
-
-    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
-    expect(result.destinations.map((d) => d.name)).toContain(cityName);
-  });
-});
-```
-
-Also in the same file, update the two fixtures that use the retired word: in the "FLEXIBLE SENTINEL" tests nothing changes (they use `beach`), but search the file for `tropical` and replace any `vibes: "tropical,beach"` with `vibes: "beach,romantic"` (grep first: `grep -n tropical src/lib/atlas/surprise.test.ts`).
-
-- [ ] **Step 7: Update wire-test fixtures**
-
-In `src/lib/atlas/surprise.wire.test.ts` and `src/lib/atlas/surprise.http-budget.test.ts`, replace every `vibes: "tropical,beach"` with `vibes: "beach,romantic"`. Expected counts are unchanged (beach+romantic has ≥ 3 curated destinations with overlap ≥ 2, so the http-budget worst case stays 1 popular fetch + 3 enrichments × 2 attempts = 7).
-
-- [ ] **Step 8: Run the full unit suite**
-
-Run: `npm run test:unit`
-Expected: all files pass; total ≥ 165 tests (156 baseline − 4 removed old destination-vibes assertions + new guard/migration/pin tests), 0 failures. If `surprise.test.ts` enrichment expectations drift because the new taxonomy ranks different curated fillers, fix the FIXTURE expectations to the new deterministic ranking — do NOT touch engine code in this task.
-
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add src/lib/trip-types.ts src/lib/atlas/destination-vibes.ts src/lib/atlas/vibe-vocabulary.guard.test.ts src/lib/atlas/destination-vibes.test.ts src/lib/atlas/surprise.test.ts src/lib/atlas/surprise.wire.test.ts src/lib/atlas/surprise.http-budget.test.ts
-git commit -m "fix(vibes): unify picker/taxonomy vocabulary, add family+romantic, guard against drift
+git add src/lib/trip-types.ts src/components/TripForm.tsx src/lib/atlas/destination-vibes.ts src/lib/atlas/travelpayouts-client.ts src/lib/atlas/vibe-vocabulary.guard.test.ts src/lib/atlas/destination-vibes.test.ts src/lib/atlas/surprise.test.ts docs/superpowers/evidence/2026-07-12-vibe-fix/guard-prefix-failure.txt
+git commit -m "fix(vibes): repair the dud Mountains/Winter chips, expose orphan vibes, guard against drift
 
-The vibe filter never worked: 5 of 8 picker vibes matched nothing (culture,food -> 0
-cards live). Canonical vocabulary is now the picker's words; 82 destinations migrated
-+ 13 TP metro city codes tagged; regression guard fails the build on any future drift."
+Two of seven live chips matched nothing (taxonomy said 'mountain', nothing carried
+'winter') so 11 of 21 two-vibe combos returned zero — masked for months by the
+fabricated fallback this branch removed. The live picker's words are now the
+canonical vocabulary (VIBE_OPTIONS, single source of truth), the taxonomy is typed
+against it, foodie/romantic/nightlife/family become selectable, 5 genuine ski/winter
+destinations + Málaga + 13 TP metro city codes are tagged, the winter chip is
+relabeled 'Winter Escapade' (Jose, 2026-07-12), and a regression guard fails the
+build on any future drift (pre-fix failure recorded in evidence/)."
 ```
 
 ---
 
-### Task 2: City naming — generated table, `resolveCityName()`, and drop-don't-render
+### Task 2: Kill the dead vocabulary sources; localize the 11 chips
+
+Deletes `PRESET_VIBES` + `SurpriseMeQuiz` + `EntryTabs` (and `DestinationSuggestions`, which only `EntryTabs` imports) so a third vocabulary cannot re-emerge, switches the chips to genuinely localized labels (today non-EN users see hardcoded English), and updates the context strip so the raw internal value `big_city` never renders as a pill label.
+
+**Files:**
+- Delete: `src/components/EntryTabs.tsx`, `src/components/SurpriseMeQuiz.tsx`, `src/components/DestinationSuggestions.tsx`
+- Modify: `src/lib/trip-types.ts` (remove `PRESET_VIBES` + quiz-only exports)
+- Modify: `src/components/TripForm.tsx` (i18n labels)
+- Create: `src/components/TripForm.test.tsx`
+- Modify: `src/components/TripContextStrip.tsx`
+- Modify: `messages/{en,es,pt,fr,de,it}/common.json` (+4 vibe labels; −`quiz`/`entryTabs` namespaces)
+- Modify: `src/lib/atlas/no-fabrication.test.ts` (dead-code-stays-dead tripwire)
+- Modify: `src/lib/help-content.ts` (vibe examples)
+
+**Interfaces:**
+- Consumes: `VIBE_OPTIONS`, `VIBE_ICONS`, `CANONICAL_VIBES`, `CanonicalVibe` from `@/lib/trip-types` (Task 1); existing `tripForm.vibes.*` i18n keys.
+- Produces: `tripForm.vibes.{foodie,romantic,nightlife,family}` in all six locales (Task 7's clarification card labels vibes through these same keys).
+
+- [ ] **Step 1: Write the failing dead-code tripwire**
+
+Append to `src/lib/atlas/no-fabrication.test.ts` (add `existsSync` to the existing `node:fs` import):
+
+```ts
+// The three-mode entry system was rejected 2026-04-10 and its PRESET_VIBES was
+// a second, dead vibe vocabulary that fooled two analyses. It is deleted, and
+// this guard keeps it deleted. NOTE (anti-self-defeat): this scans exactly one
+// product file for "PRESET_VIBES" — never test files or docs — and uses
+// existsSync for the components, so nothing here can match the guard itself.
+describe("dead entry-system stays dead", () => {
+  it.each([
+    "src/components/EntryTabs.tsx",
+    "src/components/SurpriseMeQuiz.tsx",
+    "src/components/DestinationSuggestions.tsx",
+  ])("%s stays deleted", (file) => {
+    expect(existsSync(resolve(process.cwd(), file)), `${file} has been resurrected`).toBe(false);
+  });
+
+  it("trip-types.ts no longer carries a second vibe vocabulary", () => {
+    const content = readFileSync(resolve(process.cwd(), "src/lib/trip-types.ts"), "utf-8");
+    expect(content).not.toContain("PRESET_VIBES");
+  });
+});
+```
+
+Run: `npx vitest run src/lib/atlas/no-fabrication.test.ts` → Expected: the 4 new assertions FAIL (files exist, `PRESET_VIBES` present); everything else passes.
+
+- [ ] **Step 2: Verify zero importers, then delete**
+
+```bash
+grep -rn "EntryTabs" src tests --include="*.ts" --include="*.tsx" | grep -v "no-fabrication.test"
+grep -rn "SurpriseMeQuiz\|from ['\"]./DestinationSuggestions['\"]" src tests --include="*.ts" --include="*.tsx" | grep -v "no-fabrication.test"
+grep -rn "PRESET_VIBES\|QuizAnswers\|QuizBudgetTier\|QuizWhen\|QuizWho\|BUDGET_TIERS\|QUIZ_WHO_OPTIONS\|EntryMode" src tests --include="*.ts" --include="*.tsx"
+```
+
+Expected (verified during planning): the first two match only the three doomed files themselves (`EntryTabs.tsx` imports the other two); the third matches only `trip-types.ts`, the doomed files, and the Step-1 tripwire you just wrote in `no-fabrication.test.ts` (it names `PRESET_VIBES` in order to ban it — that match is expected and stays). `DestinationSuggestion` **singular** in `travelpayouts-client.ts` is a different, live interface — do not touch it. If any OTHER file matches, STOP and flag before deleting.
+
+```bash
+git rm src/components/EntryTabs.tsx src/components/SurpriseMeQuiz.tsx src/components/DestinationSuggestions.tsx
+```
+
+Then replace `src/lib/trip-types.ts` in full with (this deletes `EntryMode`, the `Quiz*` types, `DestinationSuggestion`, `BUDGET_TIERS`, `QUIZ_WHO_OPTIONS`, and `PRESET_VIBES` — their only consumers just died; `TrendingDestination` stays for `src/config/destinations.ts`):
+
+```ts
+// Shared trip-planning constants and types.
+
+export interface TrendingDestination {
+  city: string;
+  country: string;
+  code: string; // airport code
+  image: string;
+  viatorDestId?: string;
+  gygLocationId?: string;
+  discoverCarsSlug?: string;
+  articleSlug?: string;
+}
+
+// The canonical vibe vocabulary — the single source of truth for every vibe a
+// user can pick anywhere in the product. The taxonomy in
+// src/lib/atlas/destination-vibes.ts is typed against CanonicalVibe (a stray
+// tag is a compile error) and vibe-vocabulary.guard.test.ts fails the build if
+// picker and taxonomy ever drift apart again.
+export const CANONICAL_VIBES = [
+  'tropical', 'mountains', 'big_city', 'beach', 'winter', 'cultural', 'adventure',
+  'foodie', 'romantic', 'nightlife', 'family',
+] as const;
+
+export type CanonicalVibe = (typeof CANONICAL_VIBES)[number];
+
+export const VIBE_ICONS: Record<CanonicalVibe, string> = {
+  tropical: '🌴',
+  mountains: '🏔️',
+  big_city: '🏙️',
+  beach: '🌊',
+  winter: '❄️',
+  cultural: '🏛️',
+  adventure: '🏕️',
+  foodie: '🍜',
+  romantic: '💕',
+  nightlife: '🎶',
+  family: '👨‍👩‍👧‍👦',
+};
+
+// English default labels; the UI renders localized labels from
+// messages/*/common.json tripForm.vibes (same keys).
+export const VIBE_LABELS: Record<CanonicalVibe, string> = {
+  tropical: 'Tropical',
+  mountains: 'Mountains',
+  big_city: 'Big City',
+  beach: 'Beach',
+  winter: 'Winter Escapade',
+  cultural: 'Cultural',
+  adventure: 'Adventure',
+  foodie: 'Food',
+  romantic: 'Romantic',
+  nightlife: 'Nightlife',
+  family: 'Family',
+};
+
+export const VIBE_OPTIONS: { value: CanonicalVibe; label: string; icon: string }[] =
+  CANONICAL_VIBES.map((value) => ({ value, label: VIBE_LABELS[value], icon: VIBE_ICONS[value] }));
+```
+
+Run: `npx vitest run src/lib/atlas/no-fabrication.test.ts` → Expected: PASS.
+
+- [ ] **Step 3: Delete the dead i18n namespaces**
+
+In EACH of `messages/{en,es,pt,fr,de,it}/common.json`, delete the entire `"quiz": { ... },` and `"entryTabs": { ... },` blocks by hand (they are contiguous; zero consumers — verified: no `useTranslations("quiz")` / `useTranslations("entryTabs")` anywhere; the two `quiz_budget` mentions in e2e are DB-column DTO checks, unrelated). Do NOT round-trip the files through a formatter — edit surgically to keep the diff reviewable. Then validate:
+
+```bash
+for f in messages/*/common.json; do python3 -m json.tool "$f" > /dev/null && echo "OK $f"; done
+```
+
+Expected: `OK` × 6.
+
+- [ ] **Step 4: Relabel `winter` to "Winter Escapade" and add the 4 new vibe labels, in all six locales**
+
+**The relabel is Jose's binding decision (2026-07-12, spec §3.1, review B1).** "Winter Escape ❄️" was ambiguous — escape *to* winter (ski) or escape *from* winter (somewhere warm)? An **escapade** is something you go *on*, so "Winter Escapade" unambiguously means a snow/ski adventure and ❄️ is correct. This is a LABEL cascade only: the internal value stays `winter`, the icon stays ❄️, no engine change.
+
+In each locale's `tripForm.vibes` block, do BOTH of the following (the other 6 existing entries stay exactly as they are):
+
+**(a) UPDATE the `winter` entry:**
+
+| locale | old | new |
+|---|---|---|
+| en | `"winter": "Winter Escape"` | `"winter": "Winter Escapade"` |
+| es | `"winter": "Escape de Invierno"` | `"winter": "Escapada de Invierno"` |
+| pt | `"winter": "Fuga de Inverno"` | `"winter": "Escapada de Inverno"` |
+| fr | `"winter": "Escapade Hivernale"` | **unchanged — already the escapade reading** |
+| de | `"winter": "Winterflucht"` | `"winter": "Winterabenteuer"` (Winterflucht is literally "flight FROM winter" — the reading Jose rejected) |
+| it | `"winter": "Fuga Invernale"` | `"winter": "Avventura Invernale"` (Fuga = escape/flight — same problem) |
+
+⚠ The es/pt/de/it strings are the planner's renderings of Jose's English decision — **confirm these four strings with Jose at plan review** (en is Jose's own wording; fr needs no change).
+
+**(b) Append the 4 new keys after `"adventure"`:**
+
+**en:** `"foodie": "Food", "romantic": "Romantic", "nightlife": "Nightlife", "family": "Family"`
+**es:** `"foodie": "Gastronomía", "romantic": "Romántico", "nightlife": "Vida Nocturna", "family": "En Familia"`
+**pt:** `"foodie": "Gastronomia", "romantic": "Romântico", "nightlife": "Vida Noturna", "family": "Em Família"`
+**fr:** `"foodie": "Gastronomie", "romantic": "Romantique", "nightlife": "Vie Nocturne", "family": "En Famille"`
+**de:** `"foodie": "Kulinarik", "romantic": "Romantisch", "nightlife": "Nachtleben", "family": "Familie"`
+**it:** `"foodie": "Gastronomia", "romantic": "Romantico", "nightlife": "Vita Notturna", "family": "In Famiglia"`
+
+Re-run the JSON validation loop → `OK` × 6.
+
+- [ ] **Step 5: Write the failing picker test — `src/components/TripForm.test.tsx`**
+
+This is the user-facing half of the orphan fix: the chips must actually render and toggle. Uses the ES locale so it also proves labels are genuinely localized (pre-fix, labels were hardcoded English).
+
+```tsx
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import esMessages from "../../messages/es/common.json";
+import { CANONICAL_VIBES } from "@/lib/trip-types";
+import TripForm from "./TripForm";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/hooks/usePlacesAutocomplete", () => ({ usePlacesAutocomplete: () => {} }));
+vi.mock("./PackageDealsCarousel", () => ({ default: () => null }));
+
+const vibeLabels = esMessages.tripForm.vibes as Record<string, string>;
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+
+function renderExploreForm() {
+  // preferences prefetch on mount — keep it inert
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false })));
+  render(
+    <NextIntlClientProvider locale="es" messages={esMessages}>
+      <TripForm />
+    </NextIntlClientProvider>
+  );
+  fireEvent.click(screen.getByText(esMessages.tripForm.pathBTitle));
+}
+
+// Labels like "Aventura" also exist in the INTERESTS section — scope every
+// query to the vibes section (its heading is tripForm.whatVibes).
+function vibesSection() {
+  const heading = screen.getByText(esMessages.tripForm.whatVibes);
+  return within(heading.closest("div") as HTMLElement);
+}
+
+describe("TripForm vibe picker (canonical, localized)", () => {
+  it("renders all 11 canonical vibes as chips with localized labels", () => {
+    renderExploreForm();
+
+    expect(CANONICAL_VIBES).toHaveLength(11);
+    for (const vibe of CANONICAL_VIBES) {
+      expect(vibeLabels[vibe], `missing es translation for tripForm.vibes.${vibe}`).toBeTruthy();
+      expect(
+        vibesSection().getByRole("button", { name: new RegExp(vibeLabels[vibe]) }),
+        `chip for "${vibe}" not rendered`
+      ).toBeTruthy();
+    }
+  });
+
+  it("the previously unreachable vibes are selectable", () => {
+    renderExploreForm();
+
+    for (const vibe of ["foodie", "romantic", "nightlife", "family"]) {
+      const chip = vibesSection().getByRole("button", { name: new RegExp(vibeLabels[vibe]) });
+      fireEvent.click(chip);
+      expect(chip.className, `"${vibe}" chip did not toggle selected`).toContain("bg-pink-100");
+    }
+  });
+});
+```
+
+*(Query note: within the vibes section, "Tropical" is unique — the interests section's similar words live outside the scoped container. If a regex still double-matches (e.g., a label that is a substring of another chip's label in some locale), anchor it: `new RegExp(\`${label}$\`)`.)*
+
+Run: `npx vitest run src/components/TripForm.test.tsx`
+Expected: FAIL — chips currently render `v.label` (English), so `getByRole` with "Montañas"/"Gastronomía" finds nothing.
+
+- [ ] **Step 6: Localize the chip labels in `TripForm.tsx`**
+
+In the vibes render loop, change the button text from `{v.icon} {v.label}` to:
+
+```tsx
+                  {v.icon} {t(`vibes.${v.value}`)}
+```
+
+(`t` is the component's existing `useTranslations("tripForm")`.)
+
+Run: `npx vitest run src/components/TripForm.test.tsx` → Expected: PASS.
+
+- [ ] **Step 7: Localize the context-strip vibe pills — `src/components/TripContextStrip.tsx`**
+
+Today a trip's pills render the raw internal value (`big_city`) — exactly the class of leak Jose banned. Replace the `VIBE_EMOJIS` constant (delete it) with imports and localized labels:
+
+```tsx
+import { CANONICAL_VIBES, VIBE_ICONS, type CanonicalVibe } from "@/lib/trip-types";
+
+const CANONICAL = new Set<string>(CANONICAL_VIBES);
+```
+
+Inside the component add `const tVibes = useTranslations("tripForm.vibes");` next to the existing `t`, and change the vibe pill body from
+
+```tsx
+          {VIBE_EMOJIS[vibe] ? `${VIBE_EMOJIS[vibe]} ` : ""}
+          {vibe}
+```
+
+to
+
+```tsx
+          {CANONICAL.has(vibe)
+            ? `${VIBE_ICONS[vibe as CanonicalVibe]} ${tVibes(vibe)}`
+            : vibe}
+```
+
+(Custom vibes render as the user typed them — their own words, not codes.)
+
+- [ ] **Step 8: Update the help copy — `src/lib/help-content.ts`** (standing rule `feedback_update_help_with_features`)
+
+In the `"planner-new"` entry's `"Where are you going?"` section (line ~25), replace the parenthetical `pick a vibe (Tropical, Mountains, Beach, etc.)` with `pick one or more vibes (Beach, Mountains, Winter Escapade, Food, Romantic, Nightlife, Family, and more)`.
+
+- [ ] **Step 9: Full suite + build + commit**
+
+Run: `npm run test:unit` → all pass (≥ 170). Then `npm run build` → clean (proves nothing still imports the deleted components).
+
+```bash
+git add -A src/components src/lib/trip-types.ts src/lib/atlas/no-fabrication.test.ts src/lib/help-content.ts messages
+git commit -m "feat(vibes): 11 localized chips from one VIBE_OPTIONS source; delete dead quiz/EntryTabs vocabulary
+
+foodie/romantic/nightlife/family become clickable (39/24/21/20 destinations of data
+that no user could reach). Chip labels are genuinely localized (were hardcoded
+English) and the winter chip reads 'Winter Escapade' in all six locales (Jose,
+2026-07-12 — an escapade is something you go ON: snow/ski, not winter-sun).
+PRESET_VIBES + SurpriseMeQuiz + EntryTabs + DestinationSuggestions deleted
+(zero importers, rejected 2026-04-10) with a stays-dead tripwire; context-strip
+pills stop rendering raw internal values like big_city."
+```
+
+---
+
+### Task 3: City naming — generated table, `resolveCityName()`, and drop-don't-render
+
+TP returns CITY codes; 62 of 100 sampled codes are absent from `IATA_TO_CITY` and render as raw codes ("Plan a trip to CHI"). This task derives a full name table from TravelPayouts' OWN data, keeps the curated table primary, drops anything unnameable, and dedupes/excludes by city so a JFK user is never offered "New York".
 
 **Files:**
 - Create: `scripts/generate-city-names.mjs`
@@ -631,21 +1039,23 @@ cards live). Canonical vocabulary is now the picker's words; 82 destinations mig
 - Create: `src/lib/atlas/city-names.test.ts`
 - Modify: `src/lib/atlas/surprise.ts`
 - Modify: `src/lib/atlas/surprise.test.ts` (naming/drop tests)
+- Modify: `src/lib/atlas/vibe-vocabulary.guard.test.ts` (resolve the `TODO(task-3)`)
+- Modify: `src/lib/atlas/no-fabrication.test.ts` (`SURPRISE_PATH_FILES` += `city-names.ts`)
 
 **Interfaces:**
-- Consumes: `IATA_TO_CITY` from `./travelpayouts-client` (unchanged).
-- Produces: `resolveCityName(code: string): string | null` from `@/lib/atlas/city-names` (server-only). Task 4 uses it for `originName`; this task wires it into every card-name path in `surprise.ts`.
+- Consumes: `IATA_TO_CITY` from `./travelpayouts-client` (unchanged apart from Task 1's 4 additions).
+- Produces: `resolveCityName(code: string): string | null` from `@/lib/atlas/city-names` (server-only). Task 5 uses it for `originName`; this task wires it into every card-name path in `surprise.ts`.
 
-**Provenance note (why a script, not a blob):** the table derives from TravelPayouts' own public data endpoints (`https://api.travelpayouts.com/data/en/cities.json`, `.../airports.json`, `.../countries.json`, no token required). Recipe, reverse-engineered and validated against live TP data on 2026-07-12: *every city in `cities.json` that has ≥ 1 entry in `airports.json` (matched on `city_code`; ALL airport-table entries count — TP lists some metro codes as pseudo-airports, so "is it an airport" is deliberately NOT filtered), labeled `"{city name}, {country name}"` with whitespace collapsed, plus `" (all airports)"` when the city has ≥ 2 airport-table entries.* Cities with zero airport entries are excluded (they can't be flight destinations). Expected output: **9,471 entries, 545 suffixed** (as of 2026-07-12 TP data; upstream data drifts over time, so tests assert invariants, not exact counts).
-
-This recipe intentionally **includes** the 127 curated codes (unlike the pre-generated scratchpad copy at `/tmp/claude-1000/-home-jarvis/661731b7-02cd-4330-b3ce-88b51f589913/scratchpad/tp-city-names.json`, which excluded them): runtime lookup checks curated FIRST so behavior is identical, and the script needs no knowledge of the TS module — no drift risk. If the network is unavailable when you run the script, fall back to copying the scratchpad file (it is the same recipe minus curated keys and minus whitespace normalization — a strict subset; all tests below still pass).
+**Provenance (why a script, not a blob):** the table derives from TravelPayouts' public data endpoints (`https://api.travelpayouts.com/data/en/{cities,airports,countries}.json`, no token required). Recipe, validated against live TP data on 2026-07-12 and re-validated against the cached copies: *every city in `cities.json` with ≥ 1 entry in `airports.json` (matched on `city_code`; ALL airport-table rows count — TP lists metro codes as pseudo-airports, so "is it an airport code" is deliberately NOT a filter), labeled `"{city name}, {country name}"` with whitespace collapsed, plus `" (all airports)"` when the city has ≥ 2 airport rows.* Cities with zero airport rows are excluded (they cannot be flight destinations). **Measured output: 9,471 entries, 545 suffixed** (2026-07-12; upstream drifts, so tests assert invariants, not exact counts). Measured spot values: `CHI → "Chicago, United States (all airports)"`, `NYC → "New York, United States (all airports)"`, `WAS → "Washington, United States (all airports)"`, `PAR → "Paris, France (all airports)"`, `ORL → "Orlando, United States (all airports)"`, `HNL → "Honolulu, United States"` (single airport). The three source files are cached at `/tmp/claude-1000/-home-jarvis/661731b7-02cd-4330-b3ce-88b51f589913/scratchpad/{cities,airports,countries}.json` — if the network is unavailable, run the script with `TP_DATA_DIR=` pointing there.
 
 - [ ] **Step 1: Write `scripts/generate-city-names.mjs`**
 
 ```js
 #!/usr/bin/env node
 // Regenerates src/lib/atlas/generated/city-names.json from TravelPayouts' own
-// public data (no token needed). Run: node scripts/generate-city-names.mjs
+// public data (no token needed).
+//   Run:            node scripts/generate-city-names.mjs
+//   Offline rerun:  TP_DATA_DIR=/path/to/cached node scripts/generate-city-names.mjs
 //
 // Recipe (do not change without updating city-names.test.ts):
 //   - source of truth: api.travelpayouts.com/data/en/{cities,airports,countries}.json
@@ -655,26 +1065,31 @@ This recipe intentionally **includes** the 127 curated codes (unlike the pre-gen
 //   - label: "{city name}, {country name}" (whitespace collapsed)
 //   - ">= 2 airports" => append " (all airports)" — a CHI price may be O'Hare
 //     OR Midway; printing bare "Chicago" would invite a false assumption.
+//     Never remap a metro code to one airport: that would fabricate precision.
 //   - a city we cannot label (missing name/country) is omitted: the runtime
 //     DROPS unnameable codes rather than showing them.
 
-import { writeFileSync } from "node:fs";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const BASE = "https://api.travelpayouts.com/data";
-const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "lib", "atlas", "generated", "city-names.json");
+const BASE = "https://api.travelpayouts.com/data/en";
+const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "lib", "atlas", "generated");
+const OUT = join(OUT_DIR, "city-names.json");
 
-async function getJson(path) {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+async function getJson(name) {
+  if (process.env.TP_DATA_DIR) {
+    return JSON.parse(await readFile(join(process.env.TP_DATA_DIR, name), "utf-8"));
+  }
+  const res = await fetch(`${BASE}/${name}`);
+  if (!res.ok) throw new Error(`${name} -> HTTP ${res.status}`);
   return res.json();
 }
 
 const [cities, airports, countries] = await Promise.all([
-  getJson("/en/cities.json"),
-  getJson("/en/airports.json"),
-  getJson("/en/countries.json"),
+  getJson("cities.json"),
+  getJson("airports.json"),
+  getJson("countries.json"),
 ]);
 
 const countryName = new Map(countries.map((c) => [c.code, c.name]));
@@ -696,18 +1111,20 @@ for (const city of cities) {
 }
 
 const sorted = Object.fromEntries(Object.entries(table).sort(([a], [b]) => a.localeCompare(b)));
-writeFileSync(OUT, `${JSON.stringify(sorted, null, 1)}\n`);
-console.log(`wrote ${Object.keys(sorted).length} city names (${Object.values(sorted).filter((v) => v.endsWith("(all airports)")).length} multi-airport) to ${OUT}`);
+await mkdir(OUT_DIR, { recursive: true });
+await writeFile(OUT, `${JSON.stringify(sorted, null, 1)}\n`);
+console.log(
+  `wrote ${Object.keys(sorted).length} city names (${Object.values(sorted).filter((v) => v.endsWith("(all airports)")).length} multi-airport) to ${OUT}`
+);
 ```
 
 - [ ] **Step 2: Generate the table**
 
 ```bash
-mkdir -p src/lib/atlas/generated
 node scripts/generate-city-names.mjs
 ```
 
-Expected output: `wrote 9471 city names (545 multi-airport) to .../src/lib/atlas/generated/city-names.json` (±small upstream drift is acceptable; > 9,000 and > 400 respectively is the sanity band).
+Expected output: `wrote 9471 city names (545 multi-airport) to .../src/lib/atlas/generated/city-names.json` (small upstream drift acceptable; > 9,000 and > 400 is the sanity band). If the fetch fails: `TP_DATA_DIR=/tmp/claude-1000/-home-jarvis/661731b7-02cd-4330-b3ce-88b51f589913/scratchpad node scripts/generate-city-names.mjs` → exactly 9471/545.
 
 - [ ] **Step 3: Write the failing tests — `src/lib/atlas/city-names.test.ts`**
 
@@ -721,12 +1138,14 @@ import generated from "./generated/city-names.json";
 
 describe("resolveCityName", () => {
   it("curated names win over generated ones", () => {
-    // JFK is curated as "New York, New York" — nicer than any generated label.
     expect(resolveCityName("JFK")).toBe("New York, New York");
     expect(resolveCityName("BNA")).toBe("Nashville, Tennessee");
+    // YVR exists in BOTH tables — curated ("Vancouver, Canada") must win over
+    // the generated "Vancouver, Canada (all airports)".
+    expect(resolveCityName("YVR")).toBe("Vancouver, Canada");
   });
 
-  it("resolves TP metro city codes via the generated table with the multi-airport suffix", () => {
+  it("resolves TP metro city codes via the generated table with the honest multi-airport suffix", () => {
     expect(resolveCityName("CHI")).toBe("Chicago, United States (all airports)");
     expect(resolveCityName("NYC")).toBe("New York, United States (all airports)");
     expect(resolveCityName("WAS")).toBe("Washington, United States (all airports)");
@@ -740,6 +1159,7 @@ describe("resolveCityName", () => {
   it("returns null for codes it cannot name — callers must DROP, never render the code", () => {
     expect(resolveCityName("ZZZ")).toBeNull();
     expect(resolveCityName("")).toBeNull();
+    expect(resolveCityName("TOOLONG")).toBeNull();
   });
 
   it("is case/whitespace tolerant", () => {
@@ -772,12 +1192,9 @@ describe("server-only guard", () => {
 });
 ```
 
-- [ ] **Step 4: Run to verify failure**
+Run: `npx vitest run src/lib/atlas/city-names.test.ts` → Expected: FAIL — `Cannot find module './city-names'`.
 
-Run: `npx vitest run src/lib/atlas/city-names.test.ts`
-Expected: FAIL — `Cannot find module './city-names'`.
-
-- [ ] **Step 5: Implement `src/lib/atlas/city-names.ts`**
+- [ ] **Step 4: Implement `src/lib/atlas/city-names.ts`**
 
 ```ts
 import "server-only";
@@ -785,11 +1202,11 @@ import "server-only";
 import { IATA_TO_CITY } from "./travelpayouts-client";
 import generatedNames from "./generated/city-names.json";
 
-// Two-tier destination naming. Curated IATA_TO_CITY (127 hand-written labels
+// Two-tier destination naming. Curated IATA_TO_CITY (~131 hand-written labels
 // like "Nashville, Tennessee") is primary; the generated TravelPayouts-derived
 // table (~9,400 entries, see scripts/generate-city-names.mjs for provenance)
-// is the fallback. null means "we cannot honestly name this code" — callers
-// must DROP the destination. A raw code must never reach a user.
+// is second. null means "we cannot honestly name this code" — callers must
+// DROP the destination. A raw code must never reach a user.
 const GENERATED: Record<string, string> = generatedNames;
 
 export function resolveCityName(code: string): string | null {
@@ -799,9 +1216,9 @@ export function resolveCityName(code: string): string | null {
 }
 ```
 
-Run: `npx vitest run src/lib/atlas/city-names.test.ts` → Expected: PASS (vitest resolves `server-only` via the existing alias in `vitest.config.ts`; `resolveJsonModule` is already on in `tsconfig.json`).
+Run: `npx vitest run src/lib/atlas/city-names.test.ts` → Expected: PASS (vitest resolves `server-only` via the existing alias in `vitest.config.ts`).
 
-- [ ] **Step 6: Write failing engine tests (naming + drop + same-city exclusion) in `src/lib/atlas/surprise.test.ts`**
+- [ ] **Step 5: Write the failing engine tests (naming + drop + same-city exclusion on BOTH the ranking path and the curated filler) in `src/lib/atlas/surprise.test.ts`**
 
 Append:
 
@@ -821,38 +1238,55 @@ describe("DESTINATION NAMING: no raw code ever reaches a card", () => {
     expect(names.join("|")).not.toContain("ZZZ");
   });
 
-  it("excludes destinations in the origin's own city (JFK origin must not be offered NYC)", async () => {
-    popular([item("NYC", 60), item("CUN", 120), item("MBJ", 150), item("TPA", 90)]);
+  it("excludes destinations in the origin's own city (JFK origin must not be offered NYC or LGA)", async () => {
+    popular([item("NYC", 60), item("LGA", 70), item("CUN", 120), item("MBJ", 150), item("TPA", 90)]);
 
     const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
 
     expect(result.destinations.map((d) => d.name).join("|")).not.toContain("New York");
     expect(result.destinations).toHaveLength(3);
   });
+
+  it("the curated FILLER also excludes the origin's own city (a JFK user must never be offered LaGuardia)", async () => {
+    // Review I5: the popular-routes exclusion above never exercises the filler.
+    // Without the filler-side exclusion (Step 6 change 4), LGA — overlap-2 for
+    // big_city+cultural and early in insertion order — is offered to a JFK
+    // user as "New York (LaGuardia)". This test pins the filler path itself.
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "big_city,cultural", departMonth: "2026-08" });
+
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.map((d) => d.name).join("|")).not.toContain("New York");
+  });
 });
 ```
 
-Run: `npx vitest run src/lib/atlas/surprise.test.ts` → Expected: the two new tests FAIL (`ZZZ` currently renders as the bare code; `NYC` renders as a destination from JFK).
+(`emptyPopular()` and the `rawSearchFlights` module mock already exist in `surprise.test.ts` — verified.)
 
-- [ ] **Step 7: Wire naming into `src/lib/atlas/surprise.ts`**
+Run: `npx vitest run src/lib/atlas/surprise.test.ts` → Expected: the three new tests FAIL (`ZZZ` currently renders as the bare code; `NYC`/`LGA` render as destinations from JFK; the filler offers "New York (LaGuardia)").
+
+- [ ] **Step 6: Wire naming into `src/lib/atlas/surprise.ts`**
 
 Four exact changes:
 
-1. Add the import and a city-key helper near the top (after existing imports):
+1. Add the import (after the existing imports) and a city-key helper (near `overlapCount`):
 
 ```ts
 import { resolveCityName } from "./city-names";
 ```
 
 ```ts
-// "New York, New York" and "New York, United States (all airports)" are the
-// same place for trip purposes: compare on the city part, suffix stripped.
+// "New York, New York", "New York (LaGuardia)" and "New York, United States
+// (all airports)" are the same place for trip purposes: compare on the city
+// part, trailing parenthetical stripped.
 function cityKey(name: string): string {
-  return name.replace(/ \(all airports\)$/, "").split(",")[0].trim().toLowerCase();
+  return name.replace(/\s*\([^)]*\)\s*$/, "").split(",")[0].trim().toLowerCase();
 }
 ```
 
-2. Change `toDestination` to take the already-resolved name (no `?? route.destination` escape hatch — that was the raw-code leak):
+2. Change `toDestination` to take the already-resolved name — the `IATA_TO_CITY[route.destination] ?? route.destination` escape hatch WAS the raw-code leak:
 
 ```ts
 function toDestination(route: RouteCandidate, name: string, isRoundTrip: boolean): SurpriseDestination {
@@ -866,23 +1300,17 @@ function toDestination(route: RouteCandidate, name: string, isRoundTrip: boolean
 }
 ```
 
-3. In `getSurpriseDestinations`, immediately after the `seenCodes` dedupe loop that builds `candidates`, resolve names, drop unnameables, and drop the origin's own city:
+3. Immediately after the `seenCodes` dedupe loop that builds `candidates`, resolve names, drop unnameables, and drop the origin's own city; then replace the existing vibe-ranking block and the card slice:
 
 ```ts
-  const originCityKey = (() => {
-    const originName = resolveCityName(origin);
-    return originName ? cityKey(originName) : null;
-  })();
+  const originResolved = resolveCityName(origin);
+  const originCityKey = originResolved ? cityKey(originResolved) : null;
 
   let namedCandidates = candidates
     .map((route) => ({ route, name: resolveCityName(route.destination) }))
     .filter((entry): entry is { route: RouteCandidate; name: string } => entry.name !== null)
     .filter(({ name }) => originCityKey === null || cityKey(name) !== originCityKey);
-```
 
-Then replace the existing vibe-ranking block (`if (requestedVibes.size > 0) { const minOverlap = ...; candidates = candidates.map(...)... }`) and the card slice with these exact blocks (the `minOverlap` const stays local in this task; Task 4 hoists it):
-
-```ts
   if (requestedVibes.size > 0) {
     const minOverlap = requestedVibes.size >= 2 ? 2 : 1;
     namedCandidates = namedCandidates
@@ -900,9 +1328,9 @@ Then replace the existing vibe-ranking block (`if (requestedVibes.size > 0) { co
     .map(({ route, name }) => toDestination(route, name, isRoundTrip));
 ```
 
-(The original `candidates` build loop stays as-is upstream; only the post-dedupe pipeline switches to the `{ route, name }` pairs. Since `candidates` is no longer reassigned, change its declaration from `let` to `const` — `push` still works and it avoids a new `prefer-const` lint warning.)
+(The upstream `candidates` build loop stays as-is. Since `candidates` is no longer reassigned, change its declaration from `let` to `const` — `push` still works and it avoids a new `prefer-const` lint warning. The `minOverlap` const stays local in this task; Task 5 hoists it.)
 
-4. In the curated-filler section, replace **both** occurrences of `const cityName = IATA_TO_CITY[code] ?? code;` with:
+4. In the curated-filler section, replace **both** occurrences of `const cityName = IATA_TO_CITY[code] ?? code;` (the enrichment-selection loop and the final fill loop) with:
 
 ```ts
       const cityName = resolveCityName(code);
@@ -910,67 +1338,180 @@ Then replace the existing vibe-ranking block (`if (requestedVibes.size > 0) { co
       if (originCityKey !== null && cityKey(cityName) === originCityKey) continue;
 ```
 
-and change the `seen` set to store city keys: initialize `const seen = new Set(destinations.map((destination) => cityKey(destination.name)));`, check `if (seen.has(cityKey(cityName))) continue;`, add with `seen.add(cityKey(cityName));`. Remove the now-unused `IATA_TO_CITY` import from `surprise.ts` if nothing else in the file uses it (lint enforces this).
+and make the filler's `seen` set operate on city keys: initialize `const seen = new Set(destinations.map((destination) => cityKey(destination.name)));`, check `if (seen.has(cityKey(cityName))) continue;`, add with `seen.add(cityKey(cityName));`. Remove the now-unused `IATA_TO_CITY` import from `surprise.ts` if nothing else in the file uses it (lint enforces this).
 
-- [ ] **Step 8: Add the nameability guard and run the suite**
+Run: `npx vitest run src/lib/atlas/surprise.test.ts` → Expected: PASS, including all three Step-5 tests (the filler-exclusion test proves Step-6 change 4 actually landed — review I5).
 
-Resolve the `TODO(task-2)` in `vibe-vocabulary.guard.test.ts`: add the fifth guard test from Task 1 ("every taxonomy destination resolves to a display name").
+- [ ] **Step 7: Resolve the nameability TODO in the guard**
 
-Run: `npm run test:unit`
-Expected: all pass. Watch specifically: existing enrichment/wire tests still pass because every old taxonomy code resolves via curated/generated names (validated during planning: all 82 airport codes are curated except HNL, which the generated table names).
+In `src/lib/atlas/vibe-vocabulary.guard.test.ts`, replace the `TODO(task-3)` comment with:
 
-- [ ] **Step 9: Build gate for the server-only guard**
+```ts
+  it("every taxonomy destination resolves to a display name (unnameable = invisible to users)", async () => {
+    const { resolveCityName } = await import("./city-names");
+    for (const code of Object.keys(DESTINATION_VIBES)) {
+      expect(resolveCityName(code), `taxonomy code ${code} has no display name`).not.toBeNull();
+    }
+  });
+```
 
-Run: `npm run build`
-Expected: clean build (the JSON lands in the server bundle only). This is the enforcement mechanism: if anyone ever imports `city-names.ts` from a `"use client"` component, Next.js fails the build with the `server-only` poison error.
+Also extend `SURPRISE_PATH_FILES` in `src/lib/atlas/no-fabrication.test.ts` with `"src/lib/atlas/city-names.ts",`.
+
+- [ ] **Step 8: Decode the on-screen origin — trip header + context-strip pill (G4 Scope, review I1)**
+
+Two render paths still leak bare codes after the card-name work above: the trip header (`page.tsx:72` renders `· ✈️ from JFK`) and the context-strip origin pill (`TripContextStrip.tsx:70-79` renders `✈️ JFK (+ EWR, LGA)`). `TripContextStrip` is a client component and `resolveCityName` is `server-only`, so `page.tsx` (a server component — direct import is legal) resolves the names and passes display-ready strings down.
+
+**(a) Failing test first — create `src/components/TripContextStrip.test.tsx`:**
+
+```tsx
+import { cleanup, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { afterEach, describe, expect, it } from "vitest";
+
+import enMessages from "../../messages/en/common.json";
+import TripContextStrip from "./TripContextStrip";
+
+afterEach(cleanup);
+
+function renderStrip(props: Partial<Parameters<typeof TripContextStrip>[0]> = {}) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      <TripContextStrip
+        originLabel="New York, New York (JFK)"
+        extraAirportLabels={["Newark, New Jersey", "New York (LaGuardia)"]}
+        budget="midrange"
+        vibes={["big_city"]}
+        interests={[]}
+        adults={2}
+        childrenCount={0}
+        {...props}
+      />
+    </NextIntlClientProvider>
+  );
+}
+
+describe("TripContextStrip origin pill (decoded — G4)", () => {
+  it("renders the decoded origin city (code alongside the name is fine — never bare) and decoded nearby airports", () => {
+    renderStrip();
+    expect(screen.getByText(/New York, New York \(JFK\)/)).toBeTruthy();
+    expect(screen.getByText(/Newark, New Jersey/)).toBeTruthy();
+    expect(screen.getByText(/LaGuardia/)).toBeTruthy();
+    // the old raw nearby-airport codes must be gone
+    expect(screen.queryByText(/EWR|LGA\b/)).toBeNull();
+  });
+
+  it("renders NO origin pill when the origin has no decoded label — a bare code is never the fallback", () => {
+    renderStrip({ originLabel: null, extraAirportLabels: [] });
+    expect(screen.queryByText(/JFK/)).toBeNull();
+  });
+});
+```
+
+Run: `npx vitest run src/components/TripContextStrip.test.tsx` → Expected: FAIL (the component still takes `origin`/`nearbyAirports` code props and renders them raw).
+
+**(b) `src/components/TripContextStrip.tsx`** — first verify `page.tsx` is the only importer (verified during planning; re-check):
+
+```bash
+grep -rn "TripContextStrip" src tests --include="*.ts" --include="*.tsx" | grep -v "components/TripContextStrip"
+```
+
+Then replace the props `origin: string | null` and `nearbyAirports: string[]` with `originLabel: string | null` and `extraAirportLabels: string[]`, delete the internal `extraAirports` filter (moves server-side), and change the origin pill to:
+
+```tsx
+      {originLabel && (
+        <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs">
+          {"✈️"} {originLabel}
+          {extraAirportLabels.length > 0 && (
+            <span className="ml-1 text-amber-600">
+              (+ {extraAirportLabels.join(" · ")})
+            </span>
+          )}
+        </span>
+      )}
+```
+
+(Joined with `" · "`, not `", "` — decoded labels like "Newark, New Jersey" contain commas.)
+
+**(c) `src/app/[locale]/planner/[tripId]/page.tsx`** — add `import { resolveCityName } from "@/lib/atlas/city-names";`, then next to the existing `vibesSummary` derivation add:
+
+```tsx
+  // G4: decode the origin server-side. Unnameable ⇒ the phrase is OMITTED —
+  // a bare 3-letter code must never be the fallback (Jose, 2026-07-12).
+  const originName = trip.origin ? resolveCityName(trip.origin) : null;
+  const originLabel = originName ? `${originName} (${trip.origin})` : null;
+  const extraAirportLabels = nearbyAirports
+    .filter((code) => code !== trip.origin)
+    .map((code) => resolveCityName(code))
+    .filter((name): name is string => name !== null);
+```
+
+In the header, replace `{trip.origin && ` · ✈️ from ${trip.origin}`}` with `{originLabel && ` · ✈️ from ${originLabel}`}` — e.g. "✈️ from New York, New York (JFK)". In the `<TripContextStrip>` invocation, replace `origin={trip.origin || null}` and `nearbyAirports={nearbyAirports}` with `originLabel={originLabel}` and `extraAirportLabels={extraAirportLabels}`. (The `atlas-trip-context` JSON script keeps `origin`/`nearbyAirports` raw — that is model context, part of the Jose-approved chat gap, NOT rendered UI. Do not touch it.)
+
+Run: `npx vitest run src/components/TripContextStrip.test.tsx` → PASS. (Visual-baseline safety: the snapshot trips are Path A "Cancún" with no origin — no pill, no header phrase — so `visual-baseline.spec.ts` cannot diff. Verified by the reviewer.)
+
+- [ ] **Step 9: Full suite + build gate**
+
+Run: `npm run test:unit` → all pass. (Existing enrichment/wire tests keep passing: every code they use is curated, and the origin-city exclusion only removes same-city codes those fixtures don't rely on.)
+
+Run: `npm run build` → clean. This is the enforcement mechanism for server-only: if anyone imports `city-names.ts` from a `"use client"` component, Next.js fails the build with the server-only poison error. It also proves `page.tsx`'s new `resolveCityName` import is server-side only.
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add scripts/generate-city-names.mjs src/lib/atlas/generated/city-names.json src/lib/atlas/city-names.ts src/lib/atlas/city-names.test.ts src/lib/atlas/surprise.ts src/lib/atlas/surprise.test.ts src/lib/atlas/vibe-vocabulary.guard.test.ts
-git commit -m "feat(surprise): name every destination or drop it — no raw IATA code reaches a user
+git add scripts/generate-city-names.mjs src/lib/atlas/generated/city-names.json src/lib/atlas/city-names.ts src/lib/atlas/city-names.test.ts src/lib/atlas/surprise.ts src/lib/atlas/surprise.test.ts src/lib/atlas/vibe-vocabulary.guard.test.ts src/lib/atlas/no-fabrication.test.ts src/components/TripContextStrip.tsx src/components/TripContextStrip.test.tsx src/app
+git commit -m "feat(surprise): name every destination or drop it — no raw code reaches a user
 
-Generated 9.4k-entry name table from TravelPayouts' own city/airport/country data
-(scripts/generate-city-names.mjs documents the recipe), server-only, curated
-IATA_TO_CITY stays primary. Multi-airport cities get an honest '(all airports)'
-suffix (CHI may be O'Hare OR Midway — never silently mapped to ORD). Unnameable
-codes and the origin's own city are dropped, never rendered."
+9.4k-entry name table generated from TravelPayouts' own city/airport/country data
+(scripts/generate-city-names.mjs documents the recipe; offline rerun supported),
+server-only, curated IATA_TO_CITY primary. Multi-airport metro codes get an honest
+'(all airports)' suffix — a CHI price may be O'Hare OR Midway, and we never remap
+it to one airport. Unnameable codes and the origin's own city are dropped, never
+rendered — on the ranking path AND the curated filler. The trip header and
+context-strip origin pill render decoded names (never a bare code; unnameable
+origins are omitted), per Jose's G4 decision."
 ```
+
+(`git add src/app` captures the `[locale]`-bracketed `page.tsx` path without pathspec-glob trouble; at this point in the plan it contains no other changes.)
 
 ---
 
-### Task 3: `vibe-preflight.ts` — deterministic intent check (zero LLM)
+### Task 4: `vibe-preflight.ts` — deterministic intent check (zero LLM)
 
 **Files:**
 - Create: `src/lib/atlas/vibe-preflight.ts`
 - Create: `src/lib/atlas/vibe-preflight.test.ts`
+- Modify: `src/lib/atlas/no-fabrication.test.ts` (`SURPRISE_PATH_FILES` += `vibe-preflight.ts`)
 
 **Interfaces:**
-- Consumes: `PRESET_VIBES`, `PresetVibe` from `@/lib/trip-types`; `DESTINATION_VIBES` from `./destination-vibes`.
-- Produces (Tasks 4 and 6 depend on these exact names):
+- Consumes: `CANONICAL_VIBES`, `CanonicalVibe` from `@/lib/trip-types`; `DESTINATION_VIBES` from `./destination-vibes`.
+- Produces (Tasks 5 and 7 depend on these exact names):
 
 ```ts
 export type PreflightResult =
   | { status: "ok" }
-  | { status: "unknown_vibes"; unknown: string[]; suggestions: PresetVibe[] }
+  | { status: "unknown_vibes"; unknown: string[]; suggestions: CanonicalVibe[] }
   | { status: "no_match_possible"; wouldMatchIfAny: number };
 
 export function preflightVibes(vibes: string[], opts?: { matchMode?: "all" | "any" }): PreflightResult;
-export function suggestVibes(input: string): PresetVibe[];
+export function suggestVibes(input: string): CanonicalVibe[];
 ```
 
 - [ ] **Step 1: Write the failing tests — `src/lib/atlas/vibe-preflight.test.ts`**
 
 ```ts
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { DESTINATION_VIBES } from "./destination-vibes";
 import { preflightVibes, suggestVibes } from "./vibe-preflight";
 
 describe("preflightVibes", () => {
   it("returns ok for empty input and for canonical vibes that can match", () => {
     expect(preflightVibes([])).toEqual({ status: "ok" });
     expect(preflightVibes(["beach"])).toEqual({ status: "ok" });
-    expect(preflightVibes(["culture", "food"])).toEqual({ status: "ok" });
+    expect(preflightVibes(["mountains", "cultural"])).toEqual({ status: "ok" });
+    expect(preflightVibes(["winter", "beach"])).toEqual({ status: "ok" });
   });
 
   it("flags free-text custom vibes as unknown with canonical suggestions", () => {
@@ -978,33 +1519,41 @@ describe("preflightVibes", () => {
     expect(result.status).toBe("unknown_vibes");
     if (result.status !== "unknown_vibes") throw new Error("unreachable");
     expect(result.unknown).toEqual(["wine tasting"]);
-    expect(result.suggestions).toContain("food");
+    expect(result.suggestions).toContain("foodie");
   });
 
-  it("maps legacy tag words (pre-migration vocabulary in stored trips) to suggestions", () => {
-    const result = preflightVibes(["big_city"]);
-    expect(result.status).toBe("unknown_vibes");
-    if (result.status !== "unknown_vibes") throw new Error("unreachable");
-    expect(result.suggestions).toContain("city");
+  it("maps everyday English words that are not internal values to suggestions", () => {
+    const city = preflightVibes(["city"]);
+    expect(city.status).toBe("unknown_vibes");
+    if (city.status !== "unknown_vibes") throw new Error("unreachable");
+    expect(city.suggestions).toContain("big_city");
+
+    const nature = preflightVibes(["nature"]);
+    if (nature.status !== "unknown_vibes") throw new Error("unreachable");
+    expect(nature.suggestions).toContain("mountains");
   });
 
   it("suggests via small-typo tolerance", () => {
-    const result = preflightVibes(["cultre"]);
+    const result = preflightVibes(["cultral"]);
     expect(result.status).toBe("unknown_vibes");
     if (result.status !== "unknown_vibes") throw new Error("unreachable");
-    expect(result.suggestions).toContain("culture");
+    expect(result.suggestions).toContain("cultural");
   });
 
-  it("detects the genuinely impossible combination (nature+nightlife) before any fetch", () => {
-    const result = preflightVibes(["nature", "nightlife"]);
+  it("detects the genuinely impossible combination (tropical+winter) with an honest any-match count", () => {
+    const result = preflightVibes(["tropical", "winter"]);
     expect(result.status).toBe("no_match_possible");
     if (result.status !== "no_match_possible") throw new Error("unreachable");
-    // taxonomy destinations carrying nature OR nightlife — enough for a useful any-match
-    expect(result.wouldMatchIfAny).toBeGreaterThanOrEqual(8);
+    // Honest count, derived from the same taxonomy — never hardcoded.
+    const expected = Object.values(DESTINATION_VIBES).filter(
+      (tags) => tags.has("tropical") || tags.has("winter")
+    ).length;
+    expect(result.wouldMatchIfAny).toBe(expected);
+    expect(result.wouldMatchIfAny).toBeGreaterThanOrEqual(16); // two coverage floors
   });
 
   it("matchMode any rescues combinations that are impossible under match-all", () => {
-    expect(preflightVibes(["nature", "nightlife"], { matchMode: "any" })).toEqual({ status: "ok" });
+    expect(preflightVibes(["tropical", "winter"], { matchMode: "any" })).toEqual({ status: "ok" });
   });
 
   it("unknown vibes take precedence over impossibility and never suggest already-selected vibes", () => {
@@ -1024,18 +1573,23 @@ describe("preflightVibes", () => {
 
 describe("suggestVibes", () => {
   it.each([
-    ["spa", "wellness"],
-    ["hiking", "nature"],
-    ["museums", "culture"],
+    ["ski", "winter"],
+    ["snow", "winter"],
+    ["hiking", "mountains"],
+    ["museums", "cultural"],
+    ["culture", "cultural"],
+    ["food", "foodie"],
+    ["wine", "foodie"],
+    ["city", "big_city"],
     ["kids", "family"],
     ["honeymoon", "romantic"],
     ["clubbing", "nightlife"],
+    ["island", "tropical"],
     ["diving", "adventure"],
-    ["tropical", "beach"],
-    ["mountains", "nature"],
-    ["praia", "beach"],
+    ["playa", "beach"],
     ["famille", "family"],
-    ["natur", "nature"],
+    ["montaña", "mountains"],
+    ["inverno", "winter"],
   ])("%s -> includes %s", (input, expected) => {
     expect(suggestVibes(input)).toContain(expected);
   });
@@ -1043,6 +1597,18 @@ describe("suggestVibes", () => {
   it("caps suggestions at 3 and returns [] when nothing is close", () => {
     expect(suggestVibes("xyzzyplugh")).toEqual([]);
     expect(suggestVibes("beach party spa").length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("zero-LLM guarantee (spec §5: 'deterministic by construction — asserted by test', review N4)", () => {
+  it("vibe-preflight.ts imports no model, SDK, or spend path", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/lib/atlas/vibe-preflight.ts"), "utf-8");
+    // Anti-self-defeat: these are import-shaped bans checked against the real
+    // module. The module's own comment says "spend cap" in prose, so the spend
+    // ban matches import specifiers only — never the word itself.
+    expect(source).not.toContain("@anthropic-ai");
+    expect(source).not.toContain("tool-loop");
+    expect(source).not.toMatch(/from\s+["'][^"']*spend/);
   });
 });
 ```
@@ -1055,55 +1621,61 @@ Expected: FAIL — `Cannot find module './vibe-preflight'`.
 - [ ] **Step 3: Implement `src/lib/atlas/vibe-preflight.ts`**
 
 ```ts
-import { PRESET_VIBES, type PresetVibe } from "@/lib/trip-types";
+import { CANONICAL_VIBES, type CanonicalVibe } from "@/lib/trip-types";
 import { DESTINATION_VIBES } from "./destination-vibes";
 
 // Deterministic pre-flight intent check. Pure set math + string distance —
 // NO model call, ever (Atlas runs under a hard monthly spend cap; this module
-// is what lets the empty-result path cost $0). Runs BEFORE any TravelPayouts
+// is what keeps the empty-result path at $0). Runs BEFORE any TravelPayouts
 // request and short-circuits it when no destination could possibly satisfy
-// the ask, so the wasted API call is saved too.
+// the ask, so the wasted wire call is saved too.
 
 export type PreflightResult =
   | { status: "ok" }
-  | { status: "unknown_vibes"; unknown: string[]; suggestions: PresetVibe[] }
+  | { status: "unknown_vibes"; unknown: string[]; suggestions: CanonicalVibe[] }
   | { status: "no_match_possible"; wouldMatchIfAny: number };
 
-const CANONICAL = new Set<string>(PRESET_VIBES);
+const CANONICAL = new Set<string>(CANONICAL_VIBES);
 
-// Curated synonym map: legacy tag words (pre-migration vocabulary that may
-// survive in stored trips), common English travel words, and one everyday word
-// per vibe for each supported locale. Keys must be lowercase.
-const SYNONYMS: Record<string, PresetVibe[]> = {
-  // legacy taxonomy + legacy TripForm picker values
-  tropical: ["beach"], big_city: ["city"], cultural: ["culture"], foodie: ["food"],
-  mountain: ["nature"], mountains: ["nature"], winter: ["nature", "adventure"],
-  // English travel vocabulary
-  spa: ["wellness"], yoga: ["wellness"], relax: ["wellness"], relaxing: ["wellness"], retreat: ["wellness"],
-  hiking: ["nature", "adventure"], hike: ["nature", "adventure"], trekking: ["nature", "adventure"],
-  skiing: ["nature", "adventure"], ski: ["nature", "adventure"], snow: ["nature"],
-  camping: ["nature", "adventure"], wildlife: ["nature"], safari: ["nature", "adventure"],
+// Curated synonym map: everyday travel words (users type these as free-text
+// custom vibes) and one everyday word per vibe for each supported locale.
+// Suggestions only — never auto-substituted. Keys must be lowercase.
+const SYNONYMS: Record<string, CanonicalVibe[]> = {
+  // singular/plural and near-canonical words
+  mountain: ["mountains"],
+  city: ["big_city"], urban: ["big_city"], shopping: ["big_city"],
+  culture: ["cultural"], museum: ["cultural"], museums: ["cultural"], history: ["cultural"],
+  historic: ["cultural"], art: ["cultural"], architecture: ["cultural"],
+  food: ["foodie"], wine: ["foodie"], winery: ["foodie"], dining: ["foodie"],
+  restaurants: ["foodie"], gastronomy: ["foodie"],
+  nature: ["mountains", "adventure"], hiking: ["mountains", "adventure"], hike: ["mountains", "adventure"],
+  trekking: ["mountains", "adventure"], camping: ["mountains", "adventure"],
+  wildlife: ["adventure"], safari: ["adventure"],
+  ski: ["winter", "mountains"], skiing: ["winter", "mountains"], snow: ["winter"],
+  snowboarding: ["winter", "mountains"], christmas: ["winter"],
+  wellness: ["beach", "romantic"], spa: ["beach", "romantic"], yoga: ["beach"],
+  relax: ["beach"], relaxing: ["beach"], retreat: ["romantic"],
+  island: ["tropical", "beach"], islands: ["tropical", "beach"], sun: ["tropical", "beach"],
+  caribbean: ["tropical"],
   surfing: ["beach", "adventure"], surf: ["beach", "adventure"], diving: ["beach", "adventure"],
-  scuba: ["beach", "adventure"], snorkeling: ["beach", "adventure"], island: ["beach"], islands: ["beach"],
-  sun: ["beach"], museum: ["culture"], museums: ["culture"], history: ["culture"], historic: ["culture"],
-  art: ["culture"], architecture: ["culture"], shopping: ["city"], urban: ["city"],
+  scuba: ["beach", "adventure"], snorkeling: ["beach", "adventure"],
   party: ["nightlife"], clubs: ["nightlife"], clubbing: ["nightlife"], bars: ["nightlife"],
   music: ["nightlife"], concerts: ["nightlife"],
-  wine: ["food"], winery: ["food"], dining: ["food"], restaurants: ["food"], gastronomy: ["food"],
-  kids: ["family"], children: ["family"], waterpark: ["family"],
+  kids: ["family"], children: ["family"], waterpark: ["family"], zoo: ["family"], aquarium: ["family"],
   honeymoon: ["romantic"], romance: ["romantic"], anniversary: ["romantic"], couples: ["romantic"],
   // es / pt / fr / de / it everyday words
   playa: ["beach"], praia: ["beach"], plage: ["beach"], strand: ["beach"], spiaggia: ["beach"],
-  ciudad: ["city"], cidade: ["city"], ville: ["city"], stadt: ["city"], "città": ["city"],
+  ciudad: ["big_city"], cidade: ["big_city"], ville: ["big_city"], stadt: ["big_city"], "città": ["big_city"],
+  "montaña": ["mountains"], "montañas": ["mountains"], montanha: ["mountains"], montanhas: ["mountains"],
+  montagne: ["mountains"], montagnes: ["mountains"], berge: ["mountains"], montagna: ["mountains"],
+  invierno: ["winter"], inverno: ["winter"], hiver: ["winter"],
   aventura: ["adventure"], aventure: ["adventure"], abenteuer: ["adventure"], avventura: ["adventure"],
-  comida: ["food"], "gastronomía": ["food"], gastronomia: ["food"], gastronomie: ["food"],
-  essen: ["food"], cibo: ["food"],
-  cultura: ["culture"], kultur: ["culture"],
-  naturaleza: ["nature"], natureza: ["nature"], natur: ["nature"], natura: ["nature"],
-  "montaña": ["nature"], montanha: ["nature"], montagne: ["nature"], berge: ["nature"], montagna: ["nature"],
-  bienestar: ["wellness"], "bem-estar": ["wellness"], "bien-être": ["wellness"], benessere: ["wellness"],
+  comida: ["foodie"], "gastronomía": ["foodie"], gastronomia: ["foodie"], gastronomie: ["foodie"],
+  essen: ["foodie"], cibo: ["foodie"],
+  cultura: ["cultural"], kultur: ["cultural"],
   familia: ["family"], "família": ["family"], famille: ["family"], familie: ["family"], famiglia: ["family"],
   "romántico": ["romantic"], romantico: ["romantic"], romantique: ["romantic"], romantisch: ["romantic"],
+  fiesta: ["nightlife"], festa: ["nightlife"],
 };
 
 function editDistance(a: string, b: string): number {
@@ -1128,12 +1700,12 @@ function editDistance(a: string, b: string): number {
   return distances[rows - 1][cols - 1];
 }
 
-export function suggestVibes(input: string): PresetVibe[] {
+export function suggestVibes(input: string): CanonicalVibe[] {
   const normalized = input.trim().toLowerCase();
   if (normalized.length === 0) return [];
 
-  const found: PresetVibe[] = [];
-  const push = (vibes: PresetVibe[]) => {
+  const found: CanonicalVibe[] = [];
+  const push = (vibes: CanonicalVibe[]) => {
     for (const vibe of vibes) {
       if (!found.includes(vibe)) found.push(vibe);
     }
@@ -1141,14 +1713,14 @@ export function suggestVibes(input: string): PresetVibe[] {
 
   const tokens = [normalized, ...normalized.split(/\s+/)];
   for (const token of tokens) {
-    if (CANONICAL.has(token)) push([token as PresetVibe]);
+    if (CANONICAL.has(token)) push([token as CanonicalVibe]);
     if (SYNONYMS[token]) push(SYNONYMS[token]);
   }
 
-  // typo tolerance against canonical names and synonym keys (words >= 4 chars)
+  // typo tolerance against canonical names and synonym keys (tokens >= 4 chars)
   for (const token of tokens) {
     if (token.length < 4) continue;
-    for (const vibe of PRESET_VIBES) {
+    for (const vibe of CANONICAL_VIBES) {
       if (editDistance(token, vibe) <= 2) push([vibe]);
     }
     for (const [key, vibes] of Object.entries(SYNONYMS)) {
@@ -1169,7 +1741,7 @@ export function preflightVibes(
   const unknown = normalized.filter((vibe) => !CANONICAL.has(vibe));
   if (unknown.length > 0) {
     const selected = new Set(normalized);
-    const suggestions: PresetVibe[] = [];
+    const suggestions: CanonicalVibe[] = [];
     for (const word of unknown) {
       for (const vibe of suggestVibes(word)) {
         if (!selected.has(vibe) && !suggestions.includes(vibe)) suggestions.push(vibe);
@@ -1186,7 +1758,7 @@ export function preflightVibes(
   for (const tags of Object.values(DESTINATION_VIBES)) {
     let overlap = 0;
     for (const vibe of requested) {
-      if (tags.has(vibe as PresetVibe)) overlap += 1;
+      if ((tags as ReadonlySet<string>).has(vibe)) overlap += 1;
     }
     if (overlap >= 1) wouldMatchIfAny += 1;
     if (overlap >= minOverlap) satisfiable = true;
@@ -1197,31 +1769,34 @@ export function preflightVibes(
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [ ] **Step 4: Run tests + extend the tripwire**
 
 Run: `npx vitest run src/lib/atlas/vibe-preflight.test.ts`
-Expected: PASS (all). If a suggestion assertion fails, fix the SYNONYMS table, not the test — the test encodes the product behavior.
+Expected: PASS (all). If a suggestion assertion fails, fix the SYNONYMS table, not the test — the test encodes product behavior.
+
+Extend `SURPRISE_PATH_FILES` in `src/lib/atlas/no-fabrication.test.ts` with `"src/lib/atlas/vibe-preflight.ts",` and run `npx vitest run src/lib/atlas/no-fabrication.test.ts` → PASS (the module carries no banned literal).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/lib/atlas/vibe-preflight.ts src/lib/atlas/vibe-preflight.test.ts
+git add src/lib/atlas/vibe-preflight.ts src/lib/atlas/vibe-preflight.test.ts src/lib/atlas/no-fabrication.test.ts
 git commit -m "feat(atlas): deterministic vibe pre-flight — pure set math, zero LLM calls"
 ```
 
 ---
 
-### Task 4: Engine + API integration — short-circuit, matchMode, degrade codes
+### Task 5: Engine + API integration — short-circuit, matchMode, degrade codes
 
 **Files:**
 - Modify: `src/lib/atlas/surprise.ts`
+- Modify: `src/lib/atlas/surprise.test.ts`, `src/lib/atlas/surprise.http-budget.test.ts`
 - Modify: `src/lib/atlas/surprise-degrade.ts` + `src/lib/atlas/surprise-degrade.test.ts`
-- Modify: `src/app/api/surprise-me/route.ts` + `src/app/api/surprise-me/route.test.ts`
-- Modify: `src/lib/atlas/surprise-query.ts` + `src/lib/atlas/surprise-query.test.ts`
-- Modify: `src/lib/atlas/surprise.test.ts`
+- Modify: `src/app/api/surprise-me/route.ts` + `route.test.ts`
+- Modify: `src/lib/atlas/surprise-query.ts` + `surprise-query.test.ts`
+- Modify: `messages/{en,es,pt,fr,de,it}/common.json` (2 degraded keys)
 
 **Interfaces:**
-- Consumes: `preflightVibes`, `PreflightResult` (Task 3); `resolveCityName` (Task 2).
+- Consumes: `preflightVibes`, `PreflightResult` (Task 4); `resolveCityName` (Task 3).
 - Produces:
   - `getSurpriseDestinations(params: { origin: string; vibes?: string; departMonth?: string; tripLength?: string; matchMode?: "all" | "any" })`
   - `SurpriseResult` gains `originName?: string` and `preflight?: PreflightResult`
@@ -1229,9 +1804,9 @@ git commit -m "feat(atlas): deterministic vibe pre-flight — pure set math, zer
   - `buildSurpriseQuery(args)` gains `matchAny?: boolean` and `departMonthOverride?: string | null` → sets `match=any` / overrides `depart_month`
   - API `GET /api/surprise-me` accepts `match=any`
 
-- [ ] **Step 1: Write failing engine tests**
+- [ ] **Step 1: Write the failing zero-wire-call tests**
 
-**(a)** The zero-TP-calls assertions go in `src/lib/atlas/surprise.http-budget.test.ts` — NOT in `surprise.test.ts`. Reason (anti-self-defeat): `surprise.test.ts` module-mocks `tpGet`, so a `fetch` spy there could never fire even if the short-circuit were missing — the test would pass vacuously. The http-budget file has no module mocks; `fetch` IS the wire boundary there, and these tests genuinely fail before the implementation (today the engine fetches popular routes for these inputs). Append to that file (it already has the `afterEach` env/global unstub hooks):
+**(a)** These go in `src/lib/atlas/surprise.http-budget.test.ts` — NOT in `surprise.test.ts`. Reason (anti-self-defeat): `surprise.test.ts` module-mocks `tpGet`, so a `fetch` spy there could never fire even if the short-circuit were missing — the test would pass vacuously. The http-budget file has no module mocks; `fetch` IS the wire boundary there, and these genuinely fail before the implementation (today the engine fetches popular routes for these inputs). Append (the file's `afterEach` already unstubs env/globals):
 
 ```ts
 describe("PRE-FLIGHT: impossible or unknown vibes short-circuit before any TravelPayouts call", () => {
@@ -1242,7 +1817,7 @@ describe("PRE-FLIGHT: impossible or unknown vibes short-circuit before any Trave
 
     const result = await getSurpriseDestinations({
       origin: "JFK",
-      vibes: "nature,nightlife",
+      vibes: "tropical,winter",
       departMonth: "2026-08",
     });
 
@@ -1250,12 +1825,9 @@ describe("PRE-FLIGHT: impossible or unknown vibes short-circuit before any Trave
     expect(result.destinations).toEqual([]);
     expect(result.degraded?.code).toBe("no_match_possible");
     expect(result.preflight?.status).toBe("no_match_possible");
-
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
   });
 
-  it("unknown custom vibes short-circuit with suggestions and zero wire requests", async () => {
+  it("unknown custom vibes short-circuit with suggestions, zero wire requests, and a named origin", async () => {
     vi.stubEnv("TRAVELPAYOUTS_TOKEN", "test-token");
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
@@ -1270,9 +1842,6 @@ describe("PRE-FLIGHT: impossible or unknown vibes short-circuit before any Trave
     expect(result.degraded?.code).toBe("unknown_vibes");
     expect(result.preflight).toMatchObject({ status: "unknown_vibes", unknown: ["wine tasting"] });
     expect(result.originName).toBe("New York, New York");
-
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
   });
 });
 ```
@@ -1281,41 +1850,42 @@ describe("PRE-FLIGHT: impossible or unknown vibes short-circuit before any Trave
 
 ```ts
 describe("MATCH MODE any: min overlap drops to 1 for ranking AND curated filler", () => {
-  it("nature,nightlife in any-mode returns cards from routes matching a single vibe", async () => {
-    popular([item("DEN", 90), item("MSY", 110), item("DFW", 70)]);
+  it("tropical,winter in any-mode returns cards from routes matching a single vibe", async () => {
+    popular([item("CUN", 120), item("DEN", 90), item("DFW", 70)]);
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
 
     const result = await getSurpriseDestinations({
       origin: "JFK",
-      vibes: "nature,nightlife",
+      vibes: "tropical,winter",
       departMonth: "2026-08",
       matchMode: "any",
     });
 
     const names = result.destinations.map((d) => d.name);
-    expect(names).toContain("Denver, Colorado");        // nature
-    expect(names).toContain("New Orleans, Louisiana");  // nightlife
-    expect(names).not.toContain("Dallas, Texas");       // matches neither
+    expect(names).toContain("Cancún, Mexico");     // tropical
+    expect(names).toContain("Denver, Colorado");   // winter
+    expect(names).not.toContain("Dallas, Texas");  // matches neither
   });
 
-  it("single-vibe searches let the curated filler work at overlap 1 (previously required 2)", async () => {
+  it("single-vibe searches let the curated filler work at overlap 1 (it previously demanded 2 and starved them)", async () => {
     emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
 
-    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "wellness", departMonth: "2026-08" });
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "winter", departMonth: "2026-08" });
 
-    // Popular routes empty -> filler must still offer wellness destinations (unpriced, honest).
+    // Popular routes empty -> the filler must still offer winter destinations,
+    // honestly unpriced ("—"), instead of a degraded dead end.
     expect(result.destinations.length).toBeGreaterThanOrEqual(1);
     expect(result.degraded).toBeUndefined();
   });
 });
 ```
 
-Run: `npx vitest run src/lib/atlas/surprise.http-budget.test.ts src/lib/atlas/surprise.test.ts` → Expected: all four new tests FAIL (pre-flight tests fail because the engine still fetches; matchMode tests fail because `matchMode` is not a parameter yet).
-
-*(Note: the single-vibe filler test should stub `vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] })` inside the test — the file's `vi.mock` makes `rawSearchFlights` a bare `vi.fn()`, and the engine's try/catch would otherwise mask the undefined return; the explicit stub keeps the test's intent readable.)*
+Run: `npx vitest run src/lib/atlas/surprise.http-budget.test.ts src/lib/atlas/surprise.test.ts` → Expected: the four new tests FAIL (the engine still fetches for impossible asks; `matchMode` is not a parameter; single-vibe filler returns nothing).
 
 - [ ] **Step 2: Implement in `src/lib/atlas/surprise.ts`**
 
-1. Imports:
+1. Import:
 
 ```ts
 import { preflightVibes, type PreflightResult } from "./vibe-preflight";
@@ -1342,12 +1912,13 @@ export interface SurpriseResult {
 }
 ```
 
-`getSurpriseDestinations` signature gains `matchMode?: "all" | "any"`.
+`getSurpriseDestinations`'s params gain `matchMode?: "all" | "any";`.
 
-4. Right after `const requestedVibes = new Set(normalizeVibes(params.vibes));` insert the short-circuit (BEFORE `departMonth` is even needed and before any `tpGet`):
+4. Right after `const requestedVibes = new Set(normalizeVibes(params.vibes));` insert the short-circuit (BEFORE any `tpGet`). Note this reuses Task 3's `originResolved` — move that `const originResolved = resolveCityName(origin);` line up here, keep `originCityKey` derived from it where Task 3 put it:
 
 ```ts
-  const originName = resolveCityName(origin) ?? undefined;
+  const originResolved = resolveCityName(origin);
+  const originName = originResolved ?? undefined;
 
   if (requestedVibes.size > 0) {
     const preflight = preflightVibes([...requestedVibes], { matchMode: params.matchMode });
@@ -1366,21 +1937,21 @@ export interface SurpriseResult {
   }
 ```
 
-5. Hoist the overlap threshold: insert immediately after the preflight block (so it is in scope for both the ranking filter and the curated filler), and DELETE the local `const minOverlap = requestedVibes.size >= 2 ? 2 : 1;` inside the ranking block:
+5. Hoist the overlap threshold so ranking AND filler share it: immediately after the preflight block add
 
 ```ts
   const minOverlap = params.matchMode === "any" ? 1 : requestedVibes.size >= 2 ? 2 : 1;
 ```
 
-Then replace the curated filler's two `if (overlap < 2) continue;` checks with `if (overlap < minOverlap) continue;`.
+then DELETE the local `const minOverlap = ...` inside the ranking block, and in the curated filler replace **both** `if (overlap < 2) continue;` checks with `if (overlap < minOverlap) continue;`.
 
-6. Add `originName` to both `return` statements at the end of the function.
+6. Add `originName` to both final `return` statements (`{ origin, originName, destinations, ... }`).
 
-Run: `npx vitest run src/lib/atlas/surprise.http-budget.test.ts src/lib/atlas/surprise.test.ts` → Expected: PASS.
+Run: `npx vitest run src/lib/atlas/surprise.http-budget.test.ts src/lib/atlas/surprise.test.ts` → Expected: PASS. (The http-budget worst-case pin of 7 wire calls still passes: `tropical,beach` is satisfiable and never short-circuits.)
 
 - [ ] **Step 3: Degrade codes — failing test first**
 
-In `src/lib/atlas/surprise-degrade.test.ts`, extend `EXPECTED_DEGRADE_CODES` with `"unknown_vibes", "no_match_possible"`. Run `npx vitest run src/lib/atlas/surprise-degrade.test.ts` → FAIL (map missing the codes). Then in `src/lib/atlas/surprise-degrade.ts` extend the union and map:
+In `src/lib/atlas/surprise-degrade.test.ts`, extend the expected-codes assertion with `"unknown_vibes"` and `"no_match_possible"`. Run `npx vitest run src/lib/atlas/surprise-degrade.test.ts` → FAIL. Then in `src/lib/atlas/surprise-degrade.ts`:
 
 ```ts
 export type SurpriseDegradeCode =
@@ -1393,22 +1964,57 @@ export type SurpriseDegradeCode =
   | "internal_error";
 ```
 
+and in `DEGRADE_CODE_TO_KEY`:
+
 ```ts
   unknown_vibes: "degradedUnknownVibesBody",
   no_match_possible: "degradedNoMatchPossibleBody",
 ```
 
-The same test file's locale sweep will now FAIL until Task 5 adds `degradedUnknownVibesBody` / `degradedNoMatchPossibleBody` to all six locales — to keep this task independently green, add those two keys to all six `messages/*/common.json` `atlasHero` blocks NOW using the exact translations from the Task 5 table (rows `degradedUnknownVibesBody` and `degradedNoMatchPossibleBody`), and leave the rest of the copy for Task 5.
+The same file's locale sweep will now FAIL until the two keys exist in all six locales — add them NOW to each `atlasHero` block (after `degradedInternalErrorBody`), using EXACTLY these strings:
+
+**en:**
+```json
+"degradedUnknownVibesBody": "We didn't recognize some of the vibes on this trip, so the search couldn't use them. Adjust your vibes or ask Atlas.",
+"degradedNoMatchPossibleBody": "No destination we know combines all of those vibes at once. Try matching any of them, or ask Atlas."
+```
+**es:**
+```json
+"degradedUnknownVibesBody": "No reconocimos algunos de los ambientes de este viaje, así que la búsqueda no pudo usarlos. Ajusta tus ambientes o pregunta a Atlas.",
+"degradedNoMatchPossibleBody": "Ningún destino que conozcamos combina todos esos ambientes a la vez. Prueba a buscar con cualquiera de ellos o pregunta a Atlas."
+```
+**pt:**
+```json
+"degradedUnknownVibesBody": "Não reconhecemos algumas das vibes desta viagem, então a busca não pôde usá-las. Ajuste suas vibes ou pergunte ao Atlas.",
+"degradedNoMatchPossibleBody": "Nenhum destino que conhecemos combina todas essas vibes ao mesmo tempo. Tente buscar com qualquer uma delas ou pergunte ao Atlas."
+```
+**fr:**
+```json
+"degradedUnknownVibesBody": "Nous n'avons pas reconnu certaines ambiances de ce voyage, la recherche n'a donc pas pu les utiliser. Ajustez vos ambiances ou demandez à Atlas.",
+"degradedNoMatchPossibleBody": "Aucune destination connue ne combine toutes ces ambiances à la fois. Essayez d'en chercher au moins une, ou demandez à Atlas."
+```
+**de:**
+```json
+"degradedUnknownVibesBody": "Einige Stimmungen dieser Reise haben wir nicht erkannt, deshalb konnte die Suche sie nicht verwenden. Passe deine Stimmungen an oder frage Atlas.",
+"degradedNoMatchPossibleBody": "Kein uns bekanntes Reiseziel vereint alle diese Stimmungen auf einmal. Versuche es mit mindestens einer davon oder frage Atlas."
+```
+**it:**
+```json
+"degradedUnknownVibesBody": "Non abbiamo riconosciuto alcune atmosfere di questo viaggio, quindi la ricerca non ha potuto usarle. Modifica le tue atmosfere o chiedi ad Atlas.",
+"degradedNoMatchPossibleBody": "Nessuna destinazione che conosciamo combina tutte queste atmosfere insieme. Prova a cercarne almeno una o chiedi ad Atlas."
+```
+
+Run: `npx vitest run src/lib/atlas/surprise-degrade.test.ts` → PASS.
 
 - [ ] **Step 4: API route — failing test first**
 
-Append to `src/app/api/surprise-me/route.test.ts` (uses the file's existing `request()`/mock helpers):
+Append to `src/app/api/surprise-me/route.test.ts` (uses the file's existing `request()`/`json()` helpers and `mockedGetSurpriseDestinations`):
 
 ```ts
   it("MATCH MODE: forwards match=any to the engine and varies the cache key", async () => {
     mockedGetSurpriseDestinations.mockResolvedValue({ origin: "JFK", destinations: [] });
 
-    await GET(request("origin=JFK&vibes=nature%2Cnightlife&match=any"));
+    await GET(request("origin=JFK&vibes=tropical%2Cwinter&match=any"));
 
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledWith(
       expect.objectContaining({ matchMode: "any" })
@@ -1421,22 +2027,32 @@ Append to `src/app/api/surprise-me/route.test.ts` (uses the file's existing `req
       originName: "New York, New York",
       destinations: [],
       degraded: { code: "no_match_possible", reason: "engine prose" },
-      preflight: { status: "no_match_possible", wouldMatchIfAny: 46 },
+      preflight: { status: "no_match_possible", wouldMatchIfAny: 40 },
     };
     mockedGetSurpriseDestinations.mockResolvedValue(preflightResult as never);
 
-    const first = await GET(request("origin=JFK&vibes=nature%2Cnightlife"));
+    const first = await GET(request("origin=JFK&vibes=tropical%2Cwinter"));
     expect(await json(first)).toMatchObject({
       preflight: { status: "no_match_possible" },
       originName: "New York, New York",
     });
 
-    await GET(request("origin=JFK&vibes=nature%2Cnightlife"));
+    await GET(request("origin=JFK&vibes=tropical%2Cwinter"));
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2); // degraded => never cached
   });
 ```
 
-Run → FAIL. Then in `src/app/api/surprise-me/route.ts`: parse `const match = clampQueryValue(searchParams.get("match"), 10);`, derive `const matchMode = match === "any" ? ("any" as const) : ("all" as const);`, append `matchMode` to the `cacheKey` array, and pass `matchMode` into `getSurpriseDestinations`. Run → PASS. (The existing "cache only non-degraded priced results" logic already keeps preflight responses uncached — no change needed there.)
+Run → FAIL. Then in `src/app/api/surprise-me/route.ts`: parse `const match = clampQueryValue(searchParams.get("match"), 10);`, derive `const matchMode = match === "any" ? ("any" as const) : ("all" as const);`, append `matchMode` to the `cacheKey` array, and pass `matchMode` into `getSurpriseDestinations`.
+
+**⚠ In the SAME step, update the three existing exact-match assertions (review I2 — passing `matchMode` unconditionally changes the engine-call shape, so all three fail otherwise; an earlier revision of this plan wrongly claimed they stay green).** In `route.test.ts`, each expected call object gains `matchMode: "all"`:
+
+- PASS-THROUGH test (~line 46): `expect(mockedGetSurpriseDestinations).toHaveBeenCalledWith({ origin: "JFK", vibes: "beach,romantic", departMonth: "2026-08", tripLength: "week", matchMode: "all" });`
+- NO ORIGIN MANGLING test, first call (~line 74): `toHaveBeenNthCalledWith(1, { origin: "Cancun", vibes: "", departMonth: "", tripLength: "", matchMode: "all" })`
+- NO ORIGIN MANGLING test, second call (~line 80): `toHaveBeenNthCalledWith(2, { origin: "", vibes: "no-origin-mangling", departMonth: "", tripLength: "", matchMode: "all" })`
+
+Do NOT "fix" this by passing `matchMode` only when `match=any` — that would silently fork the cache-key/engine contract (the exact failure mode the review warned about).
+
+Run → PASS, including the three updated assertions. (The existing "cache only priced, non-degraded results" logic already keeps preflight responses uncached — no change there.)
 
 - [ ] **Step 5: `buildSurpriseQuery` — failing test first**
 
@@ -1446,14 +2062,14 @@ Append to `src/lib/atlas/surprise-query.test.ts`:
   it("adds match=any and honors a depart-month override when the clarification card re-runs", () => {
     const params = buildSurpriseQuery({
       originCode: "JFK",
-      vibesSummary: "nature + nightlife",
+      vibesSummary: "tropical + winter",
       matchAny: true,
       departMonthOverride: "2026-11",
     });
 
     expect(params.get("match")).toBe("any");
     expect(params.get("depart_month")).toBe("2026-11");
-    expect(params.get("vibes")).toBe("nature,nightlife");
+    expect(params.get("vibes")).toBe("tropical,winter");
   });
 
   it("omits match unless explicitly any", () => {
@@ -1462,13 +2078,13 @@ Append to `src/lib/atlas/surprise-query.test.ts`:
   });
 ```
 
-Run → FAIL. Then in `src/lib/atlas/surprise-query.ts` extend the args type with `matchAny?: boolean; departMonthOverride?: string | null;` and implement:
+Run → FAIL. Then in `src/lib/atlas/surprise-query.ts` extend the args type with `matchAny?: boolean; departMonthOverride?: string | null;`, change the first line of `buildSurpriseQuery` to
 
 ```ts
   const departMonth = args.departMonthOverride?.trim() || deriveDepartMonth(args.flexibleWindow, args.startDate);
 ```
 
-and after the vibes block:
+and after the vibes block add
 
 ```ts
   if (args.matchAny) params.set("match", "any");
@@ -1487,19 +2103,17 @@ git commit -m "feat(surprise): pre-flight short-circuit + match-any mode — imp
 
 ---
 
-### Task 5: i18n — all new copy, six locales
+### Task 6: i18n — the clarification-card copy, six locales
 
 **Files:**
-- Modify: `messages/en/common.json`, `messages/es/common.json`, `messages/pt/common.json`, `messages/fr/common.json`, `messages/de/common.json`, `messages/it/common.json`
+- Modify: `messages/{en,es,pt,fr,de,it}/common.json` (`atlasHero` additions)
+- Modify: `src/lib/atlas/surprise-degrade.test.ts` (locale-parity tests)
 
 **Interfaces:**
-- Produces: `atlasHero.clarify*` keys (Task 6 component), `tripForm.vibes.*` canonical 10 (Tasks 6, 7), `quiz.vibe_*` canonical 10.
+- Produces: `atlasHero.clarify*` keys consumed by Task 7's component. `{vibes}` interpolates a human-readable, localized list; `{count}` a number; `{origin}`/`{month}` resolved names — never raw codes.
+- Produces: the **no-origin variants** `atlasHero.subtitleNoOrigin` and `atlasHero.clarifyAtlasSeedNoOrigin` (G4 Scope / review I4: when the origin cannot be named, the origin phrase is OMITTED — a bare code is never the fallback).
 
-Add the following keys. Use these EXACT strings — they are written for an average/older traveller (no jargon, no codes-as-concepts) and match each locale's existing register (ES/PT/DE/IT informal, FR `vous`; "vibes" is rendered per-locale as ambientes/vibes/ambiances/Stimmungen/atmosfere, consistent with the existing `degradedNoVibeMatchBody` strings).
-
-- [ ] **Step 1: `atlasHero` additions (place after `degradedInternalErrorBody`)**
-
-`{vibes}` interpolates a human-readable list, `{count}` a number, `{origin}`/`{month}` resolved names — never raw codes (the component passes `originName` when available).
+- [ ] **Step 1: Add the `atlasHero` keys (place after the two `degraded*` keys Task 5 added). Use these EXACT strings** — written for an average/older traveller (no jargon, no codes-as-concepts), matching each locale's register (ES/PT/DE/IT informal, FR `vous`; "vibes" rendered per-locale as ambientes/vibes/ambiances/Stimmungen/atmosfere, consistent with the existing `degradedNoVibeMatchBody` strings):
 
 **en:**
 ```json
@@ -1513,8 +2127,8 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "Or try a different month:",
 "clarifyAskAtlas": "Ask Atlas for ideas",
 "clarifyAtlasSeed": "I'm planning a trip from {origin} around {month}. I'd love something that feels like: {vibes}. The automatic search couldn't find a destination that matches everything — can you suggest a few places that come close?",
-"degradedUnknownVibesBody": "We didn't recognize some of the vibes on this trip, so the search couldn't use them. Adjust your vibes or ask Atlas.",
-"degradedNoMatchPossibleBody": "No destination we know combines all of those vibes at once. Try matching any of them, or ask Atlas."
+"clarifyAtlasSeedNoOrigin": "I'm planning a trip around {month}. I'd love something that feels like: {vibes}. The automatic search couldn't find a destination that matches everything — can you suggest a few places that come close?",
+"subtitleNoOrigin": "{vibes} vibes · {budget} budget"
 ```
 
 **es:**
@@ -1529,8 +2143,8 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "O prueba con otro mes:",
 "clarifyAskAtlas": "Pedir ideas a Atlas",
 "clarifyAtlasSeed": "Estoy planeando un viaje desde {origin} hacia {month}. Me gustaría algo con este estilo: {vibes}. La búsqueda automática no encontró un destino que lo tenga todo — ¿puedes sugerirme lugares que se acerquen?",
-"degradedUnknownVibesBody": "No reconocimos algunos de los ambientes de este viaje, así que la búsqueda no pudo usarlos. Ajusta tus ambientes o pregunta a Atlas.",
-"degradedNoMatchPossibleBody": "Ningún destino que conozcamos combina todos esos ambientes a la vez. Prueba a buscar con cualquiera de ellos o pregunta a Atlas."
+"clarifyAtlasSeedNoOrigin": "Estoy planeando un viaje hacia {month}. Me gustaría algo con este estilo: {vibes}. La búsqueda automática no encontró un destino que lo tenga todo — ¿puedes sugerirme lugares que se acerquen?",
+"subtitleNoOrigin": "Vibes {vibes} · presupuesto {budget}"
 ```
 
 **pt:**
@@ -1545,8 +2159,8 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "Ou tente outro mês:",
 "clarifyAskAtlas": "Pedir ideias ao Atlas",
 "clarifyAtlasSeed": "Estou planejando uma viagem saindo de {origin} por volta de {month}. Quero algo nesse estilo: {vibes}. A busca automática não encontrou um destino que combine com tudo — pode sugerir alguns lugares que cheguem perto?",
-"degradedUnknownVibesBody": "Não reconhecemos algumas das vibes desta viagem, então a busca não pôde usá-las. Ajuste suas vibes ou pergunte ao Atlas.",
-"degradedNoMatchPossibleBody": "Nenhum destino que conhecemos combina todas essas vibes ao mesmo tempo. Tente buscar com qualquer uma delas ou pergunte ao Atlas."
+"clarifyAtlasSeedNoOrigin": "Estou planejando uma viagem por volta de {month}. Quero algo nesse estilo: {vibes}. A busca automática não encontrou um destino que combine com tudo — pode sugerir alguns lugares que cheguem perto?",
+"subtitleNoOrigin": "Vibes {vibes} · orçamento {budget}"
 ```
 
 **fr:**
@@ -1561,8 +2175,8 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "Ou essayez un autre mois :",
 "clarifyAskAtlas": "Demander des idées à Atlas",
 "clarifyAtlasSeed": "Je prépare un voyage au départ de {origin} vers {month}. J'aimerais quelque chose dans cet esprit : {vibes}. La recherche automatique n'a pas trouvé de destination qui corresponde à tout — pouvez-vous me suggérer quelques endroits qui s'en approchent ?",
-"degradedUnknownVibesBody": "Nous n'avons pas reconnu certaines ambiances de ce voyage, la recherche n'a donc pas pu les utiliser. Ajustez vos ambiances ou demandez à Atlas.",
-"degradedNoMatchPossibleBody": "Aucune destination connue ne combine toutes ces ambiances à la fois. Essayez d'en chercher au moins une, ou demandez à Atlas."
+"clarifyAtlasSeedNoOrigin": "Je prépare un voyage vers {month}. J'aimerais quelque chose dans cet esprit : {vibes}. La recherche automatique n'a pas trouvé de destination qui corresponde à tout — pouvez-vous me suggérer quelques endroits qui s'en approchent ?",
+"subtitleNoOrigin": "Ambiances {vibes} · budget {budget}"
 ```
 
 **de:**
@@ -1577,8 +2191,8 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "Oder probiere einen anderen Monat:",
 "clarifyAskAtlas": "Atlas um Ideen bitten",
 "clarifyAtlasSeed": "Ich plane eine Reise ab {origin}, ungefähr im {month}. Ich hätte gern etwas in dieser Richtung: {vibes}. Die automatische Suche hat kein Ziel gefunden, das alles vereint — kannst du mir ein paar Orte vorschlagen, die nah dran sind?",
-"degradedUnknownVibesBody": "Einige Stimmungen dieser Reise haben wir nicht erkannt, deshalb konnte die Suche sie nicht verwenden. Passe deine Stimmungen an oder frage Atlas.",
-"degradedNoMatchPossibleBody": "Kein uns bekanntes Reiseziel vereint alle diese Stimmungen auf einmal. Versuche es mit mindestens einer davon oder frage Atlas."
+"clarifyAtlasSeedNoOrigin": "Ich plane eine Reise ungefähr im {month}. Ich hätte gern etwas in dieser Richtung: {vibes}. Die automatische Suche hat kein Ziel gefunden, das alles vereint — kannst du mir ein paar Orte vorschlagen, die nah dran sind?",
+"subtitleNoOrigin": "{vibes} Vibes · {budget} Budget"
 ```
 
 **it:**
@@ -1593,44 +2207,24 @@ Add the following keys. Use these EXACT strings — they are written for an aver
 "clarifyTryMonthLead": "Oppure prova un altro mese:",
 "clarifyAskAtlas": "Chiedi idee ad Atlas",
 "clarifyAtlasSeed": "Sto organizzando un viaggio in partenza da {origin}, verso {month}. Vorrei qualcosa in questo stile: {vibes}. La ricerca automatica non ha trovato una destinazione che abbia tutto — puoi suggerirmi qualche posto che ci si avvicini?",
-"degradedUnknownVibesBody": "Non abbiamo riconosciuto alcune atmosfere di questo viaggio, quindi la ricerca non ha potuto usarle. Modifica le tue atmosfere o chiedi ad Atlas.",
-"degradedNoMatchPossibleBody": "Nessuna destinazione che conosciamo combina tutte queste atmosfere insieme. Prova a cercarne almeno una o chiedi ad Atlas."
+"clarifyAtlasSeedNoOrigin": "Sto organizzando un viaggio verso {month}. Vorrei qualcosa in questo stile: {vibes}. La ricerca automatica non ha trovato una destinazione che abbia tutto — puoi suggerirmi qualche posto che ci si avvicini?",
+"subtitleNoOrigin": "Atmosfere {vibes} · budget {budget}"
 ```
 
-(If Task 4 already added the two `degraded*` keys, skip re-adding them — verify values match this table.)
+Validate: `for f in messages/*/common.json; do python3 -m json.tool "$f" > /dev/null && echo "OK $f"; done` → `OK` × 6.
 
-- [ ] **Step 2: Replace `tripForm.vibes` in each locale with the canonical 10**
+- [ ] **Step 2: Locale-parity tests**
 
-| key | en | es | pt | fr | de | it |
-|---|---|---|---|---|---|---|
-| beach | Beach | Playa | Praia | Plage | Strand | Spiaggia |
-| city | City | Ciudad | Cidade | Ville | Stadt | Città |
-| adventure | Adventure | Aventura | Aventura | Aventure | Abenteuer | Avventura |
-| food | Food | Gastronomía | Gastronomia | Gastronomie | Kulinarik | Gastronomia |
-| culture | Culture | Cultura | Cultura | Culture | Kultur | Cultura |
-| nature | Nature | Naturaleza | Natureza | Nature | Natur | Natura |
-| nightlife | Nightlife | Vida nocturna | Vida noturna | Vie nocturne | Nachtleben | Vita notturna |
-| wellness | Wellness | Bienestar | Bem-estar | Bien-être | Wellness | Benessere |
-| family | Family | En familia | Em família | En famille | Familie | In famiglia |
-| romantic | Romantic | Romántico | Romântico | Romantique | Romantik | Romantico |
-
-Delete the old `tropical/mountains/big_city/winter/cultural` keys from `tripForm.vibes` (keep `beach`/`adventure`, updating values per the table).
-
-- [ ] **Step 3: Update `quiz.vibe_*` in each locale to the same 10 words** (`vibe_beach` … `vibe_romantic`, values identical to the `tripForm.vibes` table above). The quiz component is currently unmounted (EntryTabs rejected 2026-04-10) but reads `PRESET_VIBES`, so its key set must track the canonical 10.
-
-- [ ] **Step 4: Validate + locale-parity test**
-
-```bash
-for f in messages/*/common.json; do python3 -m json.tool "$f" > /dev/null && echo "OK $f"; done
-```
-
-Expected: `OK` × 6. Then extend the locale sweep in `src/lib/atlas/surprise-degrade.test.ts` by appending inside the `describe("degraded body locale messages", ...)` block:
+Extend `src/lib/atlas/surprise-degrade.test.ts` inside the `describe("degraded body locale messages", ...)` block:
 
 ```ts
   const CLARIFY_KEYS = [
     "clarifyUnknownTitle", "clarifyUnknownBody", "clarifySuggestionsLead", "clarifyUseKnown",
     "clarifyImpossibleTitle", "clarifyImpossibleBody", "clarifyMatchAny", "clarifyTryMonthLead",
     "clarifyAskAtlas", "clarifyAtlasSeed",
+    // no-origin variants (G4 Scope / review I4): used when the origin cannot
+    // be named — the origin phrase is omitted, never a bare code
+    "clarifyAtlasSeedNoOrigin", "subtitleNoOrigin",
   ] as const;
 
   it.each(LOCALES)("%s has every clarification-card key", (locale) => {
@@ -1642,7 +2236,7 @@ Expected: `OK` × 6. Then extend the locale sweep in `src/lib/atlas/surprise-deg
     }
   });
 
-  it("non-English clarification bodies are not pasted English", () => {
+  it("non-English clarification bodies are genuinely translated, not pasted English", () => {
     const en = JSON.parse(readFileSync(resolve(process.cwd(), "messages", "en", "common.json"), "utf-8")) as {
       atlasHero: Record<string, string>;
     };
@@ -1658,32 +2252,32 @@ Expected: `OK` × 6. Then extend the locale sweep in `src/lib/atlas/surprise-deg
 
 Run: `npx vitest run src/lib/atlas/surprise-degrade.test.ts` → PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add messages src/lib/atlas/surprise-degrade.test.ts
-git commit -m "i18n(surprise): clarification-card + canonical vibe labels across en/es/pt/fr/de/it"
+git commit -m "i18n(surprise): clarification-card copy across en/es/pt/fr/de/it with parity tests"
 ```
 
 ---
 
-### Task 6: The interactive clarification card
+### Task 7: The interactive clarification card
 
 **Files:**
-- Create: `src/components/SurpriseClarificationCard.tsx`
-- Create: `src/components/SurpriseClarificationCard.test.tsx`
-- Modify: `src/components/SurpriseMeSection.tsx`
-- Modify: `src/components/SurpriseMeSection.test.tsx` (wiring test)
+- Create: `src/components/SurpriseClarificationCard.tsx` + `SurpriseClarificationCard.test.tsx`
+- Modify: `src/components/SurpriseMeSection.tsx` + `SurpriseMeSection.test.tsx`
+- Modify: `src/components/AtlasHeroSection.tsx` (optional `originName`)
+- Modify: `src/lib/atlas/no-fabrication.test.ts` (`SURPRISE_PATH_FILES` += `SurpriseClarificationCard.tsx`)
+- Modify: `src/lib/help-content.ts` ("When nothing matches" section)
 
 **Interfaces:**
-- Consumes: `PreflightResult` type (Task 3, type-only import — the JSON payload carries the data), `buildSurpriseQuery` with `matchAny`/`departMonthOverride` (Task 4), i18n keys (Task 5), existing `atlas-open` CustomEvent contract (`window.dispatchEvent(new CustomEvent("atlas-open", { detail: { message } }))` — `AssistantChat.tsx:632-649` opens the chat and auto-sends `detail.message`).
-- Produces: `<SurpriseClarificationCard>` with `data-testid="surprise-clarification-card"` (e2e in Task 8 depends on this testid, on `data-testid="clarify-match-any"`, and on `data-testid="clarify-suggestion"` chips).
+- Consumes: `PreflightResult` type (Task 4, type-only import — the JSON payload carries the data), `buildSurpriseQuery` with `matchAny`/`departMonthOverride` (Task 5), i18n keys (Tasks 2, 6), the existing `atlas-open` CustomEvent contract (`window.dispatchEvent(new CustomEvent("atlas-open", { detail: { message } }))` — `AssistantChat.tsx` opens the chat and auto-sends `detail.message`; SurpriseMeSection already uses it).
+- Produces: `<SurpriseClarificationCard>` with `data-testid="surprise-clarification-card"` (Task 8's e2e depends on it, on `data-testid="clarify-match-any"`, and on `data-testid="clarify-suggestion"` chips).
 
 - [ ] **Step 1: Write the failing component test — `src/components/SurpriseClarificationCard.test.tsx`**
 
 ```tsx
-import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -1701,8 +2295,8 @@ function renderCard(props: Partial<Parameters<typeof SurpriseClarificationCard>[
   return render(
     <NextIntlClientProvider locale="es" messages={esMessages}>
       <SurpriseClarificationCard
-        preflight={{ status: "no_match_possible", wouldMatchIfAny: 46 }}
-        vibes={["nature", "nightlife"]}
+        preflight={{ status: "no_match_possible", wouldMatchIfAny: 40 }}
+        vibes={["tropical", "winter"]}
         departMonth="2026-08"
         onMatchAny={noop}
         onPickMonth={noop}
@@ -1720,43 +2314,44 @@ describe("SurpriseClarificationCard — no_match_possible", () => {
     renderCard();
 
     const card = screen.getByTestId("surprise-clarification-card");
-    expect(card.textContent).toContain("46");
-    // localized vibe labels, not raw ids
-    expect(card.textContent).toContain("Naturaleza");
-    expect(card.textContent).toContain("Vida nocturna");
-    // no destination names appear — the card clarifies, it does not invent results
+    expect(card.textContent).toContain("40");
+    // localized vibe labels, not raw internal values
+    expect(card.textContent).toContain("Tropical");
+    expect(card.textContent).toContain("Escapada de Invierno");
+    expect(card.textContent).not.toContain("big_city");
+    // no destination or price appears — the card clarifies, it does not invent results
     expect(card.textContent).not.toMatch(/\$\d/);
   });
 
-  it("match-any button reports the count and fires the callback", async () => {
+  it("match-any button reports the count and fires the callback", () => {
     const onMatchAny = vi.fn();
     renderCard({ onMatchAny });
 
-    await userEvent.click(screen.getByTestId("clarify-match-any"));
+    fireEvent.click(screen.getByTestId("clarify-match-any"));
     expect(onMatchAny).toHaveBeenCalledTimes(1);
   });
 
-  it("offers month alternatives and Ask Atlas", async () => {
+  it("offers month alternatives and Ask Atlas", () => {
     const onPickMonth = vi.fn();
     const onAskAtlas = vi.fn();
     renderCard({ onPickMonth, onAskAtlas });
 
     const months = screen.getAllByTestId("clarify-month");
     expect(months.length).toBeGreaterThanOrEqual(3);
-    await userEvent.click(months[0]);
+    fireEvent.click(months[0]);
     expect(onPickMonth).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}$/));
 
-    await userEvent.click(screen.getByTestId("clarify-ask-atlas"));
+    fireEvent.click(screen.getByTestId("clarify-ask-atlas"));
     expect(onAskAtlas).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("SurpriseClarificationCard — unknown_vibes", () => {
-  it("names the unrecognized wish, offers canonical suggestion chips and a known-only search", async () => {
+  it("names the unrecognized wish, offers canonical suggestion chips and a known-only search", () => {
     const onUseSuggestion = vi.fn();
     const onUseKnownOnly = vi.fn();
     renderCard({
-      preflight: { status: "unknown_vibes", unknown: ["cata de vinos"], suggestions: ["food"] },
+      preflight: { status: "unknown_vibes", unknown: ["cata de vinos"], suggestions: ["foodie"] },
       vibes: ["cata de vinos", "beach"],
       onUseSuggestion,
       onUseKnownOnly,
@@ -1764,29 +2359,27 @@ describe("SurpriseClarificationCard — unknown_vibes", () => {
 
     const card = screen.getByTestId("surprise-clarification-card");
     expect(card.textContent).toContain("cata de vinos");
+    // the suggestion chip carries the localized label, not the internal value
+    expect(screen.getByTestId("clarify-suggestion").textContent).toContain("Gastronomía");
 
-    await userEvent.click(screen.getByTestId("clarify-suggestion"));
-    expect(onUseSuggestion).toHaveBeenCalledWith("food");
+    fireEvent.click(screen.getByTestId("clarify-suggestion"));
+    expect(onUseSuggestion).toHaveBeenCalledWith("foodie");
 
-    await userEvent.click(screen.getByTestId("clarify-use-known"));
+    fireEvent.click(screen.getByTestId("clarify-use-known"));
     expect(onUseKnownOnly).toHaveBeenCalledTimes(1);
   });
 });
 ```
 
-*(If `@testing-library/user-event` is not installed — check `package.json` — use `fireEvent.click` from `@testing-library/react` instead; it is sufficient here.)*
+Run: `npx vitest run src/components/SurpriseClarificationCard.test.tsx` → Expected: FAIL — module not found.
 
-- [ ] **Step 2: Run to verify failure**
-
-Run: `npx vitest run src/components/SurpriseClarificationCard.test.tsx`
-Expected: FAIL — module not found.
-
-- [ ] **Step 3: Implement `src/components/SurpriseClarificationCard.tsx`**
+- [ ] **Step 2: Implement `src/components/SurpriseClarificationCard.tsx`**
 
 ```tsx
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { CANONICAL_VIBES, type CanonicalVibe } from "@/lib/trip-types";
 import type { PreflightResult } from "@/lib/atlas/vibe-preflight";
 
 type NonOkPreflight = Exclude<PreflightResult, { status: "ok" }>;
@@ -1802,13 +2395,12 @@ interface SurpriseClarificationCardProps {
   onAskAtlas: () => void;
 }
 
-const CANONICAL_LABEL_KEYS = new Set([
-  "beach", "city", "adventure", "food", "culture", "nature", "nightlife", "wellness", "family", "romantic",
-]);
+const CANONICAL = new Set<string>(CANONICAL_VIBES);
 
 function upcomingMonths(from: string, count: number): string[] {
   const [year, month] = from.split("-").map(Number);
-  const base = Number.isFinite(year) && Number.isFinite(month) ? new Date(Date.UTC(year, month - 1, 1)) : new Date();
+  const base =
+    Number.isFinite(year) && Number.isFinite(month) ? new Date(Date.UTC(year, month - 1, 1)) : new Date();
   const months: string[] = [];
   for (let offset = 1; offset <= count; offset += 1) {
     const next = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + offset, 1));
@@ -1831,7 +2423,9 @@ export default function SurpriseClarificationCard({
   const tv = useTranslations("tripForm.vibes");
   const locale = useLocale();
 
-  const label = (vibe: string) => (CANONICAL_LABEL_KEYS.has(vibe) ? tv(vibe) : vibe);
+  // Canonical vibes get their localized label; a user's free-text wish is
+  // echoed back in their own words.
+  const label = (vibe: string) => (CANONICAL.has(vibe) ? tv(vibe as CanonicalVibe) : vibe);
   const monthLabel = (month: string) => {
     const [year, monthNum] = month.split("-").map(Number);
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
@@ -1935,9 +2529,21 @@ export default function SurpriseClarificationCard({
 
 Run: `npx vitest run src/components/SurpriseClarificationCard.test.tsx` → PASS.
 
-- [ ] **Step 4: Wire into `SurpriseMeSection.tsx` — failing wiring test first**
+- [ ] **Step 3: Wire into `SurpriseMeSection.tsx` — failing wiring test first**
 
-Append to `src/components/SurpriseMeSection.test.tsx` (uses the file's existing `stubSurpriseFetch`/`renderSurpriseMeSection` helpers; extend the `SurpriseMePayload` interface with `preflight?: unknown; originName?: string;`, and add `fireEvent` to the existing `@testing-library/react` import):
+Append to `src/components/SurpriseMeSection.test.tsx` (uses the file's existing `stubSurpriseFetch`/`renderSurpriseMeSection` helpers; extend its local `SurpriseMePayload` interface with `preflight?: unknown; originName?: string;`, and add `fireEvent` to the `@testing-library/react` import). Also extend `renderSurpriseMeSection` to accept prop overrides — existing calls stay valid:
+
+```tsx
+import type { ComponentProps } from "react";
+
+function renderSurpriseMeSection(props: Partial<ComponentProps<typeof SurpriseMeSection>> = {}) {
+  return render(
+    <NextIntlClientProvider locale="es" messages={esMessages}>
+      <SurpriseMeSection tripId={123} originCode="CANCUN" vibesSummary="playa" budgetLabel="moderado" {...props} />
+    </NextIntlClientProvider>
+  );
+}
+```
 
 ```tsx
 describe("SurpriseMeSection preflight clarification", () => {
@@ -1947,7 +2553,7 @@ describe("SurpriseMeSection preflight clarification", () => {
       originName: "New York, New York",
       destinations: [],
       degraded: { code: "no_match_possible", reason: "engine prose" },
-      preflight: { status: "no_match_possible", wouldMatchIfAny: 46 },
+      preflight: { status: "no_match_possible", wouldMatchIfAny: 40 },
     });
 
     renderSurpriseMeSection();
@@ -1963,7 +2569,7 @@ describe("SurpriseMeSection preflight clarification", () => {
       origin: "JFK",
       destinations: [],
       degraded: { code: "no_match_possible", reason: "engine prose" },
-      preflight: { status: "no_match_possible", wouldMatchIfAny: 46 },
+      preflight: { status: "no_match_possible", wouldMatchIfAny: 40 },
     });
 
     renderSurpriseMeSection();
@@ -1992,12 +2598,64 @@ describe("SurpriseMeSection preflight clarification", () => {
     });
     expect(screen.queryByTestId("surprise-clarification-card")).toBeNull();
   });
+
+  it("passes the resolved origin name into the hero subtitle when destinations render", async () => {
+    stubSurpriseFetch({
+      origin: "JFK",
+      originName: "New York, New York",
+      destinations: [
+        { name: "Lisbon, Portugal", airline: "TP", flightPrice: "$412 rt", nonstop: true, link: "" },
+      ],
+    });
+
+    renderSurpriseMeSection();
+
+    await waitFor(() => {
+      expect(screen.getByText(/New York, New York/)).toBeTruthy();
+    });
+  });
+
+  it("hero subtitle renders LOCALIZED vibe labels — an internal enum value on screen is a bug (G4 Scope)", async () => {
+    stubSurpriseFetch({
+      origin: "JFK",
+      originName: "New York, New York",
+      destinations: [
+        { name: "Lisbon, Portugal", airline: "TP", flightPrice: "$412 rt", nonstop: true, link: "" },
+      ],
+    });
+
+    renderSurpriseMeSection({ vibesSummary: "big_city + winter" });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Gran Ciudad/)).toBeTruthy(); // es label for big_city
+    });
+    expect(screen.getByText(/Escapada de Invierno/)).toBeTruthy(); // es label for winter
+    expect(screen.queryByText(/big_city/)).toBeNull();
+  });
+
+  it("omits the origin phrase when the origin cannot be named — a bare code is never the fallback (review I4)", async () => {
+    // originCode "CANCUN" is not a nameable 3-letter code and the payload has
+    // no originName — the subtitle must use the no-origin variant.
+    stubSurpriseFetch({
+      origin: "CANCUN",
+      destinations: [
+        { name: "Lisbon, Portugal", airline: "TP", flightPrice: "$412 rt", nonstop: true, link: "" },
+      ],
+    });
+
+    renderSurpriseMeSection();
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId("atlas-destination-card")).toHaveLength(1);
+    });
+    expect(screen.queryByText(/CANCUN/)).toBeNull();
+  });
 });
 ```
 
-Run → FAIL. Note: `renderSurpriseMeSection` renders with `vibesSummary="playa"` — a single unknown word. The clarification card renders for the payload's `preflight` regardless; the card's vibe list comes from `normalizeVibes(vibesSummary)`.
+Run → FAIL. (Note: `renderSurpriseMeSection` defaults to `vibesSummary="playa"` — a single unknown word. The card renders for whatever `preflight` the payload carries; its vibe list comes from `normalizeVibes(vibesSummary)`.)
 
-- [ ] **Step 5: Implement the wiring in `src/components/SurpriseMeSection.tsx`**
+- [ ] **Step 4: Implement the wiring in `src/components/SurpriseMeSection.tsx`**
 
 Exact changes:
 
@@ -2005,12 +2663,19 @@ Exact changes:
 
 ```tsx
 import { useLocale } from "next-intl";
-import { buildSurpriseQuery, normalizeVibes } from "@/lib/atlas/surprise-query";
+import { buildSurpriseQuery, deriveDepartMonth, normalizeVibes } from "@/lib/atlas/surprise-query";
+import { CANONICAL_VIBES, type CanonicalVibe } from "@/lib/trip-types";
 import type { PreflightResult } from "@/lib/atlas/vibe-preflight";
 import SurpriseClarificationCard from "./SurpriseClarificationCard";
 ```
 
-2. New state + a `Adjust` type near the other `useState` calls:
+(`buildSurpriseQuery` is already imported — extend that line with `deriveDepartMonth` and `normalizeVibes`; both are exported.) Add a module-level `const CANONICAL = new Set<string>(CANONICAL_VIBES);` and, inside the component next to the existing `t`, `const tVibes = useTranslations("tripForm.vibes");` plus a labeling helper — canonical vibes get their localized label, custom free text echoes in the user's own words (G4 Scope: no internal enum value ever renders):
+
+```tsx
+  const vibeLabel = (vibe: string) => (CANONICAL.has(vibe) ? tVibes(vibe as CanonicalVibe) : vibe);
+```
+
+2. New state near the other `useState` calls:
 
 ```tsx
   type Adjust = { vibes?: string[]; month?: string; matchAny?: boolean };
@@ -2020,7 +2685,7 @@ import SurpriseClarificationCard from "./SurpriseClarificationCard";
   const locale = useLocale();
 ```
 
-3. Rework `fetchSuggestions` to read the adjust state and capture the new payload fields (keep the AbortSignal contract and the existing catch/finally exactly). Because `adjust` joins the `useCallback` deps, every `setAdjust` gives the callback a new identity and the existing `useEffect([originCode, fetchSuggestions])` re-runs it with proper abort semantics — the action handlers below therefore only set state and never fetch directly (no double-fetch, no stale closure):
+3. Rework `fetchSuggestions` to read the adjust state and capture the new payload fields (keep the AbortSignal contract and the existing catch/finally exactly). Because `adjust` joins the `useCallback` deps, every `setAdjust` gives the callback a new identity and the existing `useEffect([originCode, fetchSuggestions])` re-runs it with proper abort semantics — the handlers below therefore only set state and never fetch directly (no double-fetch, no stale closure):
 
 ```tsx
   const fetchSuggestions = useCallback((signal?: AbortSignal) => {
@@ -2067,7 +2732,11 @@ import SurpriseClarificationCard from "./SurpriseClarificationCard";
 
 ```tsx
   const effectiveVibes = adjust.vibes ?? normalizeVibes(vibesSummary);
-  const effectiveMonth = adjust.month ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().slice(0, 7);
+  // Review I3: the month shown on the card's chips and told to Atlas MUST be
+  // the month the search actually used — deriveDepartMonth handles
+  // "2_3_months" (+2), "6_months" (+6) and dated trips. A hardcoded
+  // next-month here would misstate the user's intent back to them.
+  const effectiveMonth = adjust.month ?? deriveDepartMonth(flexibleWindow, startDate);
 
   // setAdjust alone triggers the refetch: fetchSuggestions depends on `adjust`,
   // so the [originCode, fetchSuggestions] effect re-runs with abort handling.
@@ -2095,11 +2764,14 @@ import SurpriseClarificationCard from "./SurpriseClarificationCard";
     const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
       new Date(Date.UTC(year, monthNum - 1, 1))
     );
-    const message = t("clarifyAtlasSeed", {
-      origin: originName ?? originCode,
-      month: monthLabel,
-      vibes: effectiveVibes.join(", "),
-    });
+    // The seed renders in the visible chat as the user's own message: vibes are
+    // localized labels (never internal values), and when the origin cannot be
+    // named the origin phrase is OMITTED — never a bare code (review I4; Jose's
+    // rule grants no "the user typed it themselves" exception).
+    const seedVibes = effectiveVibes.map(vibeLabel).join(", ");
+    const message = originName
+      ? t("clarifyAtlasSeed", { origin: originName, month: monthLabel, vibes: seedVibes })
+      : t("clarifyAtlasSeedNoOrigin", { month: monthLabel, vibes: seedVibes });
     window.dispatchEvent(new CustomEvent("atlas-open", { detail: { message } }));
   }
 ```
@@ -2107,7 +2779,8 @@ import SurpriseClarificationCard from "./SurpriseClarificationCard";
 5. In the render, split the `degraded` branch — clarification card for preflight codes, existing banner otherwise:
 
 ```tsx
-      ) : degraded && preflight && (degraded.code === "unknown_vibes" || degraded.code === "no_match_possible") && preflight.status !== "ok" ? (
+      ) : degraded && preflight && preflight.status !== "ok" &&
+        (degraded.code === "unknown_vibes" || degraded.code === "no_match_possible") ? (
         <SurpriseClarificationCard
           preflight={preflight}
           vibes={effectiveVibes}
@@ -2119,149 +2792,54 @@ import SurpriseClarificationCard from "./SurpriseClarificationCard";
           onAskAtlas={handleAskAtlasWithIntent}
         />
       ) : degraded ? (
-        /* existing PlannerErrorBanner branch unchanged */
+        /* existing PlannerErrorBanner branch — UNCHANGED */
 ```
 
-*(Design note, per spec: the seed message goes through the EXISTING chat auto-send mechanism — Atlas spends tokens only when the user explicitly clicks "Ask Atlas", i.e. engages. The seed carries origin, month, vibes, and the failure framing in the user's own language. `originName ?? originCode` — the code path only triggers when the origin airport cannot be named; the user typed that code themselves as their home airport, so echoing it back in their own chat message is acceptable; it is never rendered as a destination.)*
+6. Fix the hero subtitle's TWO leaks (G4 Scope — review I1 + I4). In `SurpriseMeSection`, compute the localized vibes display BEFORE interpolation and pass it in place of the raw summary:
 
-- [ ] **Step 6: Run component + full suite**
+```tsx
+  // G4: the subtitle renders localized vibe labels, never internal values like
+  // "big_city". Custom free text (and the "flexible" sentinel) echo as-is.
+  const vibesLabel = vibesSummary
+    .split(" + ")
+    .map((v) => vibeLabel(v.trim()))
+    .join(" + ");
+```
 
-Run: `npx vitest run src/components` then `npm run test:unit`
-Expected: all pass, including the pre-existing `SurpriseMeSection.test.tsx` degraded-banner tests (unchanged behavior for non-preflight codes).
+then render `<AtlasHeroSection destinations={destinations} originName={originName} vibesSummary={vibesLabel} budgetLabel={budgetLabel} ...>`. In `src/components/AtlasHeroSection.tsx`, **replace** the `originCode: string` prop with `originName?: string | null` (the subtitle was `originCode`'s only consumer — verify with a quick grep before deleting) and change the subtitle render to:
+
+```tsx
+          <p className="text-sm text-orange-800">
+            {originName
+              ? t("subtitle", { vibes: vibesSummary, origin: originName, budget: budgetLabel })
+              : t("subtitleNoOrigin", { vibes: vibesSummary, budget: budgetLabel })}
+          </p>
+```
+
+There is NO fallback to the bare code: when the origin cannot be named, the `subtitleNoOrigin` variant omits the origin phrase entirely (review I4 — "the user typed that code themselves" is an exception Jose's rule does not grant).
+
+*(Design note, per spec: the Ask-Atlas seed goes through the EXISTING chat auto-send mechanism — Atlas spends tokens only when the user explicitly clicks "Ask Atlas". The seed carries origin, month, vibes, and the failure framing, in the user's own language. The card never fabricates a destination to fill the gap.)*
+
+- [ ] **Step 5: Extend the tripwire + run**
+
+Add `"src/components/SurpriseClarificationCard.tsx",` to `SURPRISE_PATH_FILES` in `src/lib/atlas/no-fabrication.test.ts`.
+
+Run: `npx vitest run src/components src/lib/atlas/no-fabrication.test.ts` then `npm run test:unit`
+Expected: all pass, including the pre-existing `SurpriseMeSection.test.tsx` degraded-banner tests (unchanged behavior for non-preflight codes) and the `buildSurpriseQuery`/no-`new URLSearchParams` tripwires (the wiring keeps query construction delegated).
+
+- [ ] **Step 6: Update the help copy** (standing rule `feedback_update_help_with_features`)
+
+In `src/lib/help-content.ts`, `"planner-itinerary"` sections, append after the `"Atlas chat"` entry:
+
+```ts
+      { heading: "When nothing matches", text: "If no destination fits every vibe you picked, Atlas says so honestly and offers real ways forward: match any of your vibes instead of all of them, try a different month, or ask Atlas in chat — it already knows your starting city, month, and vibes. Atlas never fills the gap with made-up destinations or prices." },
+```
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/SurpriseClarificationCard.tsx src/components/SurpriseClarificationCard.test.tsx src/components/SurpriseMeSection.tsx src/components/SurpriseMeSection.test.tsx
+git add src/components/SurpriseClarificationCard.tsx src/components/SurpriseClarificationCard.test.tsx src/components/SurpriseMeSection.tsx src/components/SurpriseMeSection.test.tsx src/components/AtlasHeroSection.tsx src/lib/atlas/no-fabrication.test.ts src/lib/help-content.ts
 git commit -m "feat(surprise): interactive clarification card replaces the dead-end banner for preflight misses"
-```
-
----
-
-### Task 7: Kill the third vocabulary — TripForm/TripContextStrip on canonical vibes + tripwires + help
-
-`TripForm.tsx` is the LIVE vibe picker (the quiz is unmounted): its private `VIBES` list (`tropical, mountains, big_city, beach, winter, cultural, adventure`) is a third vocabulary that would silently regress into `unknown_vibes` for every new trip. It must draw from the canonical set. (Discovered during planning; spec G1 "every user-selectable vibe must be matchable" makes this in-scope.)
-
-**Files:**
-- Modify: `src/components/TripForm.tsx`
-- Modify: `src/components/TripContextStrip.tsx`
-- Modify: `src/lib/atlas/no-fabrication.test.ts`
-- Modify: `src/lib/help-content.ts`
-
-**Interfaces:**
-- Consumes: `VIBE_OPTIONS`, `VIBE_ICONS` from `@/lib/trip-types` (Task 1); `tripForm.vibes.*` i18n keys (Task 5).
-
-- [ ] **Step 1: Write the failing old-vocabulary tripwire**
-
-Append to `src/lib/atlas/no-fabrication.test.ts`:
-
-```ts
-// The vibe pipeline's product source must speak ONLY the canonical vocabulary.
-// vibe-preflight.ts is deliberately excluded: it maps legacy words to
-// suggestions, so it must contain them. Test files are excluded: fixtures
-// legitimately freeze the pre-migration table. BootstrapModal's GUEST_INTERESTS
-// ('mountains') are interests, not vibes — out of the vibe pipeline, excluded.
-const VIBE_PIPELINE_FILES = [
-  "src/lib/trip-types.ts",
-  "src/lib/atlas/destination-vibes.ts",
-  "src/lib/atlas/surprise.ts",
-  "src/lib/atlas/surprise-query.ts",
-  "src/components/TripForm.tsx",
-  "src/components/TripContextStrip.tsx",
-  "src/components/SurpriseMeQuiz.tsx",
-  "src/components/SurpriseMeSection.tsx",
-  "src/components/SurpriseClarificationCard.tsx",
-];
-
-// "mountain" also catches "mountains"; "winter" was a TripForm-only picker value
-// that never matched anything. "cultural" does NOT match the canonical "culture"
-// (substring runs the other way), so the canonical words are safe.
-const RETIRED_VIBE_WORDS = ["big_city", "cultural", "foodie", "tropical", "mountain", "winter"];
-
-describe("retired vibe vocabulary tripwire", () => {
-  it.each(VIBE_PIPELINE_FILES)("%s speaks only the canonical vibe vocabulary", (file) => {
-    const content = readFileSync(resolve(process.cwd(), file), "utf-8");
-    for (const word of RETIRED_VIBE_WORDS) {
-      expect(content, `${file} still contains retired vibe word "${word}"`).not.toContain(word);
-    }
-  });
-});
-```
-
-Also extend the existing `SURPRISE_PATH_FILES` array in the same file with the new surprise-path sources:
-
-```ts
-  "src/lib/atlas/vibe-preflight.ts",
-  "src/lib/atlas/city-names.ts",
-  "src/components/SurpriseClarificationCard.tsx",
-```
-
-Run: `npx vitest run src/lib/atlas/no-fabrication.test.ts`
-Expected: the new tripwire FAILS on `TripForm.tsx` and `TripContextStrip.tsx` (they still carry `tropical`/`big_city`/`cultural`/`mountains`/`winter`). The extended fabrication tripwire passes (new files carry no banned literals).
-
-- [ ] **Step 2: Migrate `TripForm.tsx`**
-
-Delete the private `VIBES` constant (lines 27–35) and import instead:
-
-```tsx
-import { VIBE_OPTIONS } from "@/lib/trip-types";
-```
-
-In the vibes section render (currently `{VIBES.map(v => ... {v.icon} {v.label} ...)}`), switch to i18n labels:
-
-```tsx
-              {VIBE_OPTIONS.map(v => (
-                <button key={v.value} type="button" onClick={() => toggleVibe(v.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    vibes.includes(v.value)
-                      ? 'bg-pink-100 border-pink-400 text-pink-800'
-                      : 'bg-white border-gray-300 text-gray-600 hover:border-pink-300'
-                  }`}>
-                  {v.icon} {t(`vibes.${v.value}`)}
-                </button>
-              ))}
-```
-
-Update the one other `VIBES` reference (`!VIBES.some(v => v.value === i)` in the custom-vibe dedupe around line 267) to `!VIBE_OPTIONS.some(v => v.value === i)`.
-
-- [ ] **Step 3: Migrate `TripContextStrip.tsx`**
-
-Replace the `VIBE_EMOJIS` map with the canonical icon map plus a graceful default for legacy/custom vibes stored on old trips:
-
-```tsx
-import { VIBE_ICONS } from "@/lib/trip-types";
-```
-
-and where the emoji is looked up, use `VIBE_ICONS[vibe as keyof typeof VIBE_ICONS] ?? "✨"`. Delete the old `VIBE_EMOJIS` constant.
-
-- [ ] **Step 4: Run the tripwire + suite**
-
-Run: `npx vitest run src/lib/atlas/no-fabrication.test.ts` → PASS.
-Then evidence sweep (expected output shown — reason about it, don't just run it):
-
-```bash
-grep -rn "tropical\|big_city\|foodie" src --include="*.ts" --include="*.tsx" | grep -v ".test."
-```
-
-Expected: matches ONLY in `src/lib/atlas/vibe-preflight.ts` (the legacy-synonym map — intentional). Any other file listed = regression, fix it.
-
-- [ ] **Step 5: Update `src/lib/help-content.ts`** (standing rule `feedback_update_help_with_features`: help must track TPI feature changes)
-
-In the `"planner-new-trip"`-area entry (the one whose heading is `"Where are you going?"`, line ~25), replace the parenthetical vibe examples: `"pick a vibe (Tropical, Mountains, Beach, etc.)"` → `"pick a vibe (Beach, Culture, Food, Family, Romantic, etc.)"`.
-
-In `"planner-itinerary"`, append a section (after `"Atlas chat"`):
-
-```ts
-      { heading: "When nothing matches", text: "If no destination fits every vibe you picked, Atlas says so honestly and offers real ways forward: match any of your vibes instead of all of them, try a different month, or ask Atlas in chat — it already knows your origin, month, and vibes. Atlas never fills the gap with made-up destinations or prices." },
-```
-
-- [ ] **Step 6: Full suite + build + commit**
-
-Run: `npm run test:unit` → all pass. `npm run build` → clean.
-
-```bash
-git add src/components/TripForm.tsx src/components/TripContextStrip.tsx src/lib/atlas/no-fabrication.test.ts src/lib/help-content.ts
-git commit -m "fix(vibes): live TripForm picker joins the canonical vocabulary; retired-word tripwire; help updated"
 ```
 
 ---
@@ -2270,6 +2848,7 @@ git commit -m "fix(vibes): live TripForm picker joins the canonical vocabulary; 
 
 **Files:**
 - Modify: `tests/e2e/planner-trust.spec.ts`
+- Create: `docs/superpowers/evidence/2026-07-12-vibe-fix/*.png`
 
 - [ ] **Step 1: Start the dev server (separate shell / background)**
 
@@ -2277,18 +2856,18 @@ git commit -m "fix(vibes): live TripForm picker joins the canonical vocabulary; 
 npm run dev -- -p 3001
 ```
 
-Wait for `Ready` on http://localhost:3001. Reminder: if every Playwright test fails in ~300ms, the server died — restart it.
+Wait for `Ready` on http://localhost:3001. Reminder: if every Playwright test fails in ~300ms, the server died — restart it, don't debug the tests.
 
 - [ ] **Step 2: Add two e2e tests to `tests/e2e/planner-trust.spec.ts`**
 
-Follow the file's existing interception pattern (see the `Path B → "Plan a trip to X"` test). `POST /api/trips` accepts `interests` (verified: `src/app/api/trips/route.ts:32`).
+Follow the file's existing interception pattern (see the `Path B → "Plan a trip to X"` test). `POST /api/trips` accepts `interests` (verified: `src/app/api/trips/route.ts`, `interests = []` destructure).
 
 ```ts
 test('impossible vibe combo renders the clarification card, and match-any re-runs the search', async ({ page, context }) => {
   const post = await context.request.post('/api/trips', {
     data: {
       name: 'Clarify test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA',
-      interests: ['vibe:nature', 'vibe:nightlife'],
+      interests: ['vibe:tropical', 'vibe:winter'],
     },
   });
   const trip = await post.json();
@@ -2303,8 +2882,8 @@ test('impossible vibe combo renders the clarification card, and match-any re-run
           origin: 'MIA',
           originName: 'Miami, Florida',
           destinations: [
-            { name: 'Denver, Colorado', flightPrice: '$142', airline: 'UA', nonstop: true, link: '' },
-            { name: 'New Orleans, Louisiana', flightPrice: '$98', airline: 'WN', nonstop: true, link: '' },
+            { name: 'Cancún, Mexico', flightPrice: '$142', airline: 'AA', nonstop: true, link: '' },
+            { name: 'Denver, Colorado', flightPrice: '$98', airline: 'UA', nonstop: true, link: '' },
           ],
         }),
       });
@@ -2317,7 +2896,7 @@ test('impossible vibe combo renders the clarification card, and match-any re-run
         originName: 'Miami, Florida',
         destinations: [],
         degraded: { code: 'no_match_possible', reason: 'engine prose' },
-        preflight: { status: 'no_match_possible', wouldMatchIfAny: 46 },
+        preflight: { status: 'no_match_possible', wouldMatchIfAny: 40 },
       }),
     });
   });
@@ -2326,7 +2905,7 @@ test('impossible vibe combo renders the clarification card, and match-any re-run
 
   const card = page.locator('[data-testid="surprise-clarification-card"]');
   await expect(card).toBeVisible({ timeout: 10000 });
-  await expect(card).toContainText('46');
+  await expect(card).toContainText('40');
   // it clarifies — it never invents a destination card
   await expect(page.locator('[data-testid="atlas-destination-card"]')).toHaveCount(0);
 
@@ -2352,7 +2931,7 @@ test('unknown free-text vibe renders suggestions instead of a silent dead end', 
       originName: 'Miami, Florida',
       destinations: [],
       degraded: { code: 'unknown_vibes', reason: 'engine prose' },
-      preflight: { status: 'unknown_vibes', unknown: ['wine tasting'], suggestions: ['food'] },
+      preflight: { status: 'unknown_vibes', unknown: ['wine tasting'], suggestions: ['foodie'] },
     }),
   }));
 
@@ -2369,22 +2948,26 @@ test('unknown free-text vibe renders suggestions instead of a silent dead end', 
 - [ ] **Step 3: Run the e2e suite**
 
 Run: `npx playwright test`
-Expected: **43/43 pass** (41 baseline + 2 new). If `visual-baseline.spec.ts` snapshots fail, STOP and inspect the diff images in `playwright-report/` — the baseline trips are Path A (destination Cancún) and should be pixel-identical; a diff means an unintended UI change leaked.
+Expected: **43/43 pass** (41 baseline + 2 new). If `visual-baseline.spec.ts` snapshots fail, STOP and inspect the diff images in `playwright-report/` — the baseline trips are Path A (destination Cancún, no vibes), so context-strip and Surprise-hero changes must not touch them; a diff means an unintended UI change leaked.
 
 - [ ] **Step 4: Visual evidence for Jose (spec §4 — this bug class was found by eye, not by tests)**
 
-With the dev server up and REAL `TRAVELPAYOUTS_TOKEN` in `.env.local` (do NOT mock):
-1. Create a Surprise Me trip from origin JFK with vibes Culture + Food (via the planner UI) → screenshot the REAL cards (`/planner/<id>`, EN locale).
-2. Create one with Nature + Nightlife → screenshot the clarification card (EN).
-3. Repeat #2 under `/es/planner/<id>` → screenshot (ES).
-Save to `docs/superpowers/evidence/2026-07-12-vibe-fix/` (create dir) as `culture-food-cards-en.png`, `clarification-en.png`, `clarification-es.png`. Present to Jose for visual review — no deploy without it.
+With the dev server up and the REAL `TRAVELPAYOUTS_TOKEN` in `.env.local` (do NOT mock):
+1. Via the planner UI, create a Surprise Me trip from origin JFK with vibes **Cultural + Food** → screenshot the REAL cards (`/planner/<id>`, EN locale) → `cultural-foodie-cards-en.png`.
+2. Create one with **Winter Escapade + Mountains** → screenshot the REAL cards (this was a dead combination before this branch) → `winter-mountains-cards-en.png`.
+3. Create one with **Tropical + Winter Escapade** → screenshot the clarification card (EN) → `clarification-en.png`.
+4. Repeat #3 under `/es/planner/<id>` → `clarification-es.png`.
+
+Save all to `docs/superpowers/evidence/2026-07-12-vibe-fix/`. Present to Jose for visual review — **no deploy without it**.
+
+**PR-description note (review I6):** when PR #7's description is next updated, it MUST restate the accepted G4 gap from the **G4 Scope** section — Atlas's chat path (AssistantChat page context `Departing from:`/`Flying from:` and `getDeals` tool outputs) still passes raw codes to the model by Jose's explicit decision ("let Atlas speak naturally"). This is a documented, approved exception — not an oversight and not a TODO to sneak-fix.
 
 - [ ] **Step 5: Final gates (all four, fresh, in order — record outputs)**
 
 ```bash
 npm run lint          # expected: 0 errors, 30 warnings (baseline; new code adds none)
-npm run test:unit     # expected: 0 failures; > 200 tests (156 baseline + this plan's ~50)
-npm run build         # expected: clean; proves the server-only name table stays out of client bundles
+npm run test:unit     # expected: 0 failures; ≥ 200 tests (156 baseline + this plan's ~50)
+npm run build         # expected: clean; also proves the server-only name table stays out of client bundles
 npx playwright test   # expected: 43/43 (dev server on :3001)
 ```
 
@@ -2401,26 +2984,39 @@ git commit -m "test(e2e): clarification-card flows + visual evidence for the vib
 
 ## Verification-gate design notes (anti-self-defeat audit)
 
-Every scan gate in this plan was checked against what it would actually match in THIS repo:
+Every scan/gate in this plan was checked against what it would actually match in THIS repo. This bug class has appeared in five prior plans here — reason before adding any new gate.
 
-1. **Retired-vocabulary tripwire (Task 7)** scans an explicit product-file list — NOT `src/**`. Excluded with stated reasons: `vibe-preflight.ts` (legacy synonyms are its job), all `*.test.*` (frozen pre-migration fixture), `BootstrapModal.tsx` (`'mountains'` is an interest, not a vibe), `messages/` (a translation may legitimately contain words like "Montañas"), and this plan/spec (docs are never scanned).
-2. **The evidence grep in Task 7 Step 4** expects `vibe-preflight.ts` matches — the expected output is stated so the implementer doesn't "fix" the synonym map to satisfy a grep.
-3. **The fabrication tripwire ban list** (`FALLBACK`, `$89`, …) applies to files this plan creates — called out in Global Constraints so nobody writes the word in a comment and trips it.
-4. **No gate asserts exact generated-table counts** — TP's upstream data drifts; tests assert invariants (>9000 entries, label shape, specific known codes).
-5. **The regression guard asserts against live exports**, not copies of itself — it cannot be satisfied by editing the test.
+1. **There is deliberately NO text-ban on retired vibe words.** A substring ban on `mountain` is UNSATISFIABLE — it matches the canonical `mountains` everywhere, plus prose, city names, and the frozen test fixture. Same for `city` (substring of `big_city`) and the other dead `PRESET_VIBES` words. Drift protection is structural instead: `DESTINATION_VIBES` is TYPED `ReadonlySet<CanonicalVibe>` (a stray tag is a compile error) and the guard's vocabulary-EQUALITY test catches anything the types cannot.
+2. **The dead-code tripwire uses `existsSync`** for the three deleted components (matches nothing textual, cannot match itself) and scans exactly ONE product file (`trip-types.ts`) for `PRESET_VIBES` — never test files, never docs, never this plan.
+3. **Zero-wire-call assertions live in `surprise.http-budget.test.ts`, not `surprise.test.ts`** — the latter module-mocks `tpGet`, so a fetch spy there would pass vacuously even without the short-circuit. In the http-budget file, `fetch` IS the wire boundary and the tests genuinely fail pre-implementation.
+4. **No gate asserts exact generated-table counts** — TP's upstream data drifts; tests assert invariants (> 9,000 entries, > 400 suffixed, label shape, specific known codes). The measured 9,471/545 figures appear only as expected script output, with a stated drift band.
+5. **`wouldMatchIfAny` is asserted against a count DERIVED from `DESTINATION_VIBES` in the test itself**, never a hardcoded 40 — future editorial tag additions won't break it.
+6. **The regression guard asserts live exports** (`VIBE_OPTIONS`, `DESTINATION_VIBES`) — it cannot be satisfied by editing copies of itself, and its pre-fix failure is captured as evidence (`guard-prefix-failure.txt`) rather than re-demonstrated by later gymnastics.
+7. **The fabrication tripwire's banned-literal list** applies to three files this plan creates and several it edits — called out in Global Constraints so nobody writes `FALLBACK` (or `MIA` in `surprise.ts`) in a comment and trips it.
+8. **The zero-LLM source scan (review N4) was checked against the module it scans.** `vibe-preflight.ts`'s own header comment contains the word "spend" ("hard monthly spend cap"), so a bare substring ban on `spend` would be self-defeating. The scan therefore bans `@anthropic-ai` and `tool-loop` as substrings (absent from the module, verified against the Task 4 implementation) and `spend` only as an import specifier (`/from\s+["'][^"']*spend/`). It scans exactly one file — never the test that contains the banned strings by necessity.
 
 ## Deviations from the spec (flagged, with rationale)
 
-1. **"total tag count per destination never decreases" (spec §5 risk table)** is implemented as *new tags ⊇ mechanically-migrated old tags*. The literal count rule contradicts the spec's own §3.1 `tropical→beach` fold (30 destinations lose one raw count by design). The superset form catches exactly the risk named (silent tag loss) without forcing padding tags.
-2. **TripForm/TripContextStrip migration (Task 7)** is not named in the spec but is required by G1: TripForm is the *live* picker and carries a third vocabulary (`winter`, `mountains`, …) that would land every new trip in `unknown_vibes`. The rejected/unmounted EntryTabs quiz needed no work beyond `PRESET_VIBES` itself.
-3. **Generated table includes the 127 curated codes** (the scratchpad pre-build excluded them). Runtime is identical (curated checked first); the regen script gains independence from the TS module. 
-4. **`no_vibe_match` (preflight OK but live routes empty) keeps the existing banner.** The spec scopes the interactive card to the two preflight cases ("for these cases"); the banner already carries honest guidance and a retry.
-5. **Suggestion i18n depth:** free-text vibes are matched against English + legacy + one everyday word per vibe in each locale, plus typo distance. A Spanish phrase like "cata de vinos" may yield no suggestion — the card still names the unmatched wish and offers known-only/Ask-Atlas paths, so it degrades honestly, never silently.
+1. **Six new destinations added to the taxonomy** (`YVR SLC ZRH GVA MUC AGP`). The spec's own winter seed list (Denver, Salt Lake, Zurich, Geneva, Aspen…) names cities that are not in the taxonomy, and the ≥ 8 coverage floor for `winter` is unreachable from the existing 82 + 13 city codes alone without dishonest tagging. Aspen (ASE) omitted: tiny airport TP rarely prices; floor met without it. **AGP carries NO `winter` tag** (review B2 — Málaga is winter-*sun*, the escape-FROM-winter reading Jose rejected and the amended spec bans); it stays as a genuine beach/cultural/foodie destination, leaving winter coverage at 9 (≥ 8).
+2. **Same-city tag alignment** (`JFK/LGA/EWR` +romantic, `ORD/LHR` +nightlife, `MDE` +nightlife) is not in the spec but prevents "same city, different tags" inconsistencies now that metro codes and their airports coexist in the taxonomy and dedupe by city name. All additions are editorially true.
+3. **`DestinationSuggestions.tsx` is deleted along with the spec's trio** — its only importer was `EntryTabs`; leaving it would just create fresh zero-importer dead code. The quiz-only types in `trip-types.ts` go for the same reason.
+4. **`no_vibe_match` (preflight OK but live routes empty) keeps the existing banner.** The spec scopes the interactive card to the two preflight cases; the banner already carries honest guidance and a retry.
+5. **The origin decode (hero subtitle, trip header, context-strip pill, Atlas seed) exceeds §3.3's destination-only scope** — deliberately, per Jose's G4 decision ("Name everything on-screen", see the G4 Scope section). There is NO fallback to a bare code anywhere: unnameable origins get dedicated no-origin i18n variants (subtitle/seed) or the phrase/pill is omitted (header/strip).
+6. **`TripContextStrip` localized vibe labels** — the strip rendered the raw internal value (`big_city`) as a pill; same rationale.
+
+## Resolved at plan review (2026-07-12 — do NOT re-litigate)
+
+- **AGP (Málaga) `winter` tag → REMOVED** (review B2 + amended spec). Winter-sun is the escape-FROM-winter reading Jose rejected; no warm-weather destination may carry `winter`. AGP stays as beach/cultural/foodie. Winter coverage 9 (≥ 8), `tropical+winter` still the only impossible pair — machine-verified by the reviewer.
+- **Winter chip label → "Winter Escapade"** (review B1, Jose's binding decision, now in the spec). An escapade is something you go ON — the chip unambiguously means a snow/ski adventure; ❄️ is correct. Internal value stays `winter`; the label cascades through `VIBE_LABELS`, all six locales, help copy, tests, and evidence wording. Jose confirms the es/pt/de/it renderings at review (Task 2 Step 4).
+- **G4 scope** (review I1/I4/I6) → Jose's decision "Name everything on-screen; let Atlas speak naturally" — see the **G4 Scope** section. The chat-path code exposure is an accepted, Jose-approved gap, restated in the PR description (Task 8); every rendered surface is decoded, with omission (never a bare code) as the unnameable fallback.
 
 ## Uncertainties (do not guess — check at implementation time)
 
-- **`@testing-library/user-event`** may not be in devDependencies; Task 6 tests note the `fireEvent` substitution.
-- **`surprise.test.ts` enrichment expectations** may need fixture-order adjustments after the taxonomy change (Task 1 Step 8 says: fix fixtures to the new deterministic ranking, never the engine).
-- **Levenshtein false positives:** `editDistance("food","good")=1` style collisions are possible for short user words; the ≥4-char floor plus suggestion-only usage (never auto-substitution) bounds the blast radius. If review finds an embarrassing pair, tighten to distance ≤1 for 4–5-char tokens.
-- **`resolve-surprise` destination strings** now include `" (all airports)"` for metro codes (e.g. trip.destination = "Chicago, United States (all airports)"). Length is well under the route's 200-char cap and the string is honest; downstream affiliate matching treats destination as free text. Flag to Jose in review if it reads oddly in the trip header.
-- **Pre-existing raw-code exposure out of scope:** `atlasHero.subtitle` shows the ORIGIN code ("… from JFK") and Atlas tool outputs (`getDeals`) return raw destination codes to the model. Both predate this work; noted for a follow-up, not silently expanded into this plan.
+- **`surprise.test.ts` enrichment expectations after Task 1:** planning-time analysis says all existing fixtures survive the taxonomy edits (additive tags; new entries appended after existing ones in iteration order). If one drifts anyway, fix the FIXTURE to the new deterministic ranking, never the engine.
+- **Levenshtein false positives** in `suggestVibes` (e.g. `winery` → also suggests `winter` at distance 2): bounded — suggestions are never auto-applied, cap 3, ≥ 4-char floor. If review finds an embarrassing pair, tighten canonical-name distance to ≤ 1 for 4–5-char tokens (review N7: acceptable as planned).
+- **`resolve-surprise` destination strings** now include `" (all airports)"` for metro codes (trip.destination = "Chicago, United States (all airports)"). Well under the route's length cap and honest; flag to Jose if it reads oddly in the trip header.
+- **Multi-airport dedupe is name-based** (`cityKey`): "Newark, New Jersey" does not dedupe against "New York, New York" (different city names). Accepted; a metro-area table is out of scope.
+- **Month-boundary drift (review N5):** `deriveDepartMonth` uses local `new Date(...)` → `toISOString()`, which can drift one month near month-end in western timezones. Pre-existing pattern; the new `upcomingMonths` in the card already uses `Date.UTC`. Noted, not fixed here — flag if Jose wants a sweep.
+- **Match-any copy vs. card count (review N6):** `clarifyMatchAny` reports the honest any-match destination count (e.g. 40) while the re-run renders at most 3 cards. The count states how many places QUALIFY, not how many cards we show — kept as-is; flag the wording to Jose at copy review.
+- **Editorial flags for Jose (reviews N1/N2):** MOW's bookability for US origins and YVR's `beach` tag — both flagged inline in the Editorial Tag Changes section with the exact consequences of each possible decision. Jose decides; do not decide silently.
+

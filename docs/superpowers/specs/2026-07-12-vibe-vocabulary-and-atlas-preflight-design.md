@@ -66,7 +66,7 @@ When a search yields nothing, the user gets a degraded banner. Honest — but a 
 - G1. One canonical vibe vocabulary shared by the picker and the taxonomy. Every user-selectable vibe **must** be matchable.
 - G2. A **regression guard** that fails the build if picker and taxonomy ever drift apart again. This is the fix that matters most — the bug was a silent drift.
 - G3. Add a **`family`** vibe (Jose, 2026-07-12), fix the two dud chips (`mountains`, `winter`), and expose the three orphan tags (`foodie`, `romantic`, `nightlife`) that already have data.
-- G4. No raw IATA code ever rendered to a user.
+- G4. No raw IATA code ever rendered to a user. **Scope (Jose, 2026-07-12 — "Name everything on-screen; let Atlas speak naturally"):** applies to ALL rendered UI (destination cards, trip header, context-strip origin pill, hero subtitle, auto-sent chat seeds) and equally bans raw internal enum values (`big_city`) on screen; when an origin cannot be named, the origin phrase is omitted — never a bare-code fallback. **Accepted deliberate gap:** Atlas's conversational chat prose may still say "JFK" (the model receives raw codes via page context and tool outputs) — forcing city names there would worsen JFK-vs-Newark disambiguation. Jose-approved; documented in the plan and PR description.
 - G5. The destinations TP actually returns most (NYC, CHI, ORL, …) participate in vibe search.
 - G6. **Atlas pre-flight intent check**: when we cannot confidently satisfy the user's intent, Atlas *asks* instead of dead-ending.
 - G7. Zero fabrication, on every path. Non-negotiable, inherited from this branch.
