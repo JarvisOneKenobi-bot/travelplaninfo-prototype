@@ -15,6 +15,7 @@ interface FlightData {
 
 export default function FlightCard({ flight }: { flight: FlightData }) {
   const t = useTranslations("atlas");
+  const flightMeta = [flight.route, flight.duration, flight.stops].filter(Boolean).join(" · ");
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start gap-2">
@@ -26,9 +27,7 @@ export default function FlightCard({ flight }: { flight: FlightData }) {
             </div>
             <p className="font-medium text-sm text-gray-900 truncate">{flight.airline}</p>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {flight.route} &middot; {flight.duration} &middot; {flight.stops}
-          </p>
+          <p className="text-xs text-gray-500 mt-1">{flightMeta}</p>
           {flight.depart_date && (
             <p className="text-xs text-gray-400 mt-0.5">
               {flight.depart_date}

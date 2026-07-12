@@ -23,6 +23,10 @@ const BUDGET_DAILY_RANGES: Record<BudgetTier, string> = {
   luxury: "$250+/day",
 };
 
+function joinNonEmpty(parts: string[], separator: string): string {
+  return parts.filter(Boolean).join(separator);
+}
+
 // ── Tab definitions ─────────────────────────────────────────────────────────
 
 const TABS = ["Flights", "Hotels", "Activities", "Restaurants", "Summary"] as const;
@@ -295,7 +299,7 @@ export default function TripResultsModal({
           day_number: flightDays[idx] || 1,
           category: "flight",
           title: `${f.airline} ${f.route}`,
-          description: `${f.duration} - ${f.stops} - ${f.price}`,
+          description: joinNonEmpty([f.duration, f.stops, f.price], " - "),
           price_estimate: f.price,
           affiliate_url: f.book_url,
         });
@@ -308,7 +312,7 @@ export default function TripResultsModal({
         day_number: flightDays[realIdx] || 1,
         category: "flight",
         title: `${f.airline} ${f.route}`,
-        description: `${f.duration} - ${f.stops} - ${f.price}`,
+        description: joinNonEmpty([f.duration, f.stops, f.price], " - "),
         price_estimate: f.price,
         affiliate_url: f.book_url,
       });
@@ -567,7 +571,7 @@ export default function TripResultsModal({
                               )}
                             </div>
                             <p className="text-sm text-gray-500 mt-1">
-                              {f.route} &middot; {f.duration} &middot; {f.stops}
+                              {joinNonEmpty([f.route, f.duration, f.stops], " · ")}
                             </p>
                             {f.depart_date && (
                               <p className="text-xs text-gray-400 mt-0.5">

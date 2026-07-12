@@ -28,10 +28,54 @@ describe("travelpayouts-client", () => {
         route: "MIA → CUN",
         price: "$210 round-trip",
         duration: "",
-        stops: "Nonstop",
+        stops: "",
         depart_date: "2026-09-01T10:00:00Z",
       });
       expect(result.flights[0].book_url).toContain("aviasales.com/search/");
+    }
+  });
+
+  it("formats stops only from explicit transfer counts through real searchFlights", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [
+            { origin: "ATL", destination: "AUS", price: 121, departure_at: "2026-09-02T10:00:00Z", transfers: 0 },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [
+            { origin: "ATL", destination: "MSY", price: 122, departure_at: "2026-09-03T10:00:00Z", transfers: 1 },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [
+            { origin: "ATL", destination: "SAT", price: 123, departure_at: "2026-09-04T10:00:00Z", transfers: 2 },
+          ],
+        }),
+      });
+
+    const nonstop = await searchFlights("ATL", "AUS", "2026-09-02");
+    const oneStop = await searchFlights("ATL", "MSY", "2026-09-03");
+    const twoStops = await searchFlights("ATL", "SAT", "2026-09-04");
+
+    expect("no_data" in nonstop).toBe(false);
+    expect("no_data" in oneStop).toBe(false);
+    expect("no_data" in twoStops).toBe(false);
+    if (!("no_data" in nonstop) && !("no_data" in oneStop) && !("no_data" in twoStops)) {
+      expect(nonstop.flights[0].stops).toBe("Nonstop");
+      expect(oneStop.flights[0].stops).toBe("1 stop");
+      expect(twoStops.flights[0].stops).toBe("2 stops");
     }
   });
 

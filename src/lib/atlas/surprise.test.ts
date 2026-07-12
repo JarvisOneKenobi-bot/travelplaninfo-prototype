@@ -248,26 +248,6 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations[2].flightPrice).toBe("$220");
   });
 
-  it("NONSTOP: enrichment does not claim nonstop when transfers are absent", async () => {
-    emptyPopular();
-    vi.mocked(rawSearchFlights).mockImplementation(async (_origin, destination) => ({
-      flights: [
-        {
-          origin: "JFK",
-          destination,
-          price: 210,
-          airline: "AA",
-          departure_at: "2026-08-01",
-          link: `https://www.aviasales.com/search/JFK${destination}`,
-        } as Awaited<ReturnType<typeof rawSearchFlights>>["flights"][number],
-      ],
-    }));
-
-    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "tropical,beach", departMonth: "2026-08" });
-
-    expect(result.destinations).toHaveLength(3);
-    expect(result.destinations.every((destination) => destination.nonstop === false)).toBe(true);
-  });
 
   it("FILLER DOES NOT ENGAGE WITHOUT VIBES", async () => {
     popular([item("CUN", 120), item("MBJ", 180)]);

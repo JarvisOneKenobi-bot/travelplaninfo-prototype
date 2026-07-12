@@ -14,7 +14,7 @@ export interface FlightOption {
   flight_number?: string;
   departure_at: string;
   return_at?: string | null;
-  transfers: number;
+  transfers: number | null;
   link: string;
 }
 
@@ -289,7 +289,8 @@ function formatPrice(price: number | null | undefined, suffix = ""): string {
   return value > 0 ? `$${value}${suffix}` : "$0";
 }
 
-function formatStops(transfers: number): string {
+function formatStops(transfers: number | null): string {
+  if (transfers == null) return "";
   if (transfers === 0) return "Nonstop";
   return `${transfers} ${transfers === 1 ? "stop" : "stops"}`;
 }
@@ -382,7 +383,7 @@ function normalizeFlights(
     flight_number: item.flight_number ?? "",
     departure_at: item.departure_at ?? departDate,
     return_at: item.return_at ?? returnDate,
-    transfers: item.transfers ?? 0,
+    transfers: item.transfers ?? null,
     link: buildAviasalesLink(origin, destination, departDate, returnDate),
   }));
 }
