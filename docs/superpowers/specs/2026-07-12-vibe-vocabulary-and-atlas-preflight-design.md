@@ -42,9 +42,7 @@ tropical,beach     -> 3 cards   OK
 
 **Orphan tags — richly populated, but no user can select them:** `foodie` (39 destinations), `romantic` (24), `nightlife` (21). The data has been sitting there unused; simply exposing these as chips makes them work immediately.
 
-**Why nobody noticed:** the fabricated `FALLBACK` (removed earlier on this branch) fired whenever the filter returned nothing — so a user picking "Culture + Food" got the invented Cancún/$89-a-night cards and the feature *looked* fine. **The fabrication was masking a completely broken filter.** Deleting the fabrication is what made this visible.
-
-The taxonomy's richest tags are the orphaned ones: `cultural` (50 destinations) is one rename away from `culture`.
+**Why nobody noticed:** the fabricated `FALLBACK` (removed earlier on this branch) fired whenever the filter returned nothing — so a user clicking **Mountains** or **Winter Escape** got the invented Cancún/$89-a-night cards and the feature *looked* fine. **The fabrication was masking a broken filter.** Deleting the fabrication is what made this visible.
 
 This bug exists in the Python original (`routers/assistant.py`) too; the faithful port faithfully reproduced it.
 
