@@ -103,7 +103,7 @@ describe("surprise-me API route", () => {
   });
 
   it("DEGRADED IS NOT CACHED: identical degraded requests call the engine every time", async () => {
-    const engineResult = { origin: "ORD", destinations: [], degraded: { reason: "x" } };
+    const engineResult = { origin: "ORD", destinations: [], degraded: { code: "no_routes", reason: "x" } };
     mockedGetSurpriseDestinations.mockResolvedValue(engineResult);
 
     await GET(request("origin=ORD&vibes=degraded-not-cached&depart_month=2026-10&trip_length=week"));
@@ -158,13 +158,17 @@ describe("surprise-me API route", () => {
     mockedGetSurpriseDestinations.mockResolvedValue({
       origin: "BOS",
       destinations: [],
-      degraded: { reason: "x" },
+      degraded: { code: "no_routes", reason: "x" },
     });
 
     const res = await GET(request("origin=BOS&vibes=always-200&depart_month=2027-01&trip_length=week"));
 
     expect(res.status).toBe(200);
-    expect(await json(res)).toEqual({ origin: "BOS", destinations: [], degraded: { reason: "x" } });
+    expect(await json(res)).toEqual({
+      origin: "BOS",
+      destinations: [],
+      degraded: { code: "no_routes", reason: "x" },
+    });
   });
 
   it("ENGINE THROW DEGRADES IN-BODY, NEVER A 500: thrown runs are not cached", async () => {
@@ -175,18 +179,18 @@ describe("surprise-me API route", () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    const firstBody = (await json(first)) as { degraded: { reason: string } };
-    const secondBody = (await json(second)) as { degraded: { reason: string } };
+    const firstBody = (await json(first)) as { degraded: { code: string; reason: string } };
+    const secondBody = (await json(second)) as { degraded: { code: string; reason: string } };
     expect(firstBody).toEqual({
       origin: "PHL",
       destinations: [],
-      degraded: { reason: expect.any(String) },
+      degraded: { code: "internal_error", reason: expect.any(String) },
     });
     expect(firstBody.degraded.reason.length).toBeGreaterThan(0);
     expect(secondBody).toEqual({
       origin: "PHL",
       destinations: [],
-      degraded: { reason: expect.any(String) },
+      degraded: { code: "internal_error", reason: expect.any(String) },
     });
     expect(secondBody.degraded.reason.length).toBeGreaterThan(0);
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);

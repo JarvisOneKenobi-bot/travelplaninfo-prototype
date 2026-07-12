@@ -6,6 +6,7 @@ import {
   nextMonthUtc,
   rawSearchFlights,
   tpGet,
+  type TpFailure,
   type TpFlightItem,
 } from "./travelpayouts-client";
 import {
@@ -122,6 +123,7 @@ describe("getSurpriseDestinations", () => {
     const result = await getSurpriseDestinations({ origin: "JFK", vibes: "flexible", departMonth: "2026-08" });
 
     expect(result.destinations).toEqual([]);
+    expect(result.degraded?.code).toBe("no_routes");
     expect(result.degraded?.reason).toBe(NO_ROUTES_REASON);
     expect(result.degraded?.reason).not.toBe(NO_VIBE_MATCH_REASON);
   });
@@ -281,16 +283,19 @@ describe("getSurpriseDestinations", () => {
     }
   });
 
-  it("TP FAILURE REASON SURVIVES", async () => {
-    vi.mocked(tpGet).mockResolvedValue({ failure: "no_token" });
+  it.each<TpFailure>(["no_token", "rate_limited", "http_error", "timeout"])(
+    "TP FAILURE REASON SURVIVES: %s",
+    async (failure) => {
+      vi.mocked(tpGet).mockResolvedValue({ failure });
 
-    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+      const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
 
-    expect(result.destinations).toEqual([]);
-    expect(result.degraded?.reason).toBe(FAILURE_REASONS.no_token);
-    expect(result.degraded?.reason).toContain("not configured");
-    expect(result.degraded?.reason).not.toBe(NO_ROUTES_REASON);
-  });
+      expect(result.destinations).toEqual([]);
+      expect(result.degraded?.code).toBe(failure);
+      expect(result.degraded?.reason).toBe(FAILURE_REASONS[failure]);
+      expect(result.degraded?.reason).not.toBe(NO_ROUTES_REASON);
+    }
+  );
 
   it("EMPTY-SUCCESS REASON", async () => {
     emptyPopular();
@@ -298,6 +303,7 @@ describe("getSurpriseDestinations", () => {
     const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
 
     expect(result.destinations).toEqual([]);
+    expect(result.degraded?.code).toBe("no_routes");
     expect(result.degraded?.reason).toBe(NO_ROUTES_REASON);
   });
 
@@ -306,7 +312,7 @@ describe("getSurpriseDestinations", () => {
     expect(cityName).toMatchObject({
       origin: "CANCUN",
       destinations: [],
-      degraded: { reason: INVALID_IATA_REASON },
+      degraded: { code: "invalid_origin", reason: INVALID_IATA_REASON },
     });
     expect(cityName.origin).not.toBe("MIA");
 
@@ -314,7 +320,7 @@ describe("getSurpriseDestinations", () => {
     expect(empty).toMatchObject({
       origin: "",
       destinations: [],
-      degraded: { reason: INVALID_IATA_REASON },
+      degraded: { code: "invalid_origin", reason: INVALID_IATA_REASON },
     });
     expect(empty.origin).not.toBe("MIA");
     expect(tpGet).not.toHaveBeenCalled();
@@ -326,9 +332,20 @@ describe("getSurpriseDestinations", () => {
     const result = await getSurpriseDestinations({ origin: "JFK", vibes: "beach", departMonth: "2026-08" });
 
     expect(result.destinations).toEqual([]);
+    expect(result.degraded?.code).toBe("no_vibe_match");
     expect(result.degraded?.reason).toBe(NO_VIBE_MATCH_REASON);
     expect(result.degraded?.reason).not.toBe(NO_ROUTES_REASON);
     expect(rawSearchFlights).not.toHaveBeenCalled();
+  });
+
+  it("ROUTES RETURNED BUT NONE MATCH VIBES: degrades with no_vibe_match", async () => {
+    popular([item("LAS", 100)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "beach", departMonth: "2026-08" });
+
+    expect(result.destinations).toEqual([]);
+    expect(result.degraded?.code).toBe("no_vibe_match");
+    expect(result.degraded?.reason).toBe(NO_VIBE_MATCH_REASON);
   });
 
   it("TP FAILURE + 2 VIBES STILL FILLS HONESTLY", async () => {

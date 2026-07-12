@@ -10,10 +10,12 @@ import {
   FAILURE_REASONS,
   INVALID_IATA_REASON,
   IATA_TO_CITY,
+  type TpFailure,
   type TpFlightItem,
 } from "./travelpayouts-client";
 import { DESTINATION_VIBES } from "./destination-vibes";
 import { normalizeVibes } from "./surprise-query";
+import type { SurpriseDegraded } from "./surprise-degrade";
 
 export const TRIP_LENGTH_DAYS: Record<string, number> = {
   weekend: 2,
@@ -40,7 +42,7 @@ export interface SurpriseDestination {
 export interface SurpriseResult {
   origin: string;
   destinations: SurpriseDestination[];
-  degraded?: { reason: string };
+  degraded?: SurpriseDegraded;
 }
 
 type RouteCandidate = {
@@ -99,7 +101,7 @@ export async function getSurpriseDestinations(params: {
     return {
       origin: inputOrigin.trim().toUpperCase(),
       destinations: [],
-      degraded: { reason: INVALID_IATA_REASON },
+      degraded: { code: "invalid_origin", reason: INVALID_IATA_REASON },
     };
   }
 
@@ -125,9 +127,11 @@ export async function getSurpriseDestinations(params: {
 
   const result = await tpGet("/aviasales/v3/prices_for_dates", popularParams);
   let failureReason: string | undefined;
+  let failureCode: TpFailure | undefined;
   let popular: RouteCandidate[] = [];
 
   if ("failure" in result) {
+    failureCode = result.failure;
     failureReason = FAILURE_REASONS[result.failure];
   } else {
     popular = rawItems(result.data).map((route) => {
@@ -248,6 +252,7 @@ export async function getSurpriseDestinations(params: {
       origin,
       destinations,
       degraded: {
+        code: failureCode ?? (requestedVibes.size > 0 ? "no_vibe_match" : "no_routes"),
         reason: failureReason ?? (requestedVibes.size > 0 ? NO_VIBE_MATCH_REASON : NO_ROUTES_REASON),
       },
     };

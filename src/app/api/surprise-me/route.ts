@@ -77,7 +77,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       origin,
       destinations: [],
-      degraded: { reason: INTERNAL_ERROR_REASON },
+      degraded: { code: "internal_error", reason: INTERNAL_ERROR_REASON },
     });
   }
 

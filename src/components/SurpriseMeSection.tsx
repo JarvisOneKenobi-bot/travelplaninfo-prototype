@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { resolveDegradedBody } from "@/lib/atlas/surprise-degrade";
 import { buildSurpriseQuery } from "@/lib/atlas/surprise-query";
 import AtlasHeroSection from "./AtlasHeroSection";
 import PlannerErrorBanner from "./PlannerErrorBanner";
@@ -41,11 +42,11 @@ export default function SurpriseMeSection({
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [originUnknown, setOriginUnknown] = useState(false);
-  const [degradedReason, setDegradedReason] = useState<string | null>(null);
+  const [degraded, setDegraded] = useState<{ code?: string; reason?: string } | null>(null);
 
   const fetchSuggestions = useCallback((signal?: AbortSignal) => {
     setLoading(true);
-    setDegradedReason(null);
+    setDegraded(null);
 
     const params = buildSurpriseQuery({ originCode, vibesSummary, flexibleWindow, tripLength, startDate });
 
@@ -54,17 +55,17 @@ export default function SurpriseMeSection({
       .then((data) => {
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
-          setDegradedReason(null);
+          setDegraded(null);
         } else {
           setDestinations([]);
-          setDegradedReason(data?.degraded?.reason ?? t("degradedNetworkBody"));
+          setDegraded(data?.degraded ?? { reason: t("degradedNetworkBody") });
         }
       })
       .catch((e) => {
         if ((e as { name?: string })?.name === "AbortError") return;
         console.warn("[SurpriseMeSection] fetch failed", e);
         setDestinations([]);
-        setDegradedReason(t("degradedNetworkBody"));
+        setDegraded({ reason: t("degradedNetworkBody") });
       })
       .finally(() => {
         if (!signal?.aborted) setLoading(false);
@@ -173,12 +174,12 @@ export default function SurpriseMeSection({
             ))}
           </div>
         </div>
-      ) : degradedReason ? (
+      ) : degraded ? (
         <div className="space-y-4">
           <PlannerErrorBanner
             testId="surprise-fallback-banner"
             title={t("degradedTitle")}
-            body={degradedReason}
+            body={resolveDegradedBody(t, degraded) ?? t("degradedNetworkBody")}
             onRetry={() => fetchSuggestions()}
           />
           <button
