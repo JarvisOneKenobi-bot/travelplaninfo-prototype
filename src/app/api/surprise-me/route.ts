@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getSurpriseDestinations,
+  NO_PRICE_LABEL,
   type SurpriseResult,
 } from "@/lib/atlas/surprise";
 
@@ -80,7 +81,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (result.destinations.length > 0 && !result.degraded) {
+  const hasMeasuredPrice = result.destinations.some(
+    (destination) => destination.flightPrice !== NO_PRICE_LABEL
+  );
+  if (result.destinations.length > 0 && hasMeasuredPrice && !result.degraded) {
     pruneCacheIfNeeded();
     cache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
   }

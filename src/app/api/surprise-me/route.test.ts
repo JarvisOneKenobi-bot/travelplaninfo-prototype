@@ -4,9 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "./route";
 import { getSurpriseDestinations } from "@/lib/atlas/surprise";
 
-vi.mock("@/lib/atlas/surprise", () => ({
-  getSurpriseDestinations: vi.fn(),
-}));
+vi.mock("@/lib/atlas/surprise", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/atlas/surprise")>();
+  return {
+    ...actual,
+    getSurpriseDestinations: vi.fn(),
+  };
+});
 
 const mockedGetSurpriseDestinations = vi.mocked(getSurpriseDestinations);
 
@@ -114,6 +118,23 @@ describe("surprise-me API route", () => {
 
     await GET(request("origin=DEN&vibes=empty-not-cached&depart_month=2026-11&trip_length=week"));
     await GET(request("origin=DEN&vibes=empty-not-cached&depart_month=2026-11&trip_length=week"));
+
+    expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
+  });
+
+  it("ALL-DASH UNDEGRADED IS NOT CACHED: identical dash-only responses call the engine every time", async () => {
+    const engineResult = {
+      origin: "IAD",
+      destinations: [
+        { name: "Cancún, Mexico", flightPrice: "—", airline: "", nonstop: false, link: "" },
+        { name: "San Juan, Puerto Rico", flightPrice: "—", airline: "", nonstop: false, link: "" },
+        { name: "Punta Cana, Dominican Republic", flightPrice: "—", airline: "", nonstop: false, link: "" },
+      ],
+    };
+    mockedGetSurpriseDestinations.mockResolvedValue(engineResult);
+
+    await GET(request("origin=IAD&vibes=all-dash-not-cached-unique&depart_month=2027-03&trip_length=week"));
+    await GET(request("origin=IAD&vibes=all-dash-not-cached-unique&depart_month=2027-03&trip_length=week"));
 
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
   });

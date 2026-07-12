@@ -27,6 +27,7 @@ export const NO_ROUTES_REASON =
   "Live flight search returned no popular routes for this origin and month. This does NOT mean no flights exist — try a different month or ask Atlas.";
 export const NO_VIBE_MATCH_REASON =
   "No live routes matched the requested vibes for this origin and month. This does NOT mean no flights exist — try different vibes or ask Atlas.";
+export const NO_PRICE_LABEL = "—";
 
 export interface SurpriseDestination {
   name: string;
@@ -57,7 +58,7 @@ type CuratedEntry = {
 };
 
 function priceLabel(price: number | null | undefined, isRoundTrip: boolean): string {
-  if (price == null) return "—";
+  if (price == null) return NO_PRICE_LABEL;
   return isRoundTrip ? `$${price} rt` : `$${price}`;
 }
 
@@ -233,7 +234,7 @@ export async function getSurpriseDestinations(params: {
       } else {
         destinations.push({
           name: cityName,
-          flightPrice: "—",
+          flightPrice: NO_PRICE_LABEL,
           airline: "",
           nonstop: false,
           link: "",
