@@ -36,6 +36,7 @@ const SURPRISE_PATH_FILES = [
   "src/components/SurpriseMeSection.tsx",
   "src/components/AtlasHeroSection.tsx",
   "src/components/DestinationCard.tsx",
+  "src/lib/atlas/surprise-query.ts",
   "src/lib/atlas/surprise.ts",
   "src/lib/atlas/destination-vibes.ts",
 ];
@@ -69,5 +70,15 @@ describe("Surprise Me fabrication tripwire", () => {
     const content = readFileSync(resolve(process.cwd(), file), "utf-8");
 
     expect(content, `${file} must not contain MIA`).not.toContain("MIA");
+  });
+
+  it("delegates Surprise Me client query construction so flexible never reaches the API as a vibe", () => {
+    const file = "src/components/SurpriseMeSection.tsx";
+    const content = readFileSync(resolve(process.cwd(), file), "utf-8");
+
+    // The flexible sentinel must never be reachable as a vibe param from the client.
+    expect(content, `${file} must delegate Surprise Me query construction`).toContain("buildSurpriseQuery");
+    expect(content, `${file} must not set a vibes param inline`).not.toMatch(/set\(\s*.vibes./);
+    expect(content, `${file} must not construct query params inline`).not.toContain("new URLSearchParams");
   });
 });

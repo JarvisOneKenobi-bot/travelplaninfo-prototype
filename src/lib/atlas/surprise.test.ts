@@ -68,6 +68,43 @@ describe("getSurpriseDestinations", () => {
     expect(result.degraded).toBeUndefined();
   });
 
+  it("FLEXIBLE SENTINEL: behaves like absent vibes when popular routes exist", async () => {
+    popular([item("CUN", 120), item("MBJ", 180), item("TPA", 90)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "flexible", departMonth: "2026-08" });
+
+    expect(result.destinations).toHaveLength(3);
+    expect(result.destinations.map((destination) => destination.name)).toEqual([
+      "Cancún, Mexico",
+      "Montego Bay, Jamaica",
+      "Tampa, Florida",
+    ]);
+    expect(result.degraded).toBeUndefined();
+  });
+
+  it("FLEXIBLE SENTINEL: mixed with a real vibe preserves the real vibe filter", async () => {
+    popular([item("TPA", 90), item("LAS", 100), item("CUN", 120)]);
+    const beachOnly = await getSurpriseDestinations({ origin: "JFK", vibes: "beach", departMonth: "2026-08" });
+
+    vi.clearAllMocks();
+    popular([item("TPA", 90), item("LAS", 100), item("CUN", 120)]);
+    const mixed = await getSurpriseDestinations({ origin: "JFK", vibes: "beach,flexible", departMonth: "2026-08" });
+
+    expect(mixed.destinations).toEqual(beachOnly.destinations);
+    expect(mixed.degraded).toBeUndefined();
+    expect(mixed.degraded).toBe(beachOnly.degraded);
+  });
+
+  it("FLEXIBLE SENTINEL: empty popular routes use the no-routes reason", async () => {
+    emptyPopular();
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "flexible", departMonth: "2026-08" });
+
+    expect(result.destinations).toEqual([]);
+    expect(result.degraded?.reason).toBe(NO_ROUTES_REASON);
+    expect(result.degraded?.reason).not.toBe(NO_VIBE_MATCH_REASON);
+  });
+
   it("ROUND-TRIP SUFFIX: only valid YYYY-MM months with known trip lengths go round-trip", async () => {
     popular([item("CUN", 120)]);
     const week = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08", tripLength: "week" });
@@ -135,6 +172,20 @@ describe("getSurpriseDestinations", () => {
     expect(twoVibes.destinations.map((d) => d.name)).not.toContain("Tampa, Florida");
     expect(twoVibes.destinations.map((d) => d.name)).not.toContain("Las Vegas, Nevada");
     expect(twoVibes.destinations[0]).toMatchObject({ name: "Cancún, Mexico", flightPrice: "$120" });
+  });
+
+  it("REAL VIBES: beach and romantic still filter out live routes without both tags", async () => {
+    popular([item("TPA", 90), item("CUN", 120), item("MBJ", 180), item("PUJ", 200)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "beach,romantic", departMonth: "2026-08" });
+
+    expect(result.destinations.map((destination) => destination.name)).toEqual([
+      "Cancún, Mexico",
+      "Montego Bay, Jamaica",
+      "Punta Cana, Dominican Republic",
+    ]);
+    expect(result.destinations.map((destination) => destination.name)).not.toContain("Tampa, Florida");
+    expect(result.degraded).toBeUndefined();
   });
 
   it("STABLE SORT + OVERLAP-DESC: overlap outranks price and equal-overlap stays price-ascending", async () => {

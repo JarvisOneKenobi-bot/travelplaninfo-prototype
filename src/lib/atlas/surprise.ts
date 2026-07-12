@@ -13,6 +13,7 @@ import {
   type TpFlightItem,
 } from "./travelpayouts-client";
 import { DESTINATION_VIBES } from "./destination-vibes";
+import { normalizeVibes } from "./surprise-query";
 
 export const TRIP_LENGTH_DAYS: Record<string, number> = {
   weekend: 2,
@@ -101,12 +102,7 @@ export async function getSurpriseDestinations(params: {
     };
   }
 
-  const requestedVibes = new Set(
-    (params.vibes ?? "")
-      .split(",")
-      .map((vibe) => vibe.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const requestedVibes = new Set(normalizeVibes(params.vibes));
   const departMonth = params.departMonth?.trim() || nextMonthUtc();
 
   let returnDate: string | undefined;

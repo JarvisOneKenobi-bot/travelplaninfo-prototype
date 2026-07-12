@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { buildSurpriseQuery } from "@/lib/atlas/surprise-query";
 import AtlasHeroSection from "./AtlasHeroSection";
 import PlannerErrorBanner from "./PlannerErrorBanner";
 
@@ -22,40 +23,6 @@ interface SurpriseMeSectionProps {
   flexibleWindow?: string | null;  // "next_2_weeks" | "next_month" | "2_3_months" | etc.
   tripLength?: string | null;      // "weekend" | "week" | "10_14_days" | "2_weeks" | etc.
   startDate?: string | null;       // ISO date if specific dates were set
-}
-
-// Convert flexible_window value to a YYYY-MM departure month
-function deriveDepartMonth(
-  flexibleWindow?: string | null,
-  startDate?: string | null,
-): string {
-  // Specific start date takes priority
-  if (startDate) return startDate.slice(0, 7); // "2026-05-15" → "2026-05"
-
-  const now = new Date();
-  switch (flexibleWindow) {
-    case "next_2_weeks": {
-      const d = new Date(now); d.setDate(d.getDate() + 14);
-      return d.toISOString().slice(0, 7);
-    }
-    case "next_month": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    case "2_3_months": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    case "6_months": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    default: {
-      // "anytime" or unknown → next month
-      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return d.toISOString().slice(0, 7);
-    }
-  }
 }
 
 export default function SurpriseMeSection({
@@ -80,14 +47,7 @@ export default function SurpriseMeSection({
     setLoading(true);
     setDegradedReason(null);
 
-    const departMonth = deriveDepartMonth(flexibleWindow, startDate);
-    const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
-    if (tripLength) params.set("trip_length", tripLength);
-    if (vibesSummary) {
-      const vibesParam = vibesSummary
-        .split(/\s*\+\s*/).map((v) => v.trim().toLowerCase()).filter(Boolean).join(",");
-      if (vibesParam) params.set("vibes", vibesParam);
-    }
+    const params = buildSurpriseQuery({ originCode, vibesSummary, flexibleWindow, tripLength, startDate });
 
     return fetch(`/api/surprise-me?${params.toString()}`, { signal })
       .then((r) => r.ok ? r.json() : Promise.reject(r.status))
