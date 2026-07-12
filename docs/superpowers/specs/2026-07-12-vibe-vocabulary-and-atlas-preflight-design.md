@@ -11,29 +11,36 @@
 
 Three defects, discovered while visually reviewing the Surprise Me de-fabrication fix. The first is severe and has been live since the feature shipped.
 
-### 1.1 The vibe filter has never worked (CRITICAL)
+### 1.1 Two of the seven vibe chips are duds (CRITICAL)
 
-The vibe picker and the destination taxonomy speak **different vocabularies**. Only three words overlap.
+> **⚠ CORRECTION (2026-07-12).** An earlier revision of this spec analysed `PRESET_VIBES` (`trip-types.ts:51`). **That was wrong.** `PRESET_VIBES` is consumed only by `SurpriseMeQuiz`, which is reachable only through `EntryTabs` — and `EntryTabs` has **no importers** (it was rejected 2026-04-10). It is dead code. Everything below is measured against the **live** picker, `TripForm.tsx`.
 
-| | |
-|---|---|
-| `PRESET_VIBES` — what a user can click (`trip-types.ts:51`) | `beach, city, adventure, food, culture, nature, nightlife, wellness` |
-| `DESTINATION_VIBES` tags — what the data carries | `tropical(30), beach(40), romantic(24), nightlife(21), big_city(44), cultural(50), adventure(16), foodie(39), mountain(5)` |
-| **Dead** — user can pick, nothing can ever match | **`city`, `culture`, `food`, `nature`, `wellness`** (5 of 8) |
-| **Orphan** — tagged, but no user can ever select | `big_city`, `cultural`, `foodie`, `tropical`, `romantic`, `mountain` |
+The codebase contains **three** competing vibe vocabularies:
 
-Because ranking requires `min_overlap = 2` when 2+ vibes are selected, **any combination containing a dead vibe filters out every destination.** Only combos drawn entirely from `{beach, adventure, nightlife}` can return anything: **3 of 28 two-vibe combos (11%).**
+| Source | Words | Status |
+|---|---|---|
+| `TripForm.tsx:27` `VIBES` | `tropical, mountains, big_city, beach, winter, cultural, adventure` | **LIVE — what users actually click** |
+| `destination-vibes.ts` tags | `cultural(50), big_city(44), beach(40), foodie(39), tropical(30), romantic(24), nightlife(21), adventure(16), mountain(5)` | the data |
+| `trip-types.ts:51` `PRESET_VIBES` | `beach, city, adventure, food, culture, nature, nightlife, wellness` | **DEAD** (SurpriseMeQuiz/EntryTabs) |
+
+**Two live chips can never match anything:**
+
+- **`mountains`** 🏔️ — the taxonomy tag is **`mountain`** (singular). A one-letter mismatch.
+- **`winter`** ❄️ ("Winter Escape") — **no destination carries a `winter` tag at all.**
+
+Because ranking requires `min_overlap = 2` when 2+ vibes are selected, **any combination containing a dud filters out every destination**: **11 of 21 two-vibe combos (52%) return zero.**
 
 Proven live against `/api/surprise-me` (origin JFK):
 
 ```
-culture,food      -> 0 cards, degraded
-city,food         -> 0 cards, degraded
-nature,wellness   -> 0 cards, degraded
-culture,nightlife -> 0 cards, degraded
-beach,adventure   -> 3 cards   OK
-beach,nightlife   -> 3 cards   OK
+mountains,cultural -> 0 cards, degraded
+winter,beach       -> 0 cards, degraded
+mountains,winter   -> 0 cards, degraded
+beach,cultural     -> 3 cards   OK
+tropical,beach     -> 3 cards   OK
 ```
+
+**Orphan tags — richly populated, but no user can select them:** `foodie` (39 destinations), `romantic` (24), `nightlife` (21). The data has been sitting there unused; simply exposing these as chips makes them work immediately.
 
 **Why nobody noticed:** the fabricated `FALLBACK` (removed earlier on this branch) fired whenever the filter returned nothing — so a user picking "Culture + Food" got the invented Cancún/$89-a-night cards and the feature *looked* fine. **The fabrication was masking a completely broken filter.** Deleting the fabrication is what made this visible.
 
@@ -60,7 +67,7 @@ When a search yields nothing, the user gets a degraded banner. Honest — but a 
 
 - G1. One canonical vibe vocabulary shared by the picker and the taxonomy. Every user-selectable vibe **must** be matchable.
 - G2. A **regression guard** that fails the build if picker and taxonomy ever drift apart again. This is the fix that matters most — the bug was a silent drift.
-- G3. Add a **`family`** vibe (Jose, 2026-07-12).
+- G3. Add a **`family`** vibe (Jose, 2026-07-12), fix the two dud chips (`mountains`, `winter`), and expose the three orphan tags (`foodie`, `romantic`, `nightlife`) that already have data.
 - G4. No raw IATA code ever rendered to a user.
 - G5. The destinations TP actually returns most (NYC, CHI, ORL, …) participate in vibe search.
 - G6. **Atlas pre-flight intent check**: when we cannot confidently satisfy the user's intent, Atlas *asks* instead of dead-ending.
@@ -78,42 +85,42 @@ When a search yields nothing, the user gets a degraded banner. Honest — but a 
 
 ### 3.1 Canonical vocabulary
 
-The **picker's words win** — they are what users read. The taxonomy migrates to them, eliminating drift at the source rather than patching it with an alias layer.
+**Keep the live chip values as canonical.** No gratuitous renames: `big_city`/`cultural`/`foodie` are internal *values* whose user-facing *labels* are already "Big City"/"Cultural"/"Food". Renaming them buys nothing and churns 133 tags. Fix only what is actually broken, then expose the data we already have.
 
 ```
-CANONICAL_VIBES = beach · city · adventure · food · culture ·
-                  nature · nightlife · wellness · family · romantic
+CANONICAL_VIBES = tropical · mountains · big_city · beach · winter ·
+                  cultural · adventure · foodie · romantic · nightlife · family
 ```
 
-Tag migration across all destinations:
+Changes required:
 
-| old tag | new tag | note |
-|---|---|---|
-| `big_city` (44) | `city` | rename |
-| `cultural` (50) | `culture` | rename |
-| `foodie` (39) | `food` | rename |
-| `mountain` (5) | `nature` | `mountain` is a subtype of `nature`; folded in, then `nature` is broadened to coastal/park/wilderness destinations |
-| `tropical` (30) | `beach` | folded — every `tropical` destination is already `beach`-tagged; the distinction was never user-selectable and adds no discriminating power |
-| `romantic` (24) | `romantic` | **kept, and now exposed in the picker** — 24 destinations already carry it, so exposing it works immediately |
-| — | `family` | **new** — tagged editorially |
-| — | `wellness` | **new** — tagged editorially |
+| change | why |
+|---|---|
+| taxonomy `mountain` → **`mountains`** (5 dests) | one-letter mismatch with the live chip. This alone fixes the Mountains chip. |
+| **add `winter` tags** | the "Winter Escape" chip has *zero* backing destinations. Tag genuine snow/ski destinations (the existing `mountain` set is the natural seed: Denver, Salt Lake, Zurich, Geneva, Aspen…). Without this the chip must be removed — a chip that can never return a result is worse than no chip. |
+| **expose `foodie`, `romantic`, `nightlife` as chips** | 39/24/21 destinations already carry these tags and **no user can select them**. Pure upside: the data works the moment the chips exist. |
+| **add `family` chip + tags** | requested by Jose (2026-07-12). Tagged editorially — theme parks, beaches with calm water, zoos/aquaria cities (ORL is the archetype). |
 
-`family` and `wellness` and the broadened `nature` require genuine editorial tagging across the destination set — they cannot be derived mechanically.
+**Single source of truth.** Export one `VIBE_OPTIONS` (value + label + icon) consumed by `TripForm`. Delete the dead `PRESET_VIBES` and, with it, the dead `SurpriseMeQuiz` + `EntryTabs` (no importers) — or at minimum make `PRESET_VIBES` derive from `VIBE_OPTIONS` so a third vocabulary cannot re-emerge.
 
-**Picker becomes 10 vibes** (adds `family`, `romantic`).
+**Picker becomes 11 chips** (adds `foodie`, `romantic`, `nightlife`, `family`).
+
+Only `winter` and `family` require genuine editorial tagging; everything else is either a rename or already tagged.
 
 ### 3.2 The regression guard (G2 — the most important deliverable)
 
-A unit test that fails if the two ever drift:
+A unit test that fails if the picker and the data ever drift again:
 
 ```ts
-// every vibe a user can pick MUST exist in the taxonomy
-for (const vibe of PRESET_VIBES) expect(ALL_TAXONOMY_TAGS).toContain(vibe);
+// every vibe a user can CLICK must exist in the taxonomy
+for (const { value } of VIBE_OPTIONS) expect(ALL_TAXONOMY_TAGS).toContain(value);
 // and no tag may exist that no user can ever reach
-expect(ALL_TAXONOMY_TAGS).toEqual(new Set(CANONICAL_VIBES));
+expect(ALL_TAXONOMY_TAGS).toEqual(new Set(VIBE_OPTIONS.map(v => v.value)));
 ```
 
-Plus a coverage floor: **every canonical vibe must be carried by at least N destinations** (N=8), so a vibe can never be technically-present-but-useless. Had this test existed, the live bug would have been impossible.
+Plus a **coverage floor**: every canonical vibe must be carried by at least **8** destinations — this is what catches `winter`, a chip that technically "exists" but backs onto zero data. A vibe that is present-but-useless is exactly the failure we shipped.
+
+This test must **fail against today's `main`** (on `mountains`, on `winter`, and on the three orphans). Had it existed, none of this could have shipped.
 
 ### 3.3 Destination naming (G4)
 
@@ -161,9 +168,10 @@ This is what "make sure Atlas has the user's intention defined" means concretely
 
 ## 4. Testing
 
-- **Regression guard (§3.2)** — picker ⊆ taxonomy; taxonomy == canonical; coverage floor ≥8 destinations per vibe. *This test must fail against today's `main`.*
-- **Vocabulary migration** — every destination's tags are a subset of `CANONICAL_VIBES`; no `big_city`/`cultural`/`foodie`/`tropical`/`mountain` string survives anywhere in `src/`.
-- **The live bug, pinned** — `culture,food`, `city,food`, `nature,wellness`, `culture,nightlife` each return **≥1 destination** (mocked TP). These assertions must fail pre-fix.
+- **Regression guard (§3.2)** — every `VIBE_OPTIONS` value exists in the taxonomy; taxonomy vocabulary == canonical set; coverage floor ≥8 destinations per vibe. *This test must fail against today's `main` — on `mountains`, on `winter`, and on the three orphans.*
+- **Vocabulary integrity** — every destination's tags are a subset of `CANONICAL_VIBES`; the singular string `'mountain'` no longer appears as a tag anywhere in `src/` (scope the grep to the taxonomy + picker files — do NOT write a repo-wide ban, since "mountain" appears in prose, city names and tests, which would make the gate unsatisfiable).
+- **The live bug, pinned** — `mountains,cultural`, `winter,beach`, `mountains,winter` each return **≥1 destination** (mocked TP). These assertions must fail pre-fix.
+- **The orphans, unlocked** — `foodie`, `romantic`, `nightlife` each return **≥1 destination** and are each selectable from `VIBE_OPTIONS`.
 - **Naming** — no card name matches `/^[A-Z]{3}$/`; `CHI → "Chicago, United States (all airports)"`; unnameable codes are dropped, not shown.
 - **Pre-flight** — `ok` / `unknown_vibes` (custom free text) / `no_match_possible`; asserts **zero** TP calls on `no_match_possible` (it must short-circuit before the fetch).
 - **No fabrication** — existing tripwire extended to the new files.
