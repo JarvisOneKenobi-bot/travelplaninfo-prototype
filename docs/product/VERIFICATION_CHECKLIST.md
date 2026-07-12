@@ -53,7 +53,7 @@ Do not use:
 curl -I http://127.0.0.1:8766/ || true
 ```
 
-Before D2, FastAPI reachability is an explicit degraded dependency check. After D2, port 8766 is not part of production architecture.
+As of 2026-07-11, D2 is complete: the FastAPI sidecar dependency has been removed, port 8766 is not part of the production architecture, and nothing listens on it. Treat the probe above as forbidden and obsolete; assistant dependency checks target the app's own `/api/assistant/health` endpoint instead.
 
 ## Environment preflight
 
