@@ -63,12 +63,12 @@ export interface DestinationSuggestion {
   estimated_flight: string;
 }
 
-type TpResponse = { success?: boolean; data?: unknown };
+export type TpResponse = { success?: boolean; data?: unknown };
 type CacheEntry = { data: TpResponse; expiresAt: number };
-type TpFailure = "no_token" | "rate_limited" | "http_error" | "timeout";
-type TpResult = { data: TpResponse } | { failure: TpFailure };
+export type TpFailure = "no_token" | "rate_limited" | "http_error" | "timeout";
+export type TpResult = { data: TpResponse } | { failure: TpFailure };
 
-const FAILURE_REASONS: Record<TpFailure, string> = {
+export const FAILURE_REASONS: Record<TpFailure, string> = {
   no_token:
     "Live flight search is not configured (missing Travelpayouts token). The search could not run — this does NOT mean no flights exist.",
   rate_limited:
@@ -81,7 +81,7 @@ const FAILURE_REASONS: Record<TpFailure, string> = {
 
 let warnedNoToken = false;
 
-type TpFlightItem = {
+export type TpFlightItem = {
   origin?: string;
   destination?: string;
   price?: number | null;
@@ -244,7 +244,7 @@ export const IATA_TO_CITY: Record<string, string> = {
 const cache = new Map<string, CacheEntry>();
 const requestTimestamps: number[] = [];
 
-function cleanIata(value: string): string {
+export function cleanIata(value: string): string {
   return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 }
 
@@ -253,7 +253,7 @@ export function parseIata(value: string): string | null {
   return /^[A-Z]{3}$/.test(cleaned) ? cleaned : null;
 }
 
-const INVALID_IATA_REASON =
+export const INVALID_IATA_REASON =
   "origin and destination must be 3-letter IATA airport codes (e.g. CUN for Cancún, MIA for Miami) — pass the airport code, not a city name.";
 
 function formatDateOffset(days: number): string {
@@ -262,13 +262,13 @@ function formatDateOffset(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function nextMonthUtc(): string {
+export function nextMonthUtc(): string {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return next.toISOString().slice(0, 7);
 }
 
-function addDays(dateString: string, days: number): string | undefined {
+export function addDays(dateString: string, days: number): string | undefined {
   const [year, month, day] = dateString.split("-").map(Number);
   if (!year || !month || !day) return undefined;
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -323,7 +323,7 @@ function checkRateLimit(): boolean {
   return requestTimestamps.length < RATE_LIMIT;
 }
 
-async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResult> {
+export async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResult> {
   const key = cacheKey(path, params);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return { data: cached.data };
@@ -362,7 +362,7 @@ async function tpGet(path: string, params: Record<string, string | number>): Pro
   }
 }
 
-function rawItems(data: TpResponse): TpFlightItem[] {
+export function rawItems(data: TpResponse): TpFlightItem[] {
   if (!data?.success || !Array.isArray(data.data)) return [];
   return data.data as TpFlightItem[];
 }
@@ -387,7 +387,7 @@ function normalizeFlights(
   }));
 }
 
-async function rawSearchFlights(
+export async function rawSearchFlights(
   origin: string,
   destination: string,
   departDate: string,
