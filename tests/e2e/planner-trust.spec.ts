@@ -2,10 +2,9 @@ import { test, expect } from '@playwright/test';
 
 // These specs assert the Atlas consent chip/nudges appear, which now requires
 // GET /api/assistant/health to report healthy:true. That in turn requires the
-// FastAPI backend to be reachable at FASTAPI_URL (default http://localhost:8766)
-// and ANTHROPIC_API_KEY (or ~/.openclaw/credentials/anthropic.json) to be set —
-// both already expected to be true in local dev; this suite does not run
-// against an environment where the assistant backend is intentionally down.
+// native Next.js assistant to have ANTHROPIC_API_KEY (or
+// ~/.openclaw/credentials/anthropic.json) available; this suite does not run
+// against an environment where the assistant is intentionally down.
 
 test.describe('Planner trust + trigger governance', () => {
   test('Atlas does not auto-send for Surprise Me trip', async ({ page }) => {

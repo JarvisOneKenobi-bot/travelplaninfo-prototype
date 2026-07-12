@@ -31,7 +31,7 @@ Expected process layout:
 
 - public HTTPS -> Nginx
 - Nginx -> `http://127.0.0.1:3001`
-- Next.js server -> local filesystem + SQLite + FastAPI dependency resolved from `FASTAPI_URL` or local fallback
+- Next.js server -> local filesystem + SQLite only; no FastAPI sidecar dependency
 
 ## 3. Application URL and backend URL behavior
 
@@ -40,8 +40,6 @@ Current server-side URL behavior:
 - Authenticated internal Next.js self-calls use trusted app-base config.
   - For assistant chat background summarization, the app builds `/api/assistant/summarize` against `APP_BASE_URL`, then `NEXTAUTH_URL`, then `http://localhost:3000`.
   - Authenticated self-calls do not trust request-derived origin or host values.
-- FastAPI sidecar calls use `FASTAPI_URL` when set.
-  - If `FASTAPI_URL` is blank or unset, the app falls back to `http://localhost:8766` for local development.
 - URL composition is path-safe.
   - Base URLs are normalized without trailing slashes before route paths are appended.
 
@@ -49,7 +47,6 @@ Operationally, that means:
 
 - Set `APP_BASE_URL` to the canonical application base URL for server-side self-calls.
 - Keep `NEXTAUTH_URL` aligned with the canonical app URL for auth flows.
-- Set `FASTAPI_URL` explicitly on the VPS if the sidecar is not reachable at the default local fallback.
 
 ## 4. Environment variables and credential inputs in use today
 
@@ -63,8 +60,6 @@ Required or effectively required for normal operation:
   - Used implicitly by NextAuth runtime for canonical auth URLs.
 - `APP_BASE_URL`
   - Used for trusted server-side authenticated self-call fallback.
-- `FASTAPI_URL`
-  - Used by assistant chat, summarization spend recording, and surprise-destination backend calls; otherwise those routes fall back to `http://localhost:8766`.
 - `TRAVELPAYOUTS_TOKEN`
   - Used by `src/app/api/trending-prices/route.ts`.
 - `GOOGLE_GEOCODING_KEY`
@@ -177,7 +172,7 @@ curl -I http://127.0.0.1:3001/hot-deals
 If testing assistant-related flows locally, remember the current defaults:
 
 - authenticated self-calls fall back to `APP_BASE_URL`, then `NEXTAUTH_URL`, then `http://localhost:3000`
-- FastAPI-backed assistant flows use `FASTAPI_URL` or fall back to `http://localhost:8766`
+- All assistant and surprise-destination flows are native to the Next.js app as of 2026-07-11, with no FastAPI backend.
 
 ## 8. VPS deployment steps
 
@@ -282,10 +277,10 @@ test -d data && echo "data dir present"
 test -f data/tpi.db && echo "sqlite present" || echo "sqlite will be created on first DB write"
 ```
 
-If validating assistant-adjacent behavior, also verify dependency reachability with the current runtime contract in mind:
+If validating assistant-adjacent behavior, also verify the app-native assistant health endpoint:
 
 ```bash
-curl -I http://127.0.0.1:8766/ || true
+curl -I http://127.0.0.1:3001/api/assistant/health
 ```
 
 ## 12. Related documents
