@@ -49,13 +49,16 @@ export function buildSurpriseQuery(args: {
   flexibleWindow?: string | null;
   tripLength?: string | null;
   startDate?: string | null;
+  matchAny?: boolean;
+  departMonthOverride?: string | null;
 }): URLSearchParams {
-  const departMonth = deriveDepartMonth(args.flexibleWindow, args.startDate);
+  const departMonth = args.departMonthOverride?.trim() || deriveDepartMonth(args.flexibleWindow, args.startDate);
   const params = new URLSearchParams({ origin: args.originCode, depart_month: departMonth });
   if (args.tripLength) params.set("trip_length", args.tripLength);
 
   const vibes = normalizeVibes(args.vibesSummary);
   if (vibes.length > 0) params.set("vibes", vibes.join(","));
+  if (args.matchAny) params.set("match", "any");
 
   return params;
 }

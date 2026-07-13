@@ -9,6 +9,7 @@ const MAX_CACHE_ENTRIES = 200;
 const MAX_VIBES_LENGTH = 120;
 const MAX_MONTH_LENGTH = 20;
 const MAX_TRIP_LENGTH_LENGTH = 20;
+const MAX_MATCH_LENGTH = 10;
 
 // 1-hour in-memory cache keyed by normalized query params.
 const cache = new Map<string, { data: SurpriseResult; expiresAt: number }>();
@@ -53,10 +54,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     searchParams.get("trip_length"),
     MAX_TRIP_LENGTH_LENGTH
   );
+  const match = clampQueryValue(searchParams.get("match"), MAX_MATCH_LENGTH);
+  const matchMode = match === "any" ? ("any" as const) : ("all" as const);
 
   purgeExpiredCacheEntries();
 
-  const cacheKey = [origin.toUpperCase(), vibes, departMonth, tripLength]
+  const cacheKey = [origin.toUpperCase(), vibes, departMonth, tripLength, matchMode]
     .map(encodeURIComponent)
     .join("|");
 
@@ -72,6 +75,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       vibes,
       departMonth,
       tripLength,
+      matchMode,
     });
   } catch {
     return NextResponse.json({

@@ -481,6 +481,8 @@
     "degradedNoRoutesBody": "Wir konnten für die gesuchten Reisedaten keine beliebten Routen ab deinem Flughafen finden. Das heißt nicht, dass es keine Flüge gibt — probiere einen anderen Monat aus oder frage Atlas.",
     "degradedNoVibeMatchBody": "Keine der gefundenen Routen passt zu den von dir gewählten Stimmungen. Das heißt nicht, dass es keine Flüge gibt — probiere andere Stimmungen aus oder frage Atlas.",
     "degradedInternalErrorBody": "Auf unserer Seite ist etwas schiefgelaufen, daher konnten wir die Suche nicht abschließen. Das heißt nicht, dass es keine Flüge gibt — versuche es erneut.",
+    "degradedUnknownVibesBody": "Einige Stimmungen dieser Reise haben wir nicht erkannt, deshalb konnte die Suche sie nicht verwenden. Passe deine Stimmungen an oder frage Atlas.",
+    "degradedNoMatchPossibleBody": "Kein uns bekanntes Reiseziel vereint alle diese Stimmungen auf einmal. Versuche es mit mindestens einer davon oder frage Atlas.",
     "originNeededTitle": "Wir brauchen deinen Heimatflughafen.",
     "originNeededBody": "Tipp hier, um ihn festzulegen — Atlas passt Vorschläge an deinen Abflugort an.",
     "setOriginCta": "Heimatflughafen festlegen →"

@@ -53,4 +53,22 @@ describe("buildSurpriseQuery", () => {
     expect(params.get("depart_month")).toBe("2026-05");
     expect(params.get("trip_length")).toBe("week");
   });
+
+  it("adds match=any and honors a depart-month override when the clarification card re-runs", () => {
+    const params = buildSurpriseQuery({
+      originCode: "JFK",
+      vibesSummary: "tropical + winter",
+      matchAny: true,
+      departMonthOverride: "2026-11",
+    });
+
+    expect(params.get("match")).toBe("any");
+    expect(params.get("depart_month")).toBe("2026-11");
+    expect(params.get("vibes")).toBe("tropical,winter");
+  });
+
+  it("omits match unless explicitly any", () => {
+    const params = buildSurpriseQuery({ originCode: "JFK", vibesSummary: "beach" });
+    expect(params.get("match")).toBeNull();
+  });
 });

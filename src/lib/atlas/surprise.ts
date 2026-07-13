@@ -16,6 +16,7 @@ import { DESTINATION_VIBES } from "./destination-vibes";
 import { resolveCityName } from "./city-names";
 import { normalizeVibes } from "./surprise-query";
 import type { SurpriseDegraded } from "./surprise-degrade";
+import { preflightVibes, type PreflightResult } from "./vibe-preflight";
 
 export const TRIP_LENGTH_DAYS: Record<string, number> = {
   weekend: 2,
@@ -29,6 +30,10 @@ export const NO_ROUTES_REASON =
   "Live flight search returned no popular routes for this origin and month. This does NOT mean no flights exist — try a different month or ask Atlas.";
 export const NO_VIBE_MATCH_REASON =
   "No live routes matched the requested vibes for this origin and month. This does NOT mean no flights exist — try different vibes or ask Atlas.";
+export const UNKNOWN_VIBES_REASON =
+  "Some requested vibes are not part of the search vocabulary, so the search did not run. This does NOT mean no flights exist — adjust the vibes or ask Atlas.";
+export const NO_MATCH_POSSIBLE_REASON =
+  "No known destination combines all the requested vibes at once, so the search did not run. This does NOT mean no flights exist — try matching any vibe, or ask Atlas.";
 export const NO_PRICE_LABEL = "—";
 
 export interface SurpriseDestination {
@@ -41,8 +46,10 @@ export interface SurpriseDestination {
 
 export interface SurpriseResult {
   origin: string;
+  originName?: string;
   destinations: SurpriseDestination[];
   degraded?: SurpriseDegraded;
+  preflight?: PreflightResult;
 }
 
 type RouteCandidate = {
@@ -101,6 +108,7 @@ export async function getSurpriseDestinations(params: {
   vibes?: string;
   departMonth?: string;
   tripLength?: string;
+  matchMode?: "all" | "any";
 }): Promise<SurpriseResult> {
   const inputOrigin = params.origin ?? "";
   const origin = parseIata(inputOrigin);
@@ -113,6 +121,26 @@ export async function getSurpriseDestinations(params: {
   }
 
   const requestedVibes = new Set(normalizeVibes(params.vibes));
+  const originResolved = resolveCityName(origin);
+  const originName = originResolved ?? undefined;
+
+  if (requestedVibes.size > 0) {
+    const preflight = preflightVibes([...requestedVibes], { matchMode: params.matchMode });
+    if (preflight.status !== "ok") {
+      return {
+        origin,
+        originName,
+        destinations: [],
+        degraded:
+          preflight.status === "unknown_vibes"
+            ? { code: "unknown_vibes", reason: UNKNOWN_VIBES_REASON }
+            : { code: "no_match_possible", reason: NO_MATCH_POSSIBLE_REASON },
+        preflight,
+      };
+    }
+  }
+
+  const minOverlap = params.matchMode === "any" ? 1 : requestedVibes.size >= 2 ? 2 : 1;
   const departMonth = params.departMonth?.trim() || nextMonthUtc();
 
   let returnDate: string | undefined;
@@ -169,7 +197,6 @@ export async function getSurpriseDestinations(params: {
     candidates.push(route);
   }
 
-  const originResolved = resolveCityName(origin);
   const originCityKey = originResolved ? cityKey(originResolved) : null;
 
   let namedCandidates = candidates
@@ -178,7 +205,6 @@ export async function getSurpriseDestinations(params: {
     .filter(({ name }) => originCityKey === null || cityKey(name) !== originCityKey);
 
   if (requestedVibes.size > 0) {
-    const minOverlap = requestedVibes.size >= 2 ? 2 : 1;
     namedCandidates = namedCandidates
       .map((entry) => ({
         ...entry,
@@ -205,7 +231,7 @@ export async function getSurpriseDestinations(params: {
     for (const { code, overlap } of curatedEntries) {
       if (enrichmentCodes.length >= slotsRemaining) break;
       if (code === origin) continue;
-      if (overlap < 2) continue;
+      if (overlap < minOverlap) continue;
       const cityName = resolveCityName(code);
       if (!cityName) continue;
       if (originCityKey !== null && cityKey(cityName) === originCityKey) continue;
@@ -238,7 +264,7 @@ export async function getSurpriseDestinations(params: {
     for (const { code, overlap } of curatedEntries) {
       if (destinations.length >= 3) break;
       if (code === origin) continue;
-      if (overlap < 2) continue;
+      if (overlap < minOverlap) continue;
       const cityName = resolveCityName(code);
       if (!cityName) continue;
       if (originCityKey !== null && cityKey(cityName) === originCityKey) continue;
@@ -269,6 +295,7 @@ export async function getSurpriseDestinations(params: {
   if (destinations.length === 0) {
     return {
       origin,
+      originName,
       destinations,
       degraded: {
         code: failureCode ?? (requestedVibes.size > 0 ? "no_vibe_match" : "no_routes"),
@@ -277,5 +304,5 @@ export async function getSurpriseDestinations(params: {
     };
   }
 
-  return { origin, destinations };
+  return { origin, originName, destinations };
 }

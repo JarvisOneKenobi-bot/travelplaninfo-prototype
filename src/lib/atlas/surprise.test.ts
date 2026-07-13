@@ -14,6 +14,8 @@ import {
   NO_ROUTES_REASON,
   NO_VIBE_MATCH_REASON,
 } from "./surprise";
+import { DESTINATION_VIBES } from "./destination-vibes";
+import { resolveCityName } from "./city-names";
 
 vi.mock("./travelpayouts-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./travelpayouts-client")>();
@@ -43,6 +45,24 @@ function itemWithoutTransfers(destination: string, price: number | null, extras:
   const route = item(destination, price, extras);
   delete route.transfers;
   return route;
+}
+
+function expectEveryDestinationCarriesAnyVibe(names: string[], vibes: string[]) {
+  const namesToVibes = new Map<string, ReadonlySet<string>>();
+  for (const [code, tags] of Object.entries(DESTINATION_VIBES)) {
+    const name = resolveCityName(code);
+    if (name) namesToVibes.set(name, tags);
+  }
+
+  expect(names.length).toBeGreaterThanOrEqual(1);
+  for (const name of names) {
+    const tags = namesToVibes.get(name);
+    expect(tags, `${name} must resolve back to a taxonomy entry`).toBeDefined();
+    expect(
+      vibes.some((vibe) => tags?.has(vibe)),
+      `${name} must carry at least one of: ${vibes.join(", ")}`
+    ).toBe(true);
+  }
 }
 
 describe("getSurpriseDestinations", () => {
@@ -326,26 +346,26 @@ describe("getSurpriseDestinations", () => {
     expect(tpGet).not.toHaveBeenCalled();
   });
 
-  it("SINGLE-VIBE FILLER IS DEAD (faithful port)", async () => {
+  it("SINGLE-VIBE FILLER: empty popular routes still fill honestly", async () => {
     emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
 
     const result = await getSurpriseDestinations({ origin: "JFK", vibes: "beach", departMonth: "2026-08" });
 
-    expect(result.destinations).toEqual([]);
-    expect(result.degraded?.code).toBe("no_vibe_match");
-    expect(result.degraded?.reason).toBe(NO_VIBE_MATCH_REASON);
-    expect(result.degraded?.reason).not.toBe(NO_ROUTES_REASON);
-    expect(rawSearchFlights).not.toHaveBeenCalled();
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.every((d) => d.flightPrice === "—")).toBe(true);
+    expect(result.degraded).toBeUndefined();
   });
 
-  it("ROUTES RETURNED BUT NONE MATCH VIBES: degrades with no_vibe_match", async () => {
+  it("ROUTES RETURNED BUT NONE MATCH VIBES: curated filler still avoids a dead end", async () => {
     popular([item("LAS", 100)]);
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
 
     const result = await getSurpriseDestinations({ origin: "JFK", vibes: "beach", departMonth: "2026-08" });
 
-    expect(result.destinations).toEqual([]);
-    expect(result.degraded?.code).toBe("no_vibe_match");
-    expect(result.degraded?.reason).toBe(NO_VIBE_MATCH_REASON);
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.map((destination) => destination.name)).not.toContain("Las Vegas, Nevada");
+    expect(result.degraded).toBeUndefined();
   });
 
   it("TP FAILURE + 2 VIBES STILL FILLS HONESTLY", async () => {
@@ -434,5 +454,56 @@ describe("DESTINATION NAMING: no raw code ever reaches a card", () => {
 
     expect(result.destinations.length).toBeGreaterThanOrEqual(1);
     expect(result.destinations.map((d) => d.name).join("|")).not.toContain("New York");
+  });
+});
+
+describe("MATCH MODE any: min overlap drops to 1 for ranking AND curated filler", () => {
+  it("RANKING path: tropical,winter in any-mode returns live routes matching a single vibe", async () => {
+    popular([item("CUN", 120), item("DEN", 90), item("DFW", 70)]);
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({
+      origin: "JFK",
+      vibes: "tropical,winter",
+      departMonth: "2026-08",
+      matchMode: "any",
+    });
+
+    const names = result.destinations.map((d) => d.name);
+    expect(names).toContain("Cancún, Mexico");
+    expect(names).toContain("Denver, Colorado");
+    expect(names).not.toContain("Dallas, Texas");
+  });
+
+  it("FILLER path: tropical,winter in any-mode can fill honest unpriced cards at overlap 1", async () => {
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({
+      origin: "JFK",
+      vibes: "tropical,winter",
+      departMonth: "2026-08",
+      matchMode: "any",
+    });
+
+    const names = result.destinations.map((d) => d.name);
+    expectEveryDestinationCarriesAnyVibe(names, ["tropical", "winter"]);
+    expect(result.destinations.every((d) => d.flightPrice === "—")).toBe(true);
+    expect(result.degraded).toBeUndefined();
+  });
+
+  it("single-vibe searches let the curated filler work at overlap 1 (it previously demanded 2 and starved them)", async () => {
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "winter", departMonth: "2026-08" });
+
+    // Popular routes empty -> the filler must still offer winter destinations,
+    // honestly unpriced ("—"), instead of a degraded dead end.
+    expectEveryDestinationCarriesAnyVibe(
+      result.destinations.map((d) => d.name),
+      ["winter"]
+    );
+    expect(result.degraded).toBeUndefined();
   });
 });

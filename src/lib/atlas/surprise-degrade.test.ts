@@ -16,6 +16,8 @@ const EXPECTED_DEGRADE_CODES: SurpriseDegradeCode[] = [
   "timeout",
   "no_routes",
   "no_vibe_match",
+  "unknown_vibes",
+  "no_match_possible",
   "internal_error",
 ];
 

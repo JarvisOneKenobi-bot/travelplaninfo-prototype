@@ -5,6 +5,8 @@ export type SurpriseDegradeCode =
   | "invalid_origin"
   | "no_routes"
   | "no_vibe_match"
+  | "unknown_vibes"
+  | "no_match_possible"
   | "internal_error";
 
 export interface SurpriseDegraded {
@@ -21,6 +23,8 @@ export const DEGRADE_CODE_TO_KEY: Record<SurpriseDegradeCode, string> = {
   timeout: "degradedTimeoutBody",
   no_routes: "degradedNoRoutesBody",
   no_vibe_match: "degradedNoVibeMatchBody",
+  unknown_vibes: "degradedUnknownVibesBody",
+  no_match_possible: "degradedNoMatchPossibleBody",
   internal_error: "degradedInternalErrorBody",
 };
 

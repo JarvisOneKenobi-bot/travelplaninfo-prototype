@@ -501,6 +501,8 @@
     "degradedNoRoutesBody": "We couldn't find popular routes from your airport for the dates we searched. This doesn't mean there are no flights — try another month, or ask Atlas.",
     "degradedNoVibeMatchBody": "None of the routes we found match the vibes you chose. This doesn't mean there are no flights — try different vibes, or ask Atlas.",
     "degradedInternalErrorBody": "Something went wrong on our end, so we couldn't finish the search. This doesn't mean there are no flights — try again.",
+    "degradedUnknownVibesBody": "We didn't recognize some of the vibes on this trip, so the search couldn't use them. Adjust your vibes or ask Atlas.",
+    "degradedNoMatchPossibleBody": "No destination we know combines all of those vibes at once. Try matching any of them, or ask Atlas.",
     "originNeededTitle": "We need your home airport.",
     "originNeededBody": "Tap to set it — Atlas will tailor suggestions to your origin.",
     "setOriginCta": "Set origin →"

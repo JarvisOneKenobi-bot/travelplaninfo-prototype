@@ -543,6 +543,8 @@
     "degradedNoRoutesBody": "Nous n’avons pas trouvé de routes populaires depuis votre aéroport pour les dates recherchées. Cela ne signifie pas qu’il n’y a pas de vols — essayez un autre mois, ou demandez à Atlas.",
     "degradedNoVibeMatchBody": "Aucune des routes trouvées ne correspond aux ambiances que vous avez choisies. Cela ne signifie pas qu’il n’y a pas de vols — essayez d’autres ambiances, ou demandez à Atlas.",
     "degradedInternalErrorBody": "Un problème est survenu de notre côté, nous n’avons donc pas pu terminer la recherche. Cela ne signifie pas qu’il n’y a pas de vols — réessayez.",
+    "degradedUnknownVibesBody": "Nous n'avons pas reconnu certaines ambiances de ce voyage, la recherche n'a donc pas pu les utiliser. Ajustez vos ambiances ou demandez à Atlas.",
+    "degradedNoMatchPossibleBody": "Aucune destination connue ne combine toutes ces ambiances à la fois. Essayez d'en chercher au moins une, ou demandez à Atlas.",
     "originNeededTitle": "Nous avons besoin de votre aéroport d'origine.",
     "originNeededBody": "Appuyez pour le définir — Atlas adaptera les suggestions à votre origine.",
     "setOriginCta": "Définir l'origine →"

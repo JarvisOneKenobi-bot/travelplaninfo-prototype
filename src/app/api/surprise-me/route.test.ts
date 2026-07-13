@@ -48,6 +48,7 @@ describe("surprise-me API route", () => {
       vibes: "beach,romantic",
       departMonth: "2026-08",
       tripLength: "week",
+      matchMode: "all",
     });
     expect(res.status).toBe(200);
     expect(await json(res)).toEqual(engineResult);
@@ -76,12 +77,14 @@ describe("surprise-me API route", () => {
       vibes: "",
       departMonth: "",
       tripLength: "",
+      matchMode: "all",
     });
     expect(mockedGetSurpriseDestinations).toHaveBeenNthCalledWith(2, {
       origin: "",
       vibes: "no-origin-mangling",
       departMonth: "",
       tripLength: "",
+      matchMode: "all",
     });
   });
 
@@ -193,6 +196,49 @@ describe("surprise-me API route", () => {
       degraded: { code: "internal_error", reason: expect.any(String) },
     });
     expect(secondBody.degraded.reason.length).toBeGreaterThan(0);
+    expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
+  });
+
+  it("MATCH MODE: match=any does not collide with the default cache entry (a shared key would serve all-mode cards to an any-mode request)", async () => {
+    const engineResult = {
+      origin: "JFK",
+      destinations: [
+        { name: "Cancún, Mexico", flightPrice: "$220", airline: "AA", nonstop: true, link: "https://example.com/jfk-cun" },
+      ],
+    };
+    mockedGetSurpriseDestinations.mockResolvedValue(engineResult);
+
+    await GET(request("origin=JFK&vibes=tropical%2Cwinter&depart_month=2027-04&trip_length=week"));
+    await GET(request("origin=JFK&vibes=tropical%2Cwinter&depart_month=2027-04&trip_length=week&match=any"));
+
+    expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
+    expect(mockedGetSurpriseDestinations).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ matchMode: "all" })
+    );
+    expect(mockedGetSurpriseDestinations).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ matchMode: "any" })
+    );
+  });
+
+  it("PRE-FLIGHT PASS-THROUGH: degraded preflight results reach the client body and are not cached", async () => {
+    const preflightResult = {
+      origin: "JFK",
+      originName: "New York, New York",
+      destinations: [],
+      degraded: { code: "no_match_possible", reason: "engine prose" },
+      preflight: { status: "no_match_possible", wouldMatchIfAny: 40 },
+    };
+    mockedGetSurpriseDestinations.mockResolvedValue(preflightResult as never);
+
+    const first = await GET(request("origin=JFK&vibes=tropical%2Cwinter"));
+    expect(await json(first)).toMatchObject({
+      preflight: { status: "no_match_possible" },
+      originName: "New York, New York",
+    });
+
+    await GET(request("origin=JFK&vibes=tropical%2Cwinter"));
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
   });
 });
