@@ -23,6 +23,23 @@ const EXPECTED_DEGRADE_CODES: SurpriseDegradeCode[] = [
 
 const LOCALES = ["en", "es", "pt", "fr", "de", "it"] as const;
 
+const CLARIFY_KEYS = [
+  "clarifyUnknownTitle",
+  "clarifyUnknownBody",
+  "clarifySuggestionsLead",
+  "clarifyUseKnown",
+  "clarifyImpossibleTitle",
+  "clarifyImpossibleBody",
+  "clarifyMatchAny",
+  "clarifyTryMonthLead",
+  "clarifyAskAtlas",
+  "clarifyAtlasSeed",
+  // no-origin variants: used when the origin cannot be named — the origin
+  // phrase is omitted, never a bare code
+  "clarifyAtlasSeedNoOrigin",
+  "subtitleNoOrigin",
+] as const;
+
 describe("resolveDegradedBody", () => {
   const t = (key: string) => key;
 
@@ -85,6 +102,35 @@ describe("degraded body locale messages", () => {
         en.atlasHero.degradedInvalidOriginBody
       );
       expect(common.atlasHero.degradedNoTokenBody).not.toBe(en.atlasHero.degradedNoTokenBody);
+    }
+  });
+
+  it.each(LOCALES)("%s has every clarification-card key", (locale) => {
+    const common = JSON.parse(
+      readFileSync(resolve(process.cwd(), "messages", locale, "common.json"), "utf-8")
+    ) as { atlasHero?: Record<string, string> };
+
+    for (const key of CLARIFY_KEYS) {
+      expect(common.atlasHero?.[key], `${locale}.atlasHero.${key}`).toEqual(expect.any(String));
+    }
+  });
+
+  it("non-English clarification bodies are genuinely translated, not pasted English", () => {
+    const en = JSON.parse(
+      readFileSync(resolve(process.cwd(), "messages", "en", "common.json"), "utf-8")
+    ) as {
+      atlasHero: Record<string, string>;
+    };
+
+    for (const locale of LOCALES.filter((l) => l !== "en")) {
+      const common = JSON.parse(
+        readFileSync(resolve(process.cwd(), "messages", locale, "common.json"), "utf-8")
+      ) as { atlasHero: Record<string, string> };
+
+      expect(common.atlasHero.clarifyImpossibleBody).not.toBe(
+        en.atlasHero.clarifyImpossibleBody
+      );
+      expect(common.atlasHero.clarifyAtlasSeed).not.toBe(en.atlasHero.clarifyAtlasSeed);
     }
   });
 });
