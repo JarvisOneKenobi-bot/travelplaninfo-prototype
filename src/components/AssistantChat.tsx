@@ -1529,7 +1529,7 @@ export default function AssistantChat() {
                           {allTrips.flights.map((f, i) => (
                             <div key={i} className="bg-white rounded-lg border border-gray-200 p-3">
                               <p className="font-bold text-orange-600 text-lg">{f.price}</p>
-                              <p className="text-xs text-gray-600 font-medium">{f.airline}</p>
+                              {f.airline && <p className="text-xs text-gray-600 font-medium">{f.airline}</p>}
                               <p className="text-xs text-gray-500 mt-1">{f.route}</p>
                               {f.nonstop && <span className="text-xs bg-green-100 text-green-700 rounded px-2 py-0.5 inline-block mt-1">Nonstop</span>}
                             </div>

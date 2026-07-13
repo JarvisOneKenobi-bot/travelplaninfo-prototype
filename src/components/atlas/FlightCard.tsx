@@ -16,17 +16,20 @@ interface FlightData {
 export default function FlightCard({ flight }: { flight: FlightData }) {
   const t = useTranslations("atlas");
   const flightMeta = [flight.route, flight.duration, flight.stops].filter(Boolean).join(" · ");
+  const airline = flight.airline.trim();
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start gap-2">
         <div className="flex-1 min-w-0">
           {/* Airline logo placeholder + name */}
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">
-              {flight.airline.charAt(0)}
+          {airline && (
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">
+                {airline.charAt(0)}
+              </div>
+              <p className="font-medium text-sm text-gray-900 truncate">{airline}</p>
             </div>
-            <p className="font-medium text-sm text-gray-900 truncate">{flight.airline}</p>
-          </div>
+          )}
           <p className="text-xs text-gray-500 mt-1">{flightMeta}</p>
           {flight.depart_date && (
             <p className="text-xs text-gray-400 mt-0.5">

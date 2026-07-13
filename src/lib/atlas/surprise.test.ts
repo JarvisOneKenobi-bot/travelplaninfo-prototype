@@ -65,6 +65,12 @@ function expectEveryDestinationCarriesAnyVibe(names: string[], vibes: string[]) 
   }
 }
 
+function expectNoRawAirlineCodes(destinations: Array<{ airline: string }>) {
+  for (const destination of destinations) {
+    expect(destination.airline).not.toMatch(/^[A-Z0-9]{2}$/);
+  }
+}
+
 describe("getSurpriseDestinations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -82,15 +88,16 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations[0]).toMatchObject({
       name: "Cancún, Mexico",
       flightPrice: "$120",
-      airline: "NK",
+      airline: "Spirit Airlines",
       nonstop: true,
     });
     expect(result.destinations[1]).toMatchObject({
       name: "Montego Bay, Jamaica",
       flightPrice: "$180",
-      airline: "B6",
+      airline: "jetBlue",
       nonstop: false,
     });
+    expectNoRawAirlineCodes(result.destinations);
     expect(result.destinations.every((d) => d.link.includes("aviasales.com/search/"))).toBe(true);
     expect(result.degraded).toBeUndefined();
   });
@@ -266,8 +273,23 @@ describe("getSurpriseDestinations", () => {
     const result = await getSurpriseDestinations({ origin: "JFK", vibes: "tropical,beach", departMonth: "2026-08" });
 
     expect(result.destinations).toHaveLength(3);
-    expect(result.destinations[1]).toMatchObject({ flightPrice: "$210", airline: "B6", nonstop: true });
+    expect(result.destinations[1]).toMatchObject({ flightPrice: "$210", airline: "jetBlue", nonstop: true });
     expect(result.destinations[2].flightPrice).toBe("$220");
+    expectNoRawAirlineCodes(result.destinations);
+  });
+
+  it("AIRLINE NAMING: unresolvable airline codes become empty strings, never raw codes", async () => {
+    popular([
+      item("CUN", 120, { airline: "X0" }),
+      item("MBJ", 180, { airline: "9K" }),
+    ]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+
+    expect(result.destinations).toHaveLength(2);
+    expect(result.destinations[0]).toMatchObject({ name: "Cancún, Mexico", airline: "" });
+    expect(result.destinations[1]).toMatchObject({ name: "Montego Bay, Jamaica", airline: "Cape Air" });
+    expectNoRawAirlineCodes(result.destinations);
   });
 
 
@@ -432,6 +454,58 @@ describe("DESTINATION NAMING: no raw code ever reaches a card", () => {
       expect(name).not.toMatch(/^[A-Z]{3}$/);
     }
     expect(names.join("|")).not.toContain("ZZZ");
+  });
+
+  it("LIVE METRO EXCLUSION: JFK origin drops every New York-metro destination, including Newark/EWR", async () => {
+    popular([item("EWR", 60), item("LGA", 70), item("NYC", 80), item("CUN", 120), item("MBJ", 150)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+
+    const names = result.destinations.map((d) => d.name).join("|");
+    expect(names).not.toContain("Newark");
+    expect(names).not.toContain("New York");
+    expect(result.destinations.map((d) => d.name)).toEqual(["Cancún, Mexico", "Montego Bay, Jamaica"]);
+  });
+
+  it("LIVE METRO EXCLUSION: EWR origin drops New York-metro destinations instead of recommending JFK/LGA/NYC", async () => {
+    popular([item("JFK", 60), item("LGA", 70), item("NYC", 80), item("CUN", 120), item("MBJ", 150)]);
+
+    const result = await getSurpriseDestinations({ origin: "EWR", departMonth: "2026-08" });
+
+    const names = result.destinations.map((d) => d.name).join("|");
+    expect(names).not.toContain("New York");
+    expect(result.destinations.map((d) => d.name)).toEqual(["Cancún, Mexico", "Montego Bay, Jamaica"]);
+  });
+
+  it("LIVE METRO EXCLUSION: LAX origin drops TP-defined LAX-metro destinations but keeps distinct adjacent TP cities", async () => {
+    popular([item("SNA", 60), item("ONT", 70), item("LGB", 80), item("CUN", 120)]);
+
+    const result = await getSurpriseDestinations({ origin: "LAX", departMonth: "2026-08" });
+
+    const names = result.destinations.map((d) => d.name);
+    expect(names).not.toContain("Santa Ana, United States (all airports)");
+    expect(names).toContain("Ontario, United States (all airports)");
+    expect(names).toContain("Long Beach, United States (all airports)");
+  });
+
+  it("NO OVER-EXCLUSION: non-metro origins still return their normal live results", async () => {
+    popular([item("MBJ", 180), item("TPA", 90), item("CUN", 120)]);
+
+    const result = await getSurpriseDestinations({ origin: "CUN", departMonth: "2026-08" });
+
+    expect(result.destinations.map((d) => d.name)).toEqual(["Montego Bay, Jamaica", "Tampa, Florida"]);
+  });
+
+  it("CURATED FILLER METRO EXCLUSION: a JFK user must not be backfilled with Newark/EWR", async () => {
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "foodie,romantic", departMonth: "2026-08" });
+
+    const names = result.destinations.map((d) => d.name).join("|");
+    expect(names).not.toContain("Newark");
+    expect(names).not.toContain("New York");
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
   });
 
   it("excludes destinations in the origin's own city (JFK origin must not be offered NYC or LGA)", async () => {

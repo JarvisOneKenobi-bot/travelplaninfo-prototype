@@ -1,4 +1,5 @@
 import { TP_CONFIG } from "@/config/affiliates";
+import { airlineDisplayName } from "./airline-names";
 
 const BASE_URL = "https://api.travelpayouts.com";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -485,7 +486,7 @@ export async function searchFlights(
     .sort((a, b) => (a.price ?? 999999) - (b.price ?? 999999))
     .slice(0, 10)
     .map((flight) => ({
-      airline: flight.airline ?? "",
+      airline: airlineDisplayName(flight.airline),
       route: `${flight.origin} → ${flight.destination}`,
       price: formatPrice(flight.price, flight.return_at && (flight.price ?? 0) > 0 ? " round-trip" : ""),
       duration: "",

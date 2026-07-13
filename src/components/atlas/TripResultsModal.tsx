@@ -298,7 +298,7 @@ export default function TripResultsModal({
         items.push({
           day_number: flightDays[idx] || 1,
           category: "flight",
-          title: `${f.airline} ${f.route}`,
+          title: joinNonEmpty([f.airline, f.route], " "),
           description: joinNonEmpty([f.duration, f.stops, f.price], " - "),
           price_estimate: f.price,
           affiliate_url: f.book_url,
@@ -311,7 +311,7 @@ export default function TripResultsModal({
       items.push({
         day_number: flightDays[realIdx] || 1,
         category: "flight",
-        title: `${f.airline} ${f.route}`,
+        title: joinNonEmpty([f.airline, f.route], " "),
         description: joinNonEmpty([f.duration, f.stops, f.price], " - "),
         price_estimate: f.price,
         affiliate_url: f.book_url,
@@ -534,6 +534,7 @@ export default function TripResultsModal({
                     const realIdx = flights.indexOf(f);
                     const isCheapest = f.price_value === cheapestFlightValue;
                     const isSelected = selectedFlights.has(realIdx);
+                    const airlineName = f.airline.trim();
                     return (
                       <div
                         key={i}
@@ -554,32 +555,36 @@ export default function TripResultsModal({
                               className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 shrink-0 mt-1"
                             />
                             <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">
-                                {f.airline.charAt(0)}
+                              <div className="flex items-center gap-2">
+                                {airlineName && (
+                                  <>
+                                    <div className="w-7 h-7 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">
+                                      {airlineName.charAt(0)}
+                                    </div>
+                                    <span className="font-medium text-gray-900">{airlineName}</span>
+                                  </>
+                                )}
+                                {isCheapest && (
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                    Best Price
+                                  </span>
+                                )}
+                                {f.nonstop && (
+                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                                    Nonstop
+                                  </span>
+                                )}
                               </div>
-                              <span className="font-medium text-gray-900">{f.airline}</span>
-                              {isCheapest && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                  Best Price
-                                </span>
-                              )}
-                              {f.nonstop && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
-                                  Nonstop
-                                </span>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {joinNonEmpty([f.route, f.duration, f.stops], " · ")}
+                              </p>
+                              {f.depart_date && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {f.depart_date}
+                                  {f.return_date ? ` - ${f.return_date}` : " (one-way)"}
+                                </p>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {joinNonEmpty([f.route, f.duration, f.stops], " · ")}
-                            </p>
-                            {f.depart_date && (
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {f.depart_date}
-                                {f.return_date ? ` - ${f.return_date}` : " (one-way)"}
-                              </p>
-                            )}
-                          </div>
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-bold text-xl text-orange-600">{f.price}</p>

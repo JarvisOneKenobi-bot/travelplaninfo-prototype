@@ -14,6 +14,8 @@ import {
 } from "./travelpayouts-client";
 import { DESTINATION_VIBES } from "./destination-vibes";
 import { resolveCityName } from "./city-names";
+import { resolveMetro } from "./metro";
+import { airlineDisplayName } from "./airline-names";
 import { normalizeVibes } from "./surprise-query";
 import type { SurpriseDegraded } from "./surprise-degrade";
 import { preflightVibes, type PreflightResult } from "./vibe-preflight";
@@ -97,7 +99,7 @@ function toDestination(route: RouteCandidate, name: string, isRoundTrip: boolean
   return {
     name,
     flightPrice: priceLabel(route.price, isRoundTrip),
-    airline: route.airline,
+    airline: airlineDisplayName(route.airline),
     nonstop: route.transfers === 0,
     link: route.link,
   };
@@ -123,6 +125,7 @@ export async function getSurpriseDestinations(params: {
   const requestedVibes = new Set(normalizeVibes(params.vibes));
   const originResolved = resolveCityName(origin);
   const originName = originResolved ?? undefined;
+  const originMetro = resolveMetro(origin);
 
   if (requestedVibes.size > 0) {
     const preflight = preflightVibes([...requestedVibes], { matchMode: params.matchMode });
@@ -192,7 +195,7 @@ export async function getSurpriseDestinations(params: {
   const candidates: RouteCandidate[] = [];
   for (const route of popular) {
     const code = route.destination;
-    if (code === origin || seenCodes.has(code)) continue;
+    if (code === origin || resolveMetro(code) === originMetro || seenCodes.has(code)) continue;
     seenCodes.add(code);
     candidates.push(route);
   }
@@ -231,6 +234,7 @@ export async function getSurpriseDestinations(params: {
     for (const { code, overlap } of curatedEntries) {
       if (enrichmentCodes.length >= slotsRemaining) break;
       if (code === origin) continue;
+      if (resolveMetro(code) === originMetro) continue;
       if (overlap < minOverlap) continue;
       const cityName = resolveCityName(code);
       if (!cityName) continue;
@@ -264,6 +268,7 @@ export async function getSurpriseDestinations(params: {
     for (const { code, overlap } of curatedEntries) {
       if (destinations.length >= 3) break;
       if (code === origin) continue;
+      if (resolveMetro(code) === originMetro) continue;
       if (overlap < minOverlap) continue;
       const cityName = resolveCityName(code);
       if (!cityName) continue;
@@ -276,7 +281,7 @@ export async function getSurpriseDestinations(params: {
         destinations.push({
           name: cityName,
           flightPrice: priceLabel(route.price, isRoundTrip),
-          airline: route.airline ?? "",
+          airline: airlineDisplayName(route.airline),
           nonstop: route.transfers === 0,
           link: route.link ?? "",
         });

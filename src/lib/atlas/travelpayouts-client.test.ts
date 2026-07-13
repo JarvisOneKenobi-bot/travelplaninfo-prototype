@@ -17,7 +17,7 @@ describe("travelpayouts-client", () => {
       ok: true,
       json: async () => ({
         success: true,
-        data: [{ origin: "MIA", destination: "CUN", price: 210, departure_at: "2026-09-01T10:00:00Z" }],
+        data: [{ origin: "MIA", destination: "CUN", price: 210, airline: "B6", departure_at: "2026-09-01T10:00:00Z" }],
       }),
     });
     const result = await searchFlights("MIA", "CUN", "2026-09-01");
@@ -26,12 +26,37 @@ describe("travelpayouts-client", () => {
       expect(result.flights.length).toBeGreaterThan(0);
       expect(result.flights[0]).toMatchObject({
         route: "MIA → CUN",
+        airline: "jetBlue",
         price: "$210 round-trip",
         duration: "",
         stops: "",
         depart_date: "2026-09-01T10:00:00Z",
       });
+      expect(result.flights[0].airline).not.toMatch(/^[A-Z0-9]{2}$/);
       expect(result.flights[0].book_url).toContain("aviasales.com/search/");
+    }
+  });
+
+  it("resolves airline codes in searchFlights and renders unresolvable codes as empty strings", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [
+          { origin: "BOS", destination: "LAX", price: 199, airline: "X0", departure_at: "2026-10-01T10:00:00Z" },
+          { origin: "BOS", destination: "LAX", price: 210, airline: "9K", departure_at: "2026-10-02T10:00:00Z" },
+        ],
+      }),
+    });
+
+    const result = await searchFlights("BOS", "LAX", "2026-10-01");
+
+    expect("no_data" in result).toBe(false);
+    if (!("no_data" in result)) {
+      expect(result.flights.map((flight) => flight.airline)).toEqual(["", "Cape Air"]);
+      for (const flight of result.flights) {
+        expect(flight.airline).not.toMatch(/^[A-Z0-9]{2}$/);
+      }
     }
   });
 
