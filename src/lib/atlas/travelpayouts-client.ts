@@ -6,6 +6,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const TIMEOUT_MS = 10 * 1000;
 const RATE_LIMIT = 200;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+export const NO_PRICE_LABEL = "—";
 
 export interface FlightOption {
   origin: string;
@@ -291,8 +292,7 @@ function datePart(dateString: string | undefined): string {
 }
 
 function formatPrice(price: number | null | undefined, suffix = ""): string {
-  const value = price ?? 0;
-  return value > 0 ? `$${value}${suffix}` : "$0";
+  return price != null && price > 0 ? `$${price}${suffix}` : NO_PRICE_LABEL;
 }
 
 function formatStops(transfers: number | null): string {

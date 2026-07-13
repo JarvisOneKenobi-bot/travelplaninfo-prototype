@@ -4,7 +4,13 @@ import { getAnthropicApiKey } from "@/lib/server-config";
 import { buildAtlasSystemPrompt } from "./system-prompt";
 import { isSpendCapReached, recordAssistantSpend } from "./spend";
 import { encodeSseData } from "./sse";
-import { getDeals, getPopularRoutes, searchFlights } from "./travelpayouts-client";
+import { getDeals, INVALID_IATA_REASON, parseIata, searchFlights } from "./travelpayouts-client";
+import { getSurpriseDestinations } from "./surprise";
+import {
+  renderDealsToolResult,
+  renderSearchFlightsToolResult,
+  renderSurpriseToolResult,
+} from "./tool-render";
 import { getArticleTool } from "./tools/get-article";
 
 const MODEL = "claude-sonnet-5";
@@ -96,19 +102,46 @@ async function sleep(ms: number): Promise<void> {
 
 async function executeTool(name: string, input: ToolInput): Promise<unknown> {
   switch (name) {
-    case "search_flights":
-      return searchFlights(
-        stringInput(input, "origin"),
+    case "search_flights": {
+      const origin = parseIata(stringInput(input, "origin"));
+      if (!origin) {
+        return {
+          flights: [],
+          no_data: true,
+          reason: INVALID_IATA_REASON,
+          origin: "",
+          destination: stringInput(input, "destination"),
+          airports_searched: [],
+          destinations_searched: [],
+        };
+      }
+      return renderSearchFlightsToolResult(await searchFlights(
+        origin,
         stringInput(input, "destination"),
         stringInput(input, "depart_date"),
         stringInput(input, "return_date") || undefined
+      ));
+    }
+    case "get_deals": {
+      const origin = parseIata(stringInput(input, "origin"));
+      if (!origin) {
+        return { deals: [], no_data: true, reason: INVALID_IATA_REASON };
+      }
+      return renderDealsToolResult(
+        await getDeals(origin, stringInput(input, "destination") || undefined),
+        origin,
+        stringInput(input, "destination") || undefined
       );
-    case "get_deals":
-      return getDeals(stringInput(input, "origin"), stringInput(input, "destination") || undefined);
+    }
     case "get_article":
       return getArticleTool(stringInput(input, "query"));
-    case "surprise_me":
-      return getPopularRoutes(stringInput(input, "origin"));
+    case "surprise_me": {
+      const origin = parseIata(stringInput(input, "origin"));
+      if (!origin) {
+        return { suggestions: [], no_data: true, reason: INVALID_IATA_REASON };
+      }
+      return renderSurpriseToolResult(await getSurpriseDestinations({ origin }));
+    }
     default:
       return { is_error: true, error: `Unknown tool: ${name}` };
   }

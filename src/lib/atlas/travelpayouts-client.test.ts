@@ -37,6 +37,28 @@ describe("travelpayouts-client", () => {
     }
   });
 
+  it("renders missing or null search_flights prices as no-price labels and sorts them last", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [
+          { origin: "SAN", destination: "PDX", departure_at: "2026-09-01T10:00:00Z" },
+          { origin: "SAN", destination: "PDX", price: 166, departure_at: "2026-09-02T10:00:00Z" },
+          { origin: "SAN", destination: "PDX", price: null, departure_at: "2026-09-03T10:00:00Z" },
+        ],
+      }),
+    });
+
+    const result = await searchFlights("SAN", "PDX", "2026-09-01");
+
+    expect("no_data" in result).toBe(false);
+    if (!("no_data" in result)) {
+      expect(result.flights.map((flight) => flight.price)).toEqual(["$166 round-trip", "—", "—"]);
+      expect(result.flights.map((flight) => flight.price)).not.toContain("$0");
+    }
+  });
+
   it("resolves airline codes in searchFlights and renders unresolvable codes as empty strings", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -123,6 +145,24 @@ describe("travelpayouts-client", () => {
         savings_pct: 0,
       });
       expect(result.deals[0].search_url).toContain("aviasales.com/search/");
+    }
+  });
+
+  it("renders missing get_deals prices as no-price labels, never fabricated zero-dollar deals", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: [{ origin: "SFO", destination: "YVR", departure_at: "2026-08-12T09:00:00Z" }],
+      }),
+    });
+
+    const result = await getDeals("SFO", "YVR");
+
+    expect("no_data" in result).toBe(false);
+    if (!("no_data" in result)) {
+      expect(result.deals[0].price).toBe("—");
+      expect(result.deals[0].price).not.toBe("$0");
     }
   });
 
