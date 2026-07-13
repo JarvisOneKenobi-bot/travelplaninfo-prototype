@@ -39,6 +39,8 @@ const CLARIFY_KEYS = [
   "subtitleNoOrigin",
 ] as const;
 
+const NOTICE_KEYS = ["noticeLivePricingTitle", "noticeLivePricingBody"] as const;
+
 describe("resolveDegradedBody", () => {
   const t = (key: string) => key;
 
@@ -111,6 +113,33 @@ describe("degraded body locale messages", () => {
 
     for (const key of CLARIFY_KEYS) {
       expect(common.atlasHero?.[key], `${locale}.atlasHero.${key}`).toEqual(expect.any(String));
+    }
+  });
+
+  it.each(LOCALES)("%s has every live-pricing notice key", (locale) => {
+    const common = JSON.parse(
+      readFileSync(resolve(process.cwd(), "messages", locale, "common.json"), "utf-8")
+    ) as { atlasHero?: Record<string, string> };
+
+    for (const key of NOTICE_KEYS) {
+      expect(common.atlasHero?.[key], `${locale}.atlasHero.${key}`).toEqual(expect.any(String));
+      expect((common.atlasHero?.[key] as string).length, `${locale}.atlasHero.${key}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("non-English live-pricing notices are genuinely translated, not pasted English", () => {
+    const en = JSON.parse(
+      readFileSync(resolve(process.cwd(), "messages", "en", "common.json"), "utf-8")
+    ) as { atlasHero: Record<string, string> };
+
+    for (const locale of LOCALES.filter((l) => l !== "en")) {
+      const common = JSON.parse(
+        readFileSync(resolve(process.cwd(), "messages", locale, "common.json"), "utf-8")
+      ) as { atlasHero: Record<string, string> };
+
+      for (const key of NOTICE_KEYS) {
+        expect(common.atlasHero[key], `${locale}.atlasHero.${key}`).not.toBe(en.atlasHero[key]);
+      }
     }
   });
 

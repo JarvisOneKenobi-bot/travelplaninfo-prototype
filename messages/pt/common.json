@@ -545,6 +545,8 @@
     "degradedInternalErrorBody": "Algo deu errado do nosso lado, então não foi possível concluir a busca. Isso não significa que não existam voos — tente novamente.",
     "degradedUnknownVibesBody": "Não reconhecemos algumas das vibes desta viagem, então a busca não pôde usá-las. Ajuste suas vibes ou pergunte ao Atlas.",
     "degradedNoMatchPossibleBody": "Nenhum destino que conhecemos combina todas essas vibes ao mesmo tempo. Tente buscar com qualquer uma delas ou pergunte ao Atlas.",
+    "noticeLivePricingTitle": "Os preços ao vivo estão temporariamente indisponíveis.",
+    "noticeLivePricingBody": "Esses destinos continuam sendo combinações reais, mas não foi possível atualizar os preços de voos ao vivo agora. Isso não significa que não existam voos — pergunte ao Atlas ou tente novamente em breve para ver tarifas atualizadas.",
     "clarifyUnknownTitle": "Vamos ajustar o que você procura",
     "clarifyUnknownBody": "Ainda não temos uma categoria \"{vibes}\" na nossa busca, então não pudemos usá-la para encontrar lugares.",
     "clarifySuggestionsLead": "O mais parecido que podemos buscar:",

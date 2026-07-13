@@ -142,6 +142,22 @@ describe("surprise-me API route", () => {
     expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
   });
 
+  it("NOTICE IS NOT CACHED: measured cards with a live-pricing notice call the engine every time", async () => {
+    const engineResult = {
+      origin: "JFK",
+      destinations: [
+        { name: "Cancún, Mexico", flightPrice: "$220", airline: "jetBlue", nonstop: true, link: "https://example.com/jfk-cun" },
+      ],
+      notice: { code: "timeout", reason: "flight data timed out" },
+    };
+    mockedGetSurpriseDestinations.mockResolvedValue(engineResult);
+
+    await GET(request("origin=JFK&vibes=notice-not-cached&depart_month=2027-05&trip_length=week"));
+    await GET(request("origin=JFK&vibes=notice-not-cached&depart_month=2027-05&trip_length=week"));
+
+    expect(mockedGetSurpriseDestinations).toHaveBeenCalledTimes(2);
+  });
+
   it("NO FASTAPI FETCH: does not call global fetch", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);

@@ -9,6 +9,7 @@ import {
   buildAviasalesLink,
   FAILURE_REASONS,
   INVALID_IATA_REASON,
+  NO_PRICE_LABEL,
   type TpFailure,
   type TpFlightItem,
 } from "./travelpayouts-client";
@@ -36,7 +37,7 @@ export const UNKNOWN_VIBES_REASON =
   "Some requested vibes are not part of the search vocabulary, so the search did not run. This does NOT mean no flights exist — adjust the vibes or ask Atlas.";
 export const NO_MATCH_POSSIBLE_REASON =
   "No known destination combines all the requested vibes at once, so the search did not run. This does NOT mean no flights exist — try matching any vibe, or ask Atlas.";
-export const NO_PRICE_LABEL = "—";
+export { NO_PRICE_LABEL };
 
 export interface SurpriseDestination {
   name: string;
@@ -51,6 +52,7 @@ export interface SurpriseResult {
   originName?: string;
   destinations: SurpriseDestination[];
   degraded?: SurpriseDegraded;
+  notice?: SurpriseDegraded;
   preflight?: PreflightResult;
 }
 
@@ -309,5 +311,10 @@ export async function getSurpriseDestinations(params: {
     };
   }
 
-  return { origin, originName, destinations };
+  return {
+    origin,
+    originName,
+    destinations,
+    ...(failureCode ? { notice: { code: failureCode, reason: FAILURE_REASONS[failureCode] } } : {}),
+  };
 }

@@ -483,6 +483,8 @@
     "degradedInternalErrorBody": "Auf unserer Seite ist etwas schiefgelaufen, daher konnten wir die Suche nicht abschließen. Das heißt nicht, dass es keine Flüge gibt — versuche es erneut.",
     "degradedUnknownVibesBody": "Einige Stimmungen dieser Reise haben wir nicht erkannt, deshalb konnte die Suche sie nicht verwenden. Passe deine Stimmungen an oder frage Atlas.",
     "degradedNoMatchPossibleBody": "Kein uns bekanntes Reiseziel vereint alle diese Stimmungen auf einmal. Versuche es mit mindestens einer davon oder frage Atlas.",
+    "noticeLivePricingTitle": "Live-Preise sind vorübergehend nicht verfügbar.",
+    "noticeLivePricingBody": "Diese Reiseziele sind weiterhin echte Treffer, aber wir konnten die Live-Flugpreise gerade nicht aktualisieren. Das heißt nicht, dass es keine Flüge gibt — frage Atlas oder versuche es in Kürze erneut, um aktuelle Tarife zu sehen.",
     "clarifyUnknownTitle": "Lass uns eingrenzen, was du suchst",
     "clarifyUnknownBody": "Eine Kategorie „{vibes}“ gibt es in unserer Suche noch nicht, deshalb konnten wir sie nicht verwenden, um Orte zu finden.",
     "clarifySuggestionsLead": "Das Ähnlichste, wonach wir suchen können:",

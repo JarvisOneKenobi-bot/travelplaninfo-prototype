@@ -503,6 +503,8 @@
     "degradedInternalErrorBody": "Something went wrong on our end, so we couldn't finish the search. This doesn't mean there are no flights — try again.",
     "degradedUnknownVibesBody": "We didn't recognize some of the vibes on this trip, so the search couldn't use them. Adjust your vibes or ask Atlas.",
     "degradedNoMatchPossibleBody": "No destination we know combines all of those vibes at once. Try matching any of them, or ask Atlas.",
+    "noticeLivePricingTitle": "Live prices are temporarily unavailable.",
+    "noticeLivePricingBody": "These destinations are still real matches, but we couldn't refresh live flight prices just now. This doesn't mean there are no flights — ask Atlas or try again shortly for updated fares.",
     "clarifyUnknownTitle": "Let's fine-tune what you're looking for",
     "clarifyUnknownBody": "We don't have a \"{vibes}\" category in our search yet, so we couldn't use it to find places.",
     "clarifySuggestionsLead": "Closest things we can search:",

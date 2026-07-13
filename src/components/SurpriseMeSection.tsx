@@ -54,6 +54,7 @@ export default function SurpriseMeSection({
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [originUnknown, setOriginUnknown] = useState(false);
   const [degraded, setDegraded] = useState<{ code?: string; reason?: string } | null>(null);
+  const [notice, setNotice] = useState<{ code?: string; reason?: string } | null>(null);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [originName, setOriginName] = useState<string | null>(initialOriginName);
   const locale = useLocale();
@@ -61,6 +62,7 @@ export default function SurpriseMeSection({
   const fetchSuggestions = useCallback((signal?: AbortSignal) => {
     setLoading(true);
     setDegraded(null);
+    setNotice(null);
     setPreflight(null);
 
     const params = buildSurpriseQuery({
@@ -79,9 +81,11 @@ export default function SurpriseMeSection({
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
           setDegraded(null);
+          setNotice(data?.notice ?? null);
         } else {
           setDestinations([]);
           setDegraded(data?.degraded ?? { reason: t("degradedNetworkBody") });
+          setNotice(null);
           setPreflight((data?.preflight as PreflightResult | undefined) ?? null);
         }
       })
@@ -90,6 +94,7 @@ export default function SurpriseMeSection({
         console.warn("[SurpriseMeSection] fetch failed", e);
         setDestinations([]);
         setDegraded({ reason: t("degradedNetworkBody") });
+        setNotice(null);
       })
       .finally(() => {
         if (!signal?.aborted) setLoading(false);
@@ -270,16 +275,27 @@ export default function SurpriseMeSection({
           </button>
         </div>
       ) : (
-        <AtlasHeroSection
-          destinations={destinations}
-          originName={originName}
-          vibesSummary={vibesLabel}
-          budgetLabel={budgetLabel}
-          onTellMeMore={handleTellMeMore}
-          onShowDifferent={handleShowDifferent}
-          onChatWithAtlas={handleChatWithAtlas}
-          onResolveDestination={resolving ? undefined : handleResolveDestination}
-        />
+        <div className="space-y-4">
+          {notice && (
+            <div
+              data-testid="surprise-live-pricing-notice"
+              className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            >
+              <p className="font-semibold">{t("noticeLivePricingTitle")}</p>
+              <p className="mt-1">{t("noticeLivePricingBody")}</p>
+            </div>
+          )}
+          <AtlasHeroSection
+            destinations={destinations}
+            originName={originName}
+            vibesSummary={vibesLabel}
+            budgetLabel={budgetLabel}
+            onTellMeMore={handleTellMeMore}
+            onShowDifferent={handleShowDifferent}
+            onChatWithAtlas={handleChatWithAtlas}
+            onResolveDestination={resolving ? undefined : handleResolveDestination}
+          />
+        </div>
       )}
 
       {/* Dimmed planner placeholder */}

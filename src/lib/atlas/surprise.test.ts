@@ -377,6 +377,7 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations.length).toBeGreaterThanOrEqual(1);
     expect(result.destinations.every((d) => d.flightPrice === "—")).toBe(true);
     expect(result.degraded).toBeUndefined();
+    expect(result.notice).toBeUndefined();
   });
 
   it("ROUTES RETURNED BUT NONE MATCH VIBES: curated filler still avoids a dead end", async () => {
@@ -388,6 +389,7 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations.length).toBeGreaterThanOrEqual(1);
     expect(result.destinations.map((destination) => destination.name)).not.toContain("Las Vegas, Nevada");
     expect(result.degraded).toBeUndefined();
+    expect(result.notice).toBeUndefined();
   });
 
   it("TP FAILURE + 2 VIBES STILL FILLS HONESTLY", async () => {
@@ -399,7 +401,24 @@ describe("getSurpriseDestinations", () => {
     expect(result.destinations).toHaveLength(3);
     expect(result.destinations.every((d) => d.flightPrice === "—")).toBe(true);
     expect(result.degraded).toBeUndefined();
+    expect(result.notice?.code).toBe("no_token");
+    expect(result.notice?.reason).toBe(FAILURE_REASONS.no_token);
   });
+
+  it.each<TpFailure>(["no_token", "rate_limited", "http_error", "timeout"])(
+    "TP FAILURE + FILLER RAISES LIVE-PRICING NOTICE: %s",
+    async (failure) => {
+      vi.mocked(tpGet).mockResolvedValue({ failure });
+      vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [], failure });
+
+      const result = await getSurpriseDestinations({ origin: "JFK", vibes: "tropical,beach", departMonth: "2026-08" });
+
+      expect(result.destinations).toHaveLength(3);
+      expect(result.degraded).toBeUndefined();
+      expect(result.notice?.code).toBe(failure);
+      expect(result.notice?.reason).toBe(FAILURE_REASONS[failure]);
+    }
+  );
 });
 
 describe("LIVE BUG PINS: the dud chips must return destinations (mocked TP)", () => {

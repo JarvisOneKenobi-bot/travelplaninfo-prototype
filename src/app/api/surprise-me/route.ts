@@ -88,7 +88,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const hasMeasuredPrice = result.destinations.some(
     (destination) => destination.flightPrice !== NO_PRICE_LABEL
   );
-  if (result.destinations.length > 0 && hasMeasuredPrice && !result.degraded) {
+  if (result.destinations.length > 0 && hasMeasuredPrice && !result.degraded && !result.notice) {
     pruneCacheIfNeeded();
     cache.set(cacheKey, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
   }
