@@ -31,7 +31,6 @@ const CLARIFY_KEYS = [
   "clarifyImpossibleTitle",
   "clarifyImpossibleBody",
   "clarifyMatchAny",
-  "clarifyTryMonthLead",
   "clarifyAskAtlas",
   "clarifyAtlasSeed",
   // no-origin variants: used when the origin cannot be named — the origin
@@ -112,6 +111,27 @@ describe("degraded body locale messages", () => {
 
     for (const key of CLARIFY_KEYS) {
       expect(common.atlasHero?.[key], `${locale}.atlasHero.${key}`).toEqual(expect.any(String));
+    }
+  });
+
+  it("non-English clarify messages preserve the same ICU placeholder sets as English", () => {
+    const en = JSON.parse(
+      readFileSync(resolve(process.cwd(), "messages", "en", "common.json"), "utf-8")
+    ) as { atlasHero: Record<string, string> };
+    const clarifyKeys = Object.keys(en.atlasHero).filter((key) => key.startsWith("clarify"));
+    const placeholders = (message: string) =>
+      Array.from(new Set(Array.from(message.matchAll(/\{(\w+)\}/g), (match) => match[1]))).sort();
+
+    for (const locale of LOCALES.filter((l) => l !== "en")) {
+      const common = JSON.parse(
+        readFileSync(resolve(process.cwd(), "messages", locale, "common.json"), "utf-8")
+      ) as { atlasHero: Record<string, string> };
+
+      for (const key of clarifyKeys) {
+        expect(placeholders(common.atlasHero[key]), `${locale}.atlasHero.${key}`).toEqual(
+          placeholders(en.atlasHero[key])
+        );
+      }
     }
   });
 

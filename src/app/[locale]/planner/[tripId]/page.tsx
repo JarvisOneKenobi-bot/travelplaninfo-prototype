@@ -108,6 +108,7 @@ export default async function TripDetail({ params }: Props) {
             <SurpriseMeSection
               tripId={trip.id}
               originCode={trip.origin || "???"}
+              originName={originName}
               vibesSummary={vibesSummary}
               budgetLabel={budgetLabel}
               flexibleWindow={trip.flexible_window}

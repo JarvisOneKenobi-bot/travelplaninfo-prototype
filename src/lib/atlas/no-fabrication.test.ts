@@ -34,6 +34,7 @@ describe("Atlas D3 no-fabrication guarantees", () => {
 const SURPRISE_PATH_FILES = [
   "src/app/api/surprise-me/route.ts",
   "src/components/SurpriseMeSection.tsx",
+  "src/components/SurpriseClarificationCard.tsx",
   "src/components/AtlasHeroSection.tsx",
   "src/components/DestinationCard.tsx",
   "src/lib/atlas/surprise-query.ts",

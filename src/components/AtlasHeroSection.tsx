@@ -12,7 +12,7 @@ interface Destination {
 
 interface AtlasHeroSectionProps {
   destinations: Destination[];
-  originCode: string;
+  originName?: string | null;
   vibesSummary: string;
   budgetLabel: string;
   onTellMeMore: (index: number) => void;
@@ -23,7 +23,7 @@ interface AtlasHeroSectionProps {
 
 export default function AtlasHeroSection({
   destinations,
-  originCode,
+  originName,
   vibesSummary,
   budgetLabel,
   onTellMeMore,
@@ -45,11 +45,9 @@ export default function AtlasHeroSection({
             {t("title", { count: destinations.length })}
           </p>
           <p className="text-sm text-orange-800">
-            {t("subtitle", {
-              vibes: vibesSummary,
-              origin: originCode,
-              budget: budgetLabel,
-            })}
+            {originName
+              ? t("subtitle", { vibes: vibesSummary, origin: originName, budget: budgetLabel })
+              : t("subtitleNoOrigin", { vibes: vibesSummary, budget: budgetLabel })}
           </p>
         </div>
       </div>
