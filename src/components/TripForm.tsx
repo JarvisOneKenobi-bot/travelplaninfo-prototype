@@ -746,7 +746,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
                       ? 'bg-pink-100 border-pink-400 text-pink-800'
                       : 'bg-white border-gray-300 text-gray-600 hover:border-pink-300'
                   }`}>
-                  {v.icon} {v.label}
+                  {v.icon} {t(`vibes.${v.value}`)}
                 </button>
               ))}
               {customVibes.map(c => (

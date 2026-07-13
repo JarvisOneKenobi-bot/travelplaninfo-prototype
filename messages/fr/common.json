@@ -92,7 +92,11 @@
       "beach": "Plage",
       "winter": "Escapade Hivernale",
       "cultural": "Culturel",
-      "adventure": "Aventure"
+      "adventure": "Aventure",
+      "foodie": "Gastronomie",
+      "romantic": "Romantique",
+      "nightlife": "Vie Nocturne",
+      "family": "En Famille"
     },
     "addYourOwn": "✏️ Ajouter le vôtre",
     "customInterestPlaceholder": "Tapez des intérêts (séparés par des virgules ou appuyez sur Entrée)",
@@ -553,38 +557,6 @@
     "continueToPartner": "Continuer vers {partner}",
     "addToItinerary": "+ Ajouter à l'itinéraire",
     "adding": "Ajout en cours..."
-  },
-  "entryTabs": {
-    "directTab": "I Know When & Where I'm Going",
-    "surpriseTab": "Surprise Me"
-  },
-  "quiz": {
-    "budgetTitle": "What's your budget per person?",
-    "vibesTitle": "What's your vibe?",
-    "vibesSubtitle": "Pick up to 5",
-    "whenTitle": "When are you thinking?",
-    "whoTitle": "Who's going?",
-    "skip": "Skip",
-    "next": "Next",
-    "back": "Back",
-    "findMyTrip": "Find My Trip",
-    "addYourOwn": "Add Your Own...",
-    "vibe_beach": "Beach",
-    "vibe_city": "City",
-    "vibe_adventure": "Adventure",
-    "vibe_food": "Food",
-    "vibe_culture": "Culture",
-    "vibe_nature": "Nature",
-    "vibe_nightlife": "Nightlife",
-    "vibe_wellness": "Wellness",
-    "groupFeatures": "Group Trip Features",
-    "howManyPeople": "How many people?",
-    "shareItinerary": "Share itinerary with group members",
-    "shareDescription": "Members can vote on activities and suggest changes",
-    "costSplitting": "Enable cost splitting",
-    "costDescription": "Track who owes what, send payment requests",
-    "atlasConsensus": "Let Atlas find group consensus",
-    "consensusDescription": "Atlas collects each member's vibes and balances the itinerary for everyone"
   },
   "trending": {
     "title": "Trending Destinations",

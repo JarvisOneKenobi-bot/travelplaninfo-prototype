@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, extname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TOOLS } from "./tool-loop";
 import { buildAtlasSystemPrompt } from "./system-prompt";
@@ -80,5 +80,74 @@ describe("Surprise Me fabrication tripwire", () => {
     expect(content, `${file} must delegate Surprise Me query construction`).toContain("buildSurpriseQuery");
     expect(content, `${file} must not set a vibes param inline`).not.toMatch(/set\(\s*.vibes./);
     expect(content, `${file} must not construct query params inline`).not.toContain("new URLSearchParams");
+  });
+});
+
+const PRODUCT_SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
+const BANNED_ENTRY_COMPONENT_BASENAMES = new Set([
+  "EntryTabs",
+  "SurpriseMeQuiz",
+  "DestinationSuggestions",
+]);
+
+function productSourceFiles(dir: string): string[] {
+  const files: string[] = [];
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...productSourceFiles(entryPath));
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const extension = extname(entry.name);
+    if (!PRODUCT_SOURCE_EXTENSIONS.has(extension) || /\.test\.tsx?$/.test(entry.name)) {
+      continue;
+    }
+
+    files.push(entryPath);
+  }
+
+  return files;
+}
+
+function productSourcePath(file: string): string {
+  return relative(process.cwd(), file).split("\\").join("/");
+}
+
+// The three-mode entry system was rejected 2026-04-10 and its PRESET_VIBES was
+// a second, dead vibe vocabulary that fooled two analyses. It is deleted, and
+// this guard keeps it deleted. NOTE (anti-self-defeat): scan product source
+// under src/ only, never test files or docs, so this guard can name PRESET_VIBES
+// and the rejected component basenames without matching itself.
+describe("dead entry-system stays dead", () => {
+  const srcRoot = resolve(process.cwd(), "src");
+
+  it("keeps PRESET_VIBES out of every product source module", () => {
+    const offenders = productSourceFiles(srcRoot)
+      .filter((file) => readFileSync(file, "utf-8").includes("PRESET_VIBES"))
+      .map(productSourcePath);
+
+    expect(offenders, "PRESET_VIBES must not reappear in product source").toEqual([]);
+  });
+
+  it("keeps the rejected entry-system component basenames deleted anywhere under src", () => {
+    const offenders = productSourceFiles(srcRoot)
+      .filter((file) => {
+        const parsedBasename = basename(file, extname(file));
+        const pathSegments = productSourcePath(file).split("/");
+        return (
+          BANNED_ENTRY_COMPONENT_BASENAMES.has(parsedBasename) ||
+          (parsedBasename === "index" &&
+            pathSegments.some((segment) => BANNED_ENTRY_COMPONENT_BASENAMES.has(segment)))
+        );
+      })
+      .map(productSourcePath);
+
+    expect(offenders, "rejected entry-system components must not reappear").toEqual([]);
   });
 });
