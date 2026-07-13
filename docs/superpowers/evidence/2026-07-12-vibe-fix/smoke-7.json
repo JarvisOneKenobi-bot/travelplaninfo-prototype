@@ -1,0 +1,1 @@
+{"origin":"CANCUN","destinations":[],"degraded":{"code":"invalid_origin","reason":"origin and destination must be 3-letter IATA airport codes (e.g. CUN for Cancún, MIA for Miami) — pass the airport code, not a city name."}}

@@ -1,0 +1,3 @@
+{"label":"1. mountains+cultural  (THE headline fix: was 0 cards)","query":"origin=JFK&vibes=mountains,cultural&depart_month=2026-09","response":/api/surprise-me/?origin=JFK&vibes=mountains%2Ccultural&depart_month=2026-09},
+{"label":"2. winter+cultural     (winter chip now works: was 0)","query":"origin=JFK&vibes=winter,cultural&depart_month=2026-09","response":/api/surprise-me/?origin=JFK&vibes=winter%2Ccultural&depart_month=2026-09},
+{"label":"3. foodie+romantic     (orphan vibes now selectable)","query":"origin=JFK&vibes=foodie,romantic&depart_month=2026-09","response":/api/surprise-me/?origin=JFK&vibes=foodie%2Cromantic&depart_month=2026-09},

@@ -3008,6 +3008,24 @@ Every scan/gate in this plan was checked against what it would actually match in
 7. **The fabrication tripwire's banned-literal list** applies to three files this plan creates and several it edits — called out in Global Constraints so nobody writes `FALLBACK` (or `MIA` in `surprise.ts`) in a comment and trips it.
 8. **The zero-LLM source scan (review N4) was checked against the module it scans.** `vibe-preflight.ts`'s own header comment contains the word "spend" ("hard monthly spend cap"), so a bare substring ban on `spend` would be self-defeating. The scan therefore bans `@anthropic-ai` and `tool-loop` as substrings (absent from the module, verified against the Task 4 implementation) and `spend` only as an import specifier (`/from\s+["'][^"']*spend/`). It scans exactly one file — never the test that contains the banned strings by necessity.
 
+## Deviations from the PLAN, found during implementation (2026-07-12)
+
+1. **The clarification card's "try a different month" chips were REMOVED — the plan was wrong.**
+   Found by adversarial review (SOL xhigh) during Task 7. `preflightVibes(vibes, matchMode)` never
+   inspects the month, and the card renders ONLY when preflight status ≠ `ok`. So clicking a month
+   re-ran the same deterministic check, got the identical status back, and re-rendered the SAME card
+   — now offering four *later* months. The user could click forever and nothing could ever change:
+   a dead-end control disguised as an escape hatch, inside the component whose entire job is ending
+   dead ends. Month cannot matter for the pre-flight by construction, so the control was deleted
+   (along with `upcomingMonths`, `onPickMonth`, `handlePickMonth`, `adjust.month`). `clarifyTryMonthLead`
+   is now an unused i18n key (left in place, dropped from the parity list). If month-retry has value
+   it belongs on the `no_vibe_match` banner, where the month genuinely changes the result — out of
+   scope here. The card's real actions remain: match-any, use-suggestion / use-known-only, ask-Atlas.
+
+2. **The Ask-Atlas seed was reworded in all six locales.** It claimed "couldn't find a destination
+   that matches everything" even for `unknown_vibes`, where the search never ran at all. The seed is
+   sent as the user's OWN message to a paid model, so it must be true for both card states.
+
 ## Deviations from the spec (flagged, with rationale)
 
 1. **Six new destinations added to the taxonomy** (`YVR SLC ZRH GVA MUC AGP`). The spec's own winter seed list (Denver, Salt Lake, Zurich, Geneva, Aspen…) names cities that are not in the taxonomy, and the ≥ 8 coverage floor for `winter` is unreachable from the existing 82 + 13 city codes alone without dishonest tagging. Aspen (ASE) omitted: tiny airport TP rarely prices; floor met without it. **AGP carries NO `winter` tag** (review B2 — Málaga is winter-*sun*, the escape-FROM-winter reading Jose rejected and the amended spec bans); it stays as a genuine beach/cultural/foodie destination, leaving winter coverage at 9 (≥ 8).

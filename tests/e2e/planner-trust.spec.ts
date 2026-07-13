@@ -231,3 +231,84 @@ test('Guest user sees bootstrap onboarding once', async ({ page, context }) => {
   await page.waitForTimeout(2000);
   await expect(page.locator('[data-testid="onboarding-bootstrap"]')).not.toBeVisible();
 });
+
+test('impossible vibe combo renders the clarification card, and match-any re-runs the search', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: {
+      name: 'Clarify test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA',
+      interests: ['vibe:tropical', 'vibe:winter'],
+    },
+  });
+  const trip = await post.json();
+
+  await context.route('/api/surprise-me*', (route) => {
+    const url = route.request().url();
+    if (url.includes('match=any')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          origin: 'MIA',
+          originName: 'Miami, Florida',
+          destinations: [
+            { name: 'Cancún, Mexico', flightPrice: '$142', airline: 'AA', nonstop: true, link: '' },
+            { name: 'Denver, Colorado', flightPrice: '$98', airline: 'UA', nonstop: true, link: '' },
+          ],
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        origin: 'MIA',
+        originName: 'Miami, Florida',
+        destinations: [],
+        degraded: { code: 'no_match_possible', reason: 'engine prose' },
+        preflight: { status: 'no_match_possible', wouldMatchIfAny: 40 },
+      }),
+    });
+  });
+
+  await page.goto(`/planner/${trip.id}`);
+
+  const card = page.locator('[data-testid="surprise-clarification-card"]');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card).toContainText('40');
+  // it clarifies — it never invents a destination card
+  await expect(page.locator('[data-testid="atlas-destination-card"]')).toHaveCount(0);
+
+  await page.click('[data-testid="clarify-match-any"]');
+  await expect(page.locator('[data-testid="atlas-destination-card"]')).toHaveCount(2, { timeout: 10000 });
+  await expect(page.locator('[data-testid="surprise-clarification-card"]')).toHaveCount(0);
+});
+
+test('unknown free-text vibe renders suggestions instead of a silent dead end', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: {
+      name: 'Unknown vibe test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA',
+      interests: ['vibe:custom:wine tasting', 'vibe:beach'],
+    },
+  });
+  const trip = await post.json();
+
+  await context.route('/api/surprise-me*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      origin: 'MIA',
+      originName: 'Miami, Florida',
+      destinations: [],
+      degraded: { code: 'unknown_vibes', reason: 'engine prose' },
+      preflight: { status: 'unknown_vibes', unknown: ['wine tasting'], suggestions: ['foodie'] },
+    }),
+  }));
+
+  await page.goto(`/planner/${trip.id}`);
+
+  const card = page.locator('[data-testid="surprise-clarification-card"]');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card).toContainText('wine tasting');
+  await expect(page.locator('[data-testid="clarify-suggestion"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="surprise-fallback-banner"]')).toHaveCount(0);
+});
