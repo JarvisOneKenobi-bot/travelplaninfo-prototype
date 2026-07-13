@@ -28,6 +28,10 @@ interface SurpriseMePayload {
     code: string;
     reason: string;
   };
+  notice?: {
+    code: string;
+    reason: string;
+  };
   preflight?: unknown;
 }
 
@@ -76,6 +80,32 @@ describe("SurpriseMeSection degraded fallback banner", () => {
       expect(screen.queryAllByTestId("atlas-destination-card")).toHaveLength(1);
     });
     expect(screen.queryByTestId("surprise-fallback-banner")).toBeNull();
+  });
+
+  it("renders live-pricing notice alongside real destination cards without degraded fallback", async () => {
+    stubSurpriseFetch({
+      origin: "JFK",
+      destinations: [
+        {
+          name: "Cancún, Mexico",
+          airline: "",
+          flightPrice: "—",
+          nonstop: false,
+          link: "",
+        },
+      ],
+      notice: { code: "no_token", reason: "Live flight search is not configured." },
+    });
+
+    renderSurpriseMeSection();
+
+    const notice = await screen.findByTestId("surprise-live-pricing-notice");
+    await waitFor(() => {
+      expect(screen.queryAllByTestId("atlas-destination-card")).toHaveLength(1);
+    });
+    expect(screen.queryByTestId("surprise-fallback-banner")).toBeNull();
+    expect(notice.textContent).toContain(esMessages.atlasHero.noticeLivePricingBody);
+    expect(notice.textContent).not.toContain("Live flight search is not configured.");
   });
 
   it("renders the shipped Spanish invalid-origin copy instead of raw engine prose", async () => {
