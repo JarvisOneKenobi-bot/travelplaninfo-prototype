@@ -359,3 +359,42 @@ describe("getSurpriseDestinations", () => {
     expect(result.degraded).toBeUndefined();
   });
 });
+
+describe("LIVE BUG PINS: the dud chips must return destinations (mocked TP)", () => {
+  // Proven live 2026-07-12 (origin JFK): mountains,cultural -> 0 . winter,cultural -> 0 .
+  // mountains,winter -> 0. Pre-fix these fail because the taxonomy tag was the
+  // singular 'mountain' and no destination carried 'winter' at all.
+  // NOTE: winter+beach is deliberately NOT pinned here. Vancouver lost its
+  // 'beach' tag (Jose, 2026-07-12: "vancouver is not a beach city destination"),
+  // which makes beach+winter a genuinely impossible pair — it routes to the
+  // no_match_possible clarification card, and inventing a carrier for it would
+  // be exactly the fabrication this branch exists to eliminate.
+  it.each([
+    ["mountains,cultural", "SEA", "Seattle, Washington"],
+    ["winter,cultural", "ZRH", "Zurich, Switzerland"],
+    ["mountains,winter", "DEN", "Denver, Colorado"],
+  ])("vibes=%s returns at least the matching mocked route", async (vibes, code, cityName) => {
+    popular([item(code, 150)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes, departMonth: "2026-08" });
+
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.map((d) => d.name)).toContain(cityName);
+  });
+});
+
+describe("ORPHANS UNLOCKED + NEW VIBES: each newly exposed vibe matches real routes", () => {
+  it.each([
+    ["foodie", "BNA", "Nashville, Tennessee"],
+    ["romantic", "PRG", "Prague, Czech Republic"],
+    ["nightlife", "MSY", "New Orleans, Louisiana"],
+    ["family", "MCO", "Orlando, Florida"],
+    ["winter", "DEN", "Denver, Colorado"],
+  ])("single vibe %s surfaces the matching mocked route", async (vibes, code, cityName) => {
+    popular([item(code, 99)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes, departMonth: "2026-08" });
+
+    expect(result.destinations.map((d) => d.name)).toContain(cityName);
+  });
+});

@@ -135,7 +135,7 @@ The taxonomy keeps its current 82 entries **in their current order** (the curate
 
 | Code | City | Tags | Rationale |
 |---|---|---|---|
-| YVR | Vancouver | mountains, winter, big_city, beach, foodie, family | Whistler/Grouse skiing + city beaches + aquarium/Stanley Park; the honest `winter+beach` carrier. **⚠ N2 — flagged for Jose:** `beach` is set-math honest (Kitsilano/English Bay) but experientially thin in winter, and YVR is now the ONLY `winter+beach` carrier. If Jose drops YVR's `beach`, `beach+winter` becomes a second impossible pair — the "exactly one impossible pair" test (Task 1 Step 8) must then be updated to expect both. |
+| YVR | Vancouver | mountains, winter, big_city, foodie, family | Whistler/Grouse skiing + Stanley Park/aquarium + a real food city. **N2 RESOLVED — Jose, 2026-07-12: "vancouver is not a beach city destination IMO." YVR carries NO `beach` tag.** Consequence, machine-verified: YVR was the sole `beach+winter` carrier, so **`beach+winter` becomes a second impossible pair** alongside `tropical+winter`. Both are genuinely contradictory under the snow/ski reading of Winter Escapade and both route to `no_match_possible` → the clarification card. That is correct behaviour, NOT a defect. No destination may be invented to carry the pair — that is the fabrication this branch exists to eliminate. |
 | SLC | Salt Lake City | mountains, winter, adventure, family | Utah ski corridor, heavily family-marketed |
 | ZRH | Zurich | mountains, winter, big_city, cultural | Alps gateway |
 | GVA | Geneva | mountains, winter, romantic, cultural | Lake Geneva, Alps, Montreux |
@@ -162,9 +162,9 @@ The taxonomy keeps its current 82 entries **in their current order** (the curate
 
 **⚠ N1 — MOW (Moscow) flagged for Jose:** the spec (§3.4) sanctions MOW, but US–Russia air links remain suspended for the primary US-origin audience — the curated filler can surface an unpriced Moscow card users cannot realistically book. Jose decides keep/drop at this plan's editorial review; dropping MOW entirely would leave winter at 8 (exactly at floor), nightlife 28, big_city 57, cultural 62 — all still passing. Do not decide silently.
 
-**Resulting coverage (101 destinations; machine-validated while planning, re-validated after the B2 AGP-winter removal):** cultural 63 · big_city 58 · foodie 49 · beach 42 · tropical 30 · romantic 30 · nightlife 29 · family 20 · adventure 19 · mountains 13 · **winter 9**. Floor is winter at 9 — above the guard's ≥ 8, with one destination of buffer.
+**Resulting coverage (101 destinations; machine-validated while planning, re-validated after the B2 AGP-winter removal AND Jose's YVR-beach removal):** cultural 63 · big_city 58 · foodie 49 · beach 41 · tropical 30 · romantic 30 · nightlife 29 · family 20 · adventure 19 · mountains 13 · **winter 9**. Floor is winter at 9 — above the guard's ≥ 8, with one destination of buffer. Winter carriers: ANC DEN GVA KEF MOW MUC SLC YVR ZRH.
 
-**Known property:** exactly **one** 2-vibe combination remains unsatisfiable at `min_overlap = 2`: **`tropical + winter`** — physically contradictory under the spec's snow/ski reading of Winter Escapade, and therefore the natural real-data fixture for the `no_match_possible` path (the clarification card handles it). Every other 2-vibe combo (54/55) matches ≥ 1 destination. (Re-verified with AGP's `winter` removed: `beach+winter` is still carried by YVR, `cultural+winter` by ZRH/GVA/MUC/MOW, `foodie+winter` by MUC/YVR — no new impossible pair.)
+**Known property:** exactly **two** 2-vibe combinations are unsatisfiable at `min_overlap = 2`: **`tropical + winter`** and **`beach + winter`** — both physically contradictory under the spec's snow/ski reading of Winter Escapade, and therefore the natural real-data fixtures for the `no_match_possible` path (the clarification card handles both). Every other 2-vibe combo (53/55) matches ≥ 1 destination. (Machine-verified after Jose's YVR-beach removal: `cultural+winter` is carried by ZRH/GVA/MUC/MOW, `foodie+winter` by MUC/YVR, `mountains+winter` by DEN/KEF/YVR/SLC/ZRH/GVA/ANC — no *third* impossible pair emerged.)
 
 ---
 
@@ -288,12 +288,15 @@ Append to `src/lib/atlas/surprise.test.ts` (uses the file's existing `popular()`
 
 ```ts
 describe("LIVE BUG PINS: the dud chips must return destinations (mocked TP)", () => {
-  // Proven live 2026-07-12 (origin JFK): mountains,cultural -> 0 · winter,beach -> 0 ·
+  // Proven live 2026-07-12 (origin JFK): mountains,cultural -> 0 · winter,cultural -> 0 ·
   // mountains,winter -> 0. Pre-fix these fail because the taxonomy tag was the
   // singular 'mountain' and no destination carried 'winter' at all.
+  // NOTE: winter+beach is deliberately NOT pinned here. Vancouver lost its
+  // 'beach' tag (Jose, 2026-07-12), making beach+winter a genuinely impossible
+  // pair -> it routes to the no_match_possible clarification card.
   it.each([
     ["mountains,cultural", "SEA", "Seattle, Washington"],
-    ["winter,beach", "YVR", "Vancouver, Canada"],
+    ["winter,cultural", "ZRH", "Zurich, Switzerland"],
     ["mountains,winter", "DEN", "Denver, Colorado"],
   ])("vibes=%s returns at least the matching mocked route", async (vibes, code, cityName) => {
     popular([item(code, 150)]);
@@ -336,7 +339,7 @@ Expected: FAIL, specifically —
 - guard "no orphan tags": vocabulary mismatch listing `foodie`, `romantic`, `nightlife`, `mountain` as taxonomy words no picker exposes;
 - guard floor: `mountains` carried by 0 (singular mismatch), `winter` by 0;
 - guard "exactly 11": picker has 7;
-- pins: `mountains,cultural`, `winter,beach`, `mountains,winter`, `family`, `winter` return 0 destinations.
+- pins: `mountains,cultural`, `winter,cultural`, `mountains,winter`, `family`, `winter` return 0 destinations.
 
 This file IS the spec-required demonstration that the guard would have failed pre-fix. Keep it — it ships with the evidence in Task 8.
 
@@ -491,7 +494,7 @@ export const DESTINATION_VIBES: Record<string, ReadonlySet<CanonicalVibe>> = {
   SSH: new Set<CanonicalVibe>(['beach', 'tropical']),
   // ── NEW: genuine snow/ski winter destinations (back the Winter Escapade
   // chip) + Málaga, which carries NO winter tag (warm-weather; spec bans it) ──
-  YVR: new Set<CanonicalVibe>(['mountains', 'winter', 'big_city', 'beach', 'foodie', 'family']),
+  YVR: new Set<CanonicalVibe>(['mountains', 'winter', 'big_city', 'foodie', 'family']),
   SLC: new Set<CanonicalVibe>(['mountains', 'winter', 'adventure', 'family']),
   ZRH: new Set<CanonicalVibe>(['mountains', 'winter', 'big_city', 'cultural']),
   GVA: new Set<CanonicalVibe>(['mountains', 'winter', 'romantic', 'cultural']),
@@ -679,7 +682,8 @@ describe('DESTINATION_VIBES (canonical)', () => {
     expect(sorted('CUN')).toEqual(['beach', 'big_city', 'family', 'nightlife', 'romantic', 'tropical']);
     expect(sorted('DEN')).toEqual(['adventure', 'big_city', 'mountains', 'winter']);
     expect(sorted('KEF')).toEqual(['adventure', 'mountains', 'romantic', 'winter']);
-    expect(sorted('YVR')).toEqual(['beach', 'big_city', 'family', 'foodie', 'mountains', 'winter']);
+    // Jose 2026-07-12: Vancouver is NOT a beach destination. No 'beach' here.
+    expect(sorted('YVR')).toEqual(['big_city', 'family', 'foodie', 'mountains', 'winter']);
     expect(sorted('ORL')).toEqual(['adventure', 'family']);
     expect(sorted('PAR')).toEqual(['big_city', 'cultural', 'foodie', 'romantic']);
     expect(sorted('ANC')).toEqual(['adventure', 'mountains', 'winter']);
@@ -1511,7 +1515,7 @@ describe("preflightVibes", () => {
     expect(preflightVibes([])).toEqual({ status: "ok" });
     expect(preflightVibes(["beach"])).toEqual({ status: "ok" });
     expect(preflightVibes(["mountains", "cultural"])).toEqual({ status: "ok" });
-    expect(preflightVibes(["winter", "beach"])).toEqual({ status: "ok" });
+    expect(preflightVibes(["winter", "cultural"])).toEqual({ status: "ok" });
   });
 
   it("flags free-text custom vibes as unknown with canonical suggestions", () => {
@@ -1539,6 +1543,15 @@ describe("preflightVibes", () => {
     if (result.status !== "unknown_vibes") throw new Error("unreachable");
     expect(result.suggestions).toContain("cultural");
   });
+
+  // Both genuinely impossible pairs must route here. beach+winter joined
+  // tropical+winter when Vancouver lost its 'beach' tag (Jose, 2026-07-12).
+  it.each([["tropical"], ["beach"]])(
+    "detects the genuinely impossible combination (%s+winter) as no_match_possible",
+    (other) => {
+      expect(preflightVibes([other, "winter"]).status).toBe("no_match_possible");
+    }
+  );
 
   it("detects the genuinely impossible combination (tropical+winter) with an honest any-match count", () => {
     const result = preflightVibes(["tropical", "winter"]);
@@ -3006,7 +3019,8 @@ Every scan/gate in this plan was checked against what it would actually match in
 
 ## Resolved at plan review (2026-07-12 — do NOT re-litigate)
 
-- **AGP (Málaga) `winter` tag → REMOVED** (review B2 + amended spec). Winter-sun is the escape-FROM-winter reading Jose rejected; no warm-weather destination may carry `winter`. AGP stays as beach/cultural/foodie. Winter coverage 9 (≥ 8), `tropical+winter` still the only impossible pair — machine-verified by the reviewer.
+- **AGP (Málaga) `winter` tag → REMOVED** (review B2 + amended spec). Winter-sun is the escape-FROM-winter reading Jose rejected; no warm-weather destination may carry `winter`. AGP stays as beach/cultural/foodie. Winter coverage 9 (≥ 8) — machine-verified by the reviewer.
+- **YVR (Vancouver) `beach` tag → REMOVED** (Jose, 2026-07-12: *"vancouver is not a beach city destination IMO."*). N2 is thereby resolved. YVR keeps mountains/winter/big_city/foodie/family. **Consequence, machine-verified against the final table: `beach+winter` becomes a SECOND impossible pair** (YVR was its sole carrier), joining `tropical+winter`. No third pair emerged; `beach` coverage 42 → 41, `winter` stays 9. Both impossible pairs route to `no_match_possible` → the clarification card, which is correct and honest. **Inventing a destination to carry beach+winter is forbidden** — that is precisely the fabrication this branch eliminates.
 - **Winter chip label → "Winter Escapade"** (review B1, Jose's binding decision, now in the spec). An escapade is something you go ON — the chip unambiguously means a snow/ski adventure; ❄️ is correct. Internal value stays `winter`; the label cascades through `VIBE_LABELS`, all six locales, help copy, tests, and evidence wording. Jose confirms the es/pt/de/it renderings at review (Task 2 Step 4).
 - **G4 scope** (review I1/I4/I6) → Jose's decision "Name everything on-screen; let Atlas speak naturally" — see the **G4 Scope** section. The chat-path code exposure is an accepted, Jose-approved gap, restated in the PR description (Task 8); every rendered surface is decoded, with omission (never a bare code) as the unnameable fallback.
 
@@ -3018,5 +3032,5 @@ Every scan/gate in this plan was checked against what it would actually match in
 - **Multi-airport dedupe is name-based** (`cityKey`): "Newark, New Jersey" does not dedupe against "New York, New York" (different city names). Accepted; a metro-area table is out of scope.
 - **Month-boundary drift (review N5):** `deriveDepartMonth` uses local `new Date(...)` → `toISOString()`, which can drift one month near month-end in western timezones. Pre-existing pattern; the new `upcomingMonths` in the card already uses `Date.UTC`. Noted, not fixed here — flag if Jose wants a sweep.
 - **Match-any copy vs. card count (review N6):** `clarifyMatchAny` reports the honest any-match destination count (e.g. 40) while the re-run renders at most 3 cards. The count states how many places QUALIFY, not how many cards we show — kept as-is; flag the wording to Jose at copy review.
-- **Editorial flags for Jose (reviews N1/N2):** MOW's bookability for US origins and YVR's `beach` tag — both flagged inline in the Editorial Tag Changes section with the exact consequences of each possible decision. Jose decides; do not decide silently.
+- **Editorial flag for Jose (review N1):** MOW's bookability for US origins — flagged inline in the Editorial Tag Changes section. Jose decides; do not decide silently. (**N2 — YVR's `beach` tag — is RESOLVED: Jose removed it**, see "Resolved at plan review".)
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { VIBE_OPTIONS } from "@/lib/trip-types";
 import PackageDealsCarousel from "./PackageDealsCarousel";
 
 const INTERESTS = [
@@ -22,16 +23,6 @@ const INTERESTS = [
   { value: "backpacking", icon: "🏕️" },
   { value: "romance", icon: "💕" },
   { value: "family_travel", icon: "👨‍👩‍👧‍👦" },
-];
-
-const VIBES = [
-  { value: "tropical", icon: "🌴", label: "Tropical" },
-  { value: "mountains", icon: "🏔️", label: "Mountains" },
-  { value: "big_city", icon: "🏙️", label: "Big City" },
-  { value: "beach", icon: "🌊", label: "Beach" },
-  { value: "winter", icon: "❄️", label: "Winter Escape" },
-  { value: "cultural", icon: "🏛️", label: "Cultural" },
-  { value: "adventure", icon: "🏕️", label: "Adventure" },
 ];
 
 const BUDGET_VALUES = [
@@ -264,7 +255,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
 
   function addCustomVibes(raw: string) {
     const items = raw.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-    const newOnes = items.filter(i => !customVibes.includes(i) && !VIBES.some(v => v.value === i));
+    const newOnes = items.filter(i => !customVibes.includes(i) && !VIBE_OPTIONS.some(v => v.value === i));
     if (newOnes.length > 0) setCustomVibes(prev => [...prev, ...newOnes]);
     setCustomVibeInput("");
   }
@@ -748,7 +739,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           <div className={sectionBorder(vibesComplete)}>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("whatVibes")}</h3>
             <div className="flex flex-wrap gap-2">
-              {VIBES.map(v => (
+              {VIBE_OPTIONS.map(v => (
                 <button key={v.value} type="button" onClick={() => toggleVibe(v.value)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     vibes.includes(v.value)

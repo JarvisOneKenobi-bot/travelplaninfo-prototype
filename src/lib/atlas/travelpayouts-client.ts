@@ -161,6 +161,9 @@ export const IATA_TO_CITY: Record<string, string> = {
   "RSW": "Fort Myers, Florida",
   "PBI": "West Palm Beach, Florida",
   "JAX": "Jacksonville, Florida",
+  "SLC": "Salt Lake City, Utah",
+  // Canada
+  "YVR": "Vancouver, Canada",
   // Europe
   "LHR": "London, England",
   "LGW": "London Gatwick, England",
@@ -170,6 +173,7 @@ export const IATA_TO_CITY: Record<string, string> = {
   "MXP": "Milan, Italy",
   "BCN": "Barcelona, Spain",
   "MAD": "Madrid, Spain",
+  "AGP": "Málaga, Spain",
   "AMS": "Amsterdam, Netherlands",
   "DUB": "Dublin, Ireland",
   "LIS": "Lisbon, Portugal",
@@ -182,6 +186,7 @@ export const IATA_TO_CITY: Record<string, string> = {
   "OSL": "Oslo, Norway",
   "HEL": "Helsinki, Finland",
   "ZRH": "Zurich, Switzerland",
+  "GVA": "Geneva, Switzerland",
   "VIE": "Vienna, Austria",
   "WAW": "Warsaw, Poland",
   "PRG": "Prague, Czech Republic",
