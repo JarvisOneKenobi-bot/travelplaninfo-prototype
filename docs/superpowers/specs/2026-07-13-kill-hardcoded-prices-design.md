@@ -53,8 +53,24 @@ So these values are not merely *unsourced*; they are **unanswerable in context**
 ### 4.1 `/[locale]/destinations`
 Drop `flightsFrom` / `hotelsFrom` from the destination objects (24 literals) and remove the two `<p>` elements at `page.tsx:275,278`. The card keeps its image, name, region, and description, and gains nothing fake. Verify the card doesn't collapse visually with two lines removed.
 
-### 4.2 `/hot-deals`
-The four category stat tiles (`HOTELS "From $79/night"`, `RENTALS`, `CAR RENTALS`, `CRUISES`) lose their invented `value`. Keep the category tiles and their CTAs — replace the fake number with the honest value proposition already implied by the tile (e.g. the category name + its partner), or drop the value line entirely if that reads better. **A tile with no number is honest; a tile with an invented number is not.**
+### 4.2 `/hot-deals` — ⚠ FAR WORSE THAN FOUR BAD NUMBERS (amended 2026-07-13 after viewing production)
+
+The page is `"use client"` with **no `fetch`, no `await`, no revalidation — it is 100% static constants** — and it presents itself as a **"LIVE DEAL FEED"** of specific, urgent, time-limited offers. All of it is invented:
+
+- **"LIVE DEAL FEED"** — nothing on the page is live. Flatly false.
+- **A fabricated featured offer:** *"Caribbean Cruise from Miami — CruiseDirect · 5-night all-inclusive from Port Everglades · **$349** · Includes meals, entertainment & port stops at Nassau + Cozumel."* An invented product with a fictional itinerary.
+- **A fabricated deal feed:** "Miami Beach Hotels — **Tonight's Deals** — $79" · "Cancún All-Inclusive Resorts — $899" · "NYC Vacation Apartments — $159" · "Bahamas Cruise — 3 Nights — $199" …
+- **Invented urgency and scarcity:** *"Up to **45% off** Miami Beach stays **tonight**"* · *"**Last minute** cruise deals … **Limited inventory**"*
+- The 4 category stat tiles (`From $79/night`, `From $129/night`, `From $19/day`, `From $199/person`).
+
+> **A fabricated price is dishonest. A fabricated time-limited offer with manufactured scarcity is a different category of claim** — "tonight", "last minute", "limited inventory", "45% off" are assertions about availability and discount that no data backs, because there is no feed. Every urgency/scarcity/discount claim is treated as fabrication here.
+
+**Remove** all of the above. **Keep** — these are the *partners'* descriptions of their own service, not offers we invent, and they are the part that earns:
+- partner names/branding (Hotels.com, Vrbo, CruiseDirect, EconomyBookings);
+- generic partner value props ("Free cancellation", "500+ suppliers", "Entire home rentals");
+- **every affiliate CTA and its tracking link** ("View rates", "Browse homes", "Grab a deal", "Compare cars").
+
+Result: an honest partner directory. **Do NOT redesign the layout and do NOT invent replacement offers.** If a section is left visibly empty, report it rather than filling it with something made up.
 
 ### 4.3 `src/config/affiliates.ts`
 Remove the `price` field from the deal objects (8 literals) and from every consumer: `AffiliateSidebar.tsx`, `PackageDealsCarousel.tsx`, `DesignA.tsx` (+ check `ItineraryBuilder.tsx`, `AssistantChat.tsx`). The card keeps partner, title, description, and its booking CTA — which is the part that actually earns.
