@@ -4,8 +4,8 @@ import { useTranslations } from "next-intl";
 import { CANONICAL_VIBES, VIBE_ICONS, type CanonicalVibe } from "@/lib/trip-types";
 
 interface TripContextStripProps {
-  origin: string | null;
-  nearbyAirports: string[];
+  originLabel: string | null;
+  extraAirportLabels: string[];
   budget: string | null;
   vibes: string[];
   interests: string[];
@@ -34,8 +34,8 @@ const INTEREST_EMOJIS: Record<string, string> = {
 };
 
 export default function TripContextStrip({
-  origin,
-  nearbyAirports,
+  originLabel,
+  extraAirportLabels,
   budget,
   vibes,
   interests,
@@ -44,10 +44,6 @@ export default function TripContextStrip({
 }: TripContextStripProps) {
   const t = useTranslations("contextStrip");
   const tVibes = useTranslations("tripForm.vibes");
-
-  const extraAirports = nearbyAirports.filter(
-    (code) => code !== origin
-  );
 
   const budgetLabel =
     budget === "budget"
@@ -61,12 +57,12 @@ export default function TripContextStrip({
   return (
     <div className="flex flex-wrap gap-2">
       {/* Origin pill */}
-      {origin && (
+      {originLabel && (
         <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs">
-          {"\u2708\uFE0F"} {origin}
-          {extraAirports.length > 0 && (
+          {"✈️"} {originLabel}
+          {extraAirportLabels.length > 0 && (
             <span className="ml-1 text-amber-600">
-              (+ {extraAirports.join(", ")})
+              (+ {extraAirportLabels.join(" · ")})
             </span>
           )}
         </span>

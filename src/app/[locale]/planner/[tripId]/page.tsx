@@ -11,6 +11,7 @@ import AffiliateRecommendations from "@/components/AffiliateRecommendations";
 import TripContextStrip from "@/components/TripContextStrip";
 import SurpriseMeSection from "@/components/SurpriseMeSection";
 import { getAssistantHealth } from "@/lib/assistant-health";
+import { resolveCityName } from "@/lib/atlas/city-names";
 interface Props {
   params: Promise<{ tripId: string; locale: string }>;
 }
@@ -56,6 +57,14 @@ export default async function TripDetail({ params }: Props) {
 
   const budgetLabel = trip.budget === "midrange" ? t("midrange") : (trip.budget === "luxury" ? "Luxury" : (trip.budget || "Mid-range"));
   const vibesSummary = vibes.length > 0 ? vibes.join(" + ") : "flexible";
+  // Decode the origin server-side. Unnameable => the phrase is OMITTED —
+  // a bare 3-letter code must never be the fallback (Jose, 2026-07-12).
+  const originName = trip.origin ? resolveCityName(trip.origin) : null;
+  const originLabel = originName ? `${originName} (${trip.origin})` : null;
+  const extraAirportLabels = nearbyAirports
+    .filter((code) => code !== trip.origin)
+    .map((code) => resolveCityName(code))
+    .filter((name): name is string => name !== null);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,7 +78,7 @@ export default async function TripDetail({ params }: Props) {
               <h1 className="text-3xl font-bold text-gray-900 mb-1">{trip.name}</h1>
               {!isSurpriseMe && (
                 <p className="text-gray-500">📍 {trip.destination}
-                  {trip.origin && ` · ✈️ from ${trip.origin}`}
+                  {originLabel && ` · ✈️ from ${originLabel}`}
                   {trip.start_date && ` · ${dateFmt.format(new Date(trip.start_date))}`}
                   {trip.end_date && ` → ${dateFmt.format(new Date(trip.end_date))}`}
                 </p>
@@ -82,8 +91,8 @@ export default async function TripDetail({ params }: Props) {
         {/* Context strip — always visible */}
         <div className="mb-6">
           <TripContextStrip
-            origin={trip.origin || null}
-            nearbyAirports={nearbyAirports}
+            originLabel={originLabel}
+            extraAirportLabels={extraAirportLabels}
             budget={trip.budget}
             vibes={vibes}
             interests={pureInterests}

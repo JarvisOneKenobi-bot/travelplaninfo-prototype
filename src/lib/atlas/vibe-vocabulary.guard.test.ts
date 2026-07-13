@@ -55,6 +55,10 @@ describe("vibe vocabulary regression guard", () => {
     expect([...pickerValues()].sort()).toEqual(CANONICAL_TARGET);
   });
 
-  // TODO(task-3): add the nameability guard here once resolveCityName exists
-  // ("every taxonomy destination resolves to a display name").
+  it("every taxonomy destination resolves to a display name (unnameable = invisible to users)", async () => {
+    const { resolveCityName } = await import("./city-names");
+    for (const code of Object.keys(DESTINATION_VIBES)) {
+      expect(resolveCityName(code), `taxonomy code ${code} has no display name`).not.toBeNull();
+    }
+  });
 });

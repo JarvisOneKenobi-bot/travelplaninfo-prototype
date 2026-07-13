@@ -38,6 +38,7 @@ const SURPRISE_PATH_FILES = [
   "src/components/DestinationCard.tsx",
   "src/lib/atlas/surprise-query.ts",
   "src/lib/atlas/surprise.ts",
+  "src/lib/atlas/city-names.ts",
   "src/lib/atlas/destination-vibes.ts",
 ];
 

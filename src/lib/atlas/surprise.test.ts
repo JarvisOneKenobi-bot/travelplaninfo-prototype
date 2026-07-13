@@ -398,3 +398,41 @@ describe("ORPHANS UNLOCKED + NEW VIBES: each newly exposed vibe matches real rou
     expect(result.destinations.map((d) => d.name)).toContain(cityName);
   });
 });
+
+describe("DESTINATION NAMING: no raw code ever reaches a card", () => {
+  it("names TP metro city codes and drops unnameable codes instead of rendering them", async () => {
+    popular([item("ZZZ", 80), item("CHI", 120), item("ORL", 140), item("CUN", 160)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+
+    const names = result.destinations.map((d) => d.name);
+    expect(names).toContain("Chicago, United States (all airports)");
+    expect(names).toContain("Orlando, United States (all airports)");
+    for (const name of names) {
+      expect(name).not.toMatch(/^[A-Z]{3}$/);
+    }
+    expect(names.join("|")).not.toContain("ZZZ");
+  });
+
+  it("excludes destinations in the origin's own city (JFK origin must not be offered NYC or LGA)", async () => {
+    popular([item("NYC", 60), item("LGA", 70), item("CUN", 120), item("MBJ", 150), item("TPA", 90)]);
+
+    const result = await getSurpriseDestinations({ origin: "JFK", departMonth: "2026-08" });
+
+    expect(result.destinations.map((d) => d.name).join("|")).not.toContain("New York");
+    expect(result.destinations).toHaveLength(3);
+  });
+
+  it("the curated FILLER also excludes the origin's own city (a JFK user must never be offered LaGuardia)", async () => {
+    // The popular-routes exclusion above never exercises the filler. Without the
+    // filler-side exclusion, LGA — overlap-2 for big_city+cultural and early in
+    // insertion order — is offered to a JFK user as "New York (LaGuardia)".
+    emptyPopular();
+    vi.mocked(rawSearchFlights).mockResolvedValue({ flights: [] });
+
+    const result = await getSurpriseDestinations({ origin: "JFK", vibes: "big_city,cultural", departMonth: "2026-08" });
+
+    expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+    expect(result.destinations.map((d) => d.name).join("|")).not.toContain("New York");
+  });
+});
