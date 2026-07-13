@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 type TransfersFixture = "absent" | number | null;
 
-function flightItem(destination: string, transfers: TransfersFixture): Record<string, unknown> {
+function flightItem(destination: string, transfers: TransfersFixture, airline = "AA"): Record<string, unknown> {
   const item: Record<string, unknown> = {
     origin: "JFK",
     destination,
     price: 210,
-    airline: "AA",
+    airline,
     departure_at: "2026-08-01",
   };
   if (transfers !== "absent") {
@@ -33,6 +33,31 @@ async function runEnrichmentWireTest(transfers: TransfersFixture, origin: string
   const { getSurpriseDestinations } = await import("./surprise");
   const result = await getSurpriseDestinations({
     origin,
+    vibes: "tropical,beach",
+    departMonth: "2026-08",
+    tripLength: "week",
+  });
+
+  return { fetchMock, result };
+}
+
+async function runEnrichmentAirlineWireTest() {
+  vi.resetModules();
+  vi.stubEnv("TRAVELPAYOUTS_TOKEN", "test-token");
+
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input));
+    const destination = url.searchParams.get("destination");
+    if (!destination) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: true, data: [flightItem(destination, 0, "B6")] }), { status: 200 });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const { getSurpriseDestinations } = await import("./surprise");
+  const result = await getSurpriseDestinations({
+    origin: "JFK",
     vibes: "tropical,beach",
     departMonth: "2026-08",
     tripLength: "week",
@@ -86,5 +111,15 @@ describe("getSurpriseDestinations wire-level enrichment", () => {
       expect(destination.flightPrice).toMatch(/^\$\d/);
       expect(destination.nonstop).toBe(false);
     }
+  });
+
+  it("ENRICHMENT: priced raw B6 from rawSearchFlights renders as jetBlue", async () => {
+    const { fetchMock, result } = await runEnrichmentAirlineWireTest();
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.destinations).toHaveLength(3);
+    expect(result.destinations[0]).toMatchObject({ flightPrice: "$210 rt", airline: "jetBlue" });
+    expect(result.destinations[0].airline).not.toBe("");
+    expect(result.destinations[0].airline).not.toBe("B6");
   });
 });
