@@ -40,6 +40,7 @@ const SURPRISE_PATH_FILES = [
   "src/lib/atlas/surprise.ts",
   "src/lib/atlas/city-names.ts",
   "src/lib/atlas/destination-vibes.ts",
+  "src/lib/atlas/vibe-preflight.ts",
 ];
 
 const BANNED_SUBSTRINGS = [
