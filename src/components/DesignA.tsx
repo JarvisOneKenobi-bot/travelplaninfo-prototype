@@ -66,8 +66,6 @@ export default function DesignA() {
                 <p className="text-sm text-gray-500">{deal.subtitle}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full">{deal.savings}</span>
-                <span className="text-lg font-bold text-gray-900">{deal.price}</span>
                 <span className="text-sm font-medium bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
                   {deal.cta}
                 </span>

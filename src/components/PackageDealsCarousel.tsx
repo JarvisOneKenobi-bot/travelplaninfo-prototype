@@ -116,12 +116,10 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
                   <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${programColors[deal.program] || ''}`}>
                     {programLabels[deal.program]}
                   </span>
-                  <span className="text-xs text-green-600 font-medium">{deal.savings}</span>
                 </div>
                 <h4 className="text-sm font-semibold text-gray-900 leading-tight">{deal.title}</h4>
                 <p className="text-xs text-gray-500 line-clamp-2">{deal.subtitle}</p>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-lg font-bold text-orange-600">{deal.price}</span>
                   <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
                     {deal.cta} →
                   </span>

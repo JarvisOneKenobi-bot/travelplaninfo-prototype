@@ -327,7 +327,7 @@
     "noSpam": "Pas de spam. Désinscrivez-vous à tout moment."
   },
   "hotDeals": {
-    "tagline": "Flux d'Offres · Hôtels · Locations · Voitures · Croisières",
+    "tagline": "Hôtels · Locations · Voitures · Croisières",
     "heading": "Offres de voyage sélectionnées de partenaires de confiance — réservez et économisez.",
     "subheading": "Comparez les hôtels sur Hotels.com, les locations sur Vrbo, les voitures sur EconomyBookings et les croisières sur CruiseDirect.",
     "hotels": "Offres Hotels.com",
@@ -341,7 +341,7 @@
     "browseAllGuides": "Voir Tous les Guides →",
     "dealAlerts": "Alertes de Bons Plans",
     "dealAlertsDesc": "Packs hebdomadaires vols + hôtels avec alertes de baisse de prix.",
-    "affiliateDisclosure": "TravelPlanInfo perçoit une commission lorsque vous réservez via nos liens partenaires. Les prix indiqués sont des estimations et peuvent varier."
+    "affiliateDisclosure": "TravelPlanInfo perçoit une commission lorsque vous réservez via nos liens partenaires."
   },
   "assistant": {
     "title": "Atlas",

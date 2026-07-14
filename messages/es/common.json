@@ -327,7 +327,7 @@
     "noSpam": "Sin spam. Cancela cuando quieras."
   },
   "hotDeals": {
-    "tagline": "Feed de Ofertas · Hoteles · Alquileres · Autos · Cruceros",
+    "tagline": "Hoteles · Alquileres · Autos · Cruceros",
     "heading": "Ofertas de viaje seleccionadas de socios confiables — reserva y ahorra.",
     "subheading": "Compara hoteles en Hotels.com, alquileres en Vrbo, autos en EconomyBookings y cruceros en CruiseDirect.",
     "hotels": "Ofertas Hotels.com",
@@ -341,7 +341,7 @@
     "browseAllGuides": "Ver Todas las Guías →",
     "dealAlerts": "Alertas de Ofertas",
     "dealAlertsDesc": "Paquetes semanales de vuelos + hoteles con alertas de bajada de precios.",
-    "affiliateDisclosure": "TravelPlanInfo gana una comisión cuando reservas a través de nuestros enlaces de socios. Los precios mostrados son estimaciones y pueden variar."
+    "affiliateDisclosure": "TravelPlanInfo gana una comisión cuando reservas a través de nuestros enlaces de socios."
   },
   "assistant": {
     "title": "Atlas",

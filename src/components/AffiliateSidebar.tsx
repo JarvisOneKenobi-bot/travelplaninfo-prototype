@@ -14,12 +14,6 @@ export default function AffiliateSidebar() {
           rel="noopener noreferrer sponsored"
           className="block p-4 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all"
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-              {deal.savings}
-            </span>
-            <span className="text-lg font-bold text-gray-900">{deal.price}</span>
-          </div>
           <p className="text-sm font-medium text-gray-900">{deal.title}</p>
           <p className="text-xs text-gray-500 mt-0.5">{deal.subtitle}</p>
           <span className="text-xs font-medium text-orange-600 mt-2 inline-block">{deal.cta} →</span>
