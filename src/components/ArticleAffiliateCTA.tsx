@@ -43,7 +43,7 @@ function buildCTAs(opportunities: string[], destination?: string): CTAConfig[] {
     cruises: {
       label: "🚢 Cruises",
       title: "Caribbean & Bahamas Cruises",
-      description: "Up to 75% off cruise fares. Last-minute deals available.",
+      description: "Search and compare CruiseDirect sailings across major cruise lines.",
       cta: "View Cruises",
       url: CJ_LINKS.cruisesLastMinute(),
     },

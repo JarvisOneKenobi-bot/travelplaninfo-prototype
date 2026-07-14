@@ -21,20 +21,53 @@ const URGENCY_PATTERNS = [
   /\b\d+[-\s]nights?\b/i,
 ];
 const I18N_PATTERNS = [...PRICE_PATTERNS, /\blive\b/i, /\bfeed\b/i, /\bflux\b/i];
+// Keep price-shaped i18n checks dollar/night/day/person scoped. affiliateRecommendations.airAdvisorDesc
+// includes EU261's real, regulation-backed €600 compensation cap, so euro/pound literals are not
+// fabricated-price signals in this namespace.
+const AFFILIATE_RECOMMENDATIONS_PATTERNS = [
+  ...PRICE_PATTERNS,
+  /\d+\s*%/,
+  /last[-\s]?minute/i,
+  /último minuto/i,
+  /última hora/i,
+  /dernière minute/i,
+  /tonight/i,
+  /limited (?:inventory|time)/i,
+  /hurry/i,
+  /\bdeals?\b/i,
+  /\bofertas?\b/i,
+  /\boffres?\b/i,
+  /\bangebote?\b/i,
+  /\bofferte?\b/i,
+];
 
 const SOURCE_FILES = [
   "src/app/[locale]/destinations/page.tsx",
   "src/app/[locale]/hot-deals/page.tsx",
   "src/config/affiliates.ts",
+  "src/components/ArticleAffiliateCTA.tsx",
   "src/components/AffiliateInlineCTA.tsx",
 ] as const;
 
 const URGENCY_SOURCE_FILES = [
   "src/app/[locale]/hot-deals/page.tsx",
+  "src/components/ArticleAffiliateCTA.tsx",
   "src/components/AffiliateInlineCTA.tsx",
 ] as const;
 
 const LOCALES = ["de", "en", "es", "fr", "it", "pt"] as const;
+
+// This manifest is intentionally hardcoded: this key has already carried a fabricated discount
+// claim once; a regex cannot distinguish an honest sentence from a fabricated one, so any future
+// edit to this copy must be a deliberate, reviewed change to this manifest.
+const APPROVED_CRUISES_DESC: Record<(typeof LOCALES)[number], string> = {
+  en: "Search and compare CruiseDirect sailings across major cruise lines.",
+  es: "Busca y compara salidas de las principales navieras en CruiseDirect.",
+  pt: "Pesquise e compare cruzeiros das principais companhias de cruzeiro no CruiseDirect.",
+  fr: "Recherchez et comparez les départs des grandes compagnies de croisière sur CruiseDirect.",
+  de: "Suchen und vergleichen Sie auf CruiseDirect Kreuzfahrten großer Reedereien.",
+  it: "Cerca e confronta su CruiseDirect le partenze delle principali compagnie di crociera.",
+};
 
 type Violation = {
   file: string;
@@ -193,16 +226,16 @@ function collectJsonStrings(value: unknown): string[] {
   return Object.values(value as Record<string, unknown>).flatMap(collectJsonStrings);
 }
 
-function collectI18nViolations(): Violation[] {
+function collectI18nNamespaceViolations(namespace: string, patterns: RegExp[]): Violation[] {
   const violations: Violation[] = [];
 
   for (const locale of LOCALES) {
     const file = `messages/${locale}/common.json`;
     const raw = readRepoFile(file);
-    const json = JSON.parse(raw) as { hotDeals?: unknown };
-    for (const text of collectJsonStrings(json.hotDeals)) {
+    const json = JSON.parse(raw) as Record<string, unknown>;
+    for (const text of collectJsonStrings(json[namespace])) {
       const normalized = normalizeMatchedText(text);
-      if (I18N_PATTERNS.some((pattern) => pattern.test(normalized))) {
+      if (patterns.some((pattern) => pattern.test(normalized))) {
         const offset = raw.indexOf(JSON.stringify(text));
         const line = offset === -1 ? 1 : raw.slice(0, offset).split("\n").length;
         violations.push({ file, line, text: normalized });
@@ -211,6 +244,18 @@ function collectI18nViolations(): Violation[] {
   }
 
   return violations;
+}
+
+function collectI18nViolations(): Violation[] {
+  return collectI18nNamespaceViolations("hotDeals", I18N_PATTERNS);
+}
+
+function affiliateRecommendationsCruisesDesc(locale: (typeof LOCALES)[number]): string | undefined {
+  const json = JSON.parse(readRepoFile(`messages/${locale}/common.json`)) as {
+    affiliateRecommendations?: { cruisesDesc?: unknown };
+  };
+  const cruisesDesc = json.affiliateRecommendations?.cruisesDesc;
+  return typeof cruisesDesc === "string" ? cruisesDesc : undefined;
 }
 
 function formatViolations(title: string, violations: Violation[]): string {
@@ -246,6 +291,46 @@ describe("no fabricated claims guard", () => {
   it("Arm C: hotDeals i18n namespace does not claim live feeds or fabricated prices", () => {
     const violations = collectI18nViolations();
     expectNoViolations("Arm C i18n guard", violations);
+  });
+
+  it("Arm E: affiliateRecommendations i18n namespace does not contain fabricated prices, discounts, or urgency", () => {
+    const violations = collectI18nNamespaceViolations(
+      "affiliateRecommendations",
+      AFFILIATE_RECOMMENDATIONS_PATTERNS,
+    );
+    expectNoViolations("Arm E affiliateRecommendations i18n guard", violations);
+  });
+
+  it("Arm E: cruisesDesc exists in every locale and non-English locales are translated", () => {
+    const english = affiliateRecommendationsCruisesDesc("en");
+    expect(english, "messages/en/common.json missing affiliateRecommendations.cruisesDesc").toBeDefined();
+
+    for (const locale of LOCALES) {
+      const value = affiliateRecommendationsCruisesDesc(locale);
+      expect(
+        value,
+        `messages/${locale}/common.json missing affiliateRecommendations.cruisesDesc`,
+      ).toBeDefined();
+      if (locale !== "en") {
+        expect(
+          value,
+          `messages/${locale}/common.json cruisesDesc must not be byte-identical to EN`,
+        ).not.toBe(english);
+      }
+    }
+  });
+
+  it("Arm E: cruisesDesc matches the approved per-locale copy manifest", () => {
+    for (const locale of LOCALES) {
+      expect(
+        affiliateRecommendationsCruisesDesc(locale),
+        `messages/${locale}/common.json affiliateRecommendations.cruisesDesc must match approved copy`,
+      ).toBe(APPROVED_CRUISES_DESC[locale]);
+    }
+  });
+
+  it("Arm E: ArticleAffiliateCTA keeps the hardcoded English cruisesDesc aligned with approved copy", () => {
+    expect(readRepoFile("src/components/ArticleAffiliateCTA.tsx")).toContain(APPROVED_CRUISES_DESC.en);
   });
 
   it("Arm D: affiliate monetization links stay intact", () => {
