@@ -333,11 +333,13 @@ function destinationsSubheading(locale: (typeof LOCALES)[number]): string | unde
   return typeof subheading === "string" ? subheading : undefined;
 }
 
-// Byte-exact normalized whole-string exemption computed from the live pt
-// destinations.subheading. "garantir" here is the ordinary Portuguese verb
-// "to ensure", not a guarantee claim; near-misses must still be flagged.
+// Byte-exact normalized whole-string exemption. "garantir" here is the ordinary Portuguese
+// verb "to ensure", not a guarantee claim; /gu?aran/i cannot tell them apart. The copy is a
+// pending product decision and is not ours to change, so it is exempted explicitly and
+// auditably rather than by weakening the pattern. HARDCODED ON PURPOSE: deriving this from the
+// live file would auto-approve any future edit and silently disable the guard.
 const APPROVED_INNOCENT_VERB_COPY = new Set([
-  normalizeMatchedText(destinationsSubheading("pt") ?? ""),
+  "Encontre os melhores voos e hotéis nos principais destinos. Comparamos preços nos principais sites de reservas para garantir a melhor oferta.",
 ]);
 
 function formatViolations(title: string, violations: Violation[]): string {
@@ -447,15 +449,14 @@ describe("no fabricated claims guard", () => {
     }
   });
 
-  it("Arm F: destinations innocent-verb exemption manifest stays in sync with the live PT string", () => {
+  it("Arm F: the approved innocent-verb exemption still matches the live PT copy", () => {
     const ptSubheading = destinationsSubheading("pt");
 
+    expect(ptSubheading).toBeDefined();
     expect(APPROVED_INNOCENT_VERB_COPY.size).toBe(1);
-    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
-    expect(
-      APPROVED_INNOCENT_VERB_COPY.has(normalizeMatchedText(ptSubheading as string)),
-      "messages/pt/common.json destinations.subheading must stay approved byte-exact",
-    ).toBe(true);
+    expect(normalizeMatchedText(ptSubheading as string)).toBe(
+      "Encontre os melhores voos e hotéis nos principais destinos. Comparamos preços nos principais sites de reservas para garantir a melhor oferta.",
+    );
   });
 
   it("Arm F: destinations innocent-verb exemption is byte-exact and does not hide appended fabrications", () => {
