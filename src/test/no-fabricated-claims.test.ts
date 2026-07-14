@@ -64,6 +64,10 @@ const AFFILIATE_RECOMMENDATIONS_PATTERNS = [
   /\bangebote?\b/i,
   /\bofferte?\b/i,
 ];
+// Deliberately do not reuse I18N_PATTERNS here: its /\blive\b/, /\bfeed\b/,
+// and /\bflux\b/ checks are hotDeals "live deal feed" specific, while "flux"
+// is ordinary French (for example, "flux touristique") in destinations copy.
+const DESTINATIONS_I18N_PATTERNS = [...PRICE_PATTERNS, ...MULTILINGUAL_FABRICATED_CLAIM_PATTERNS];
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
   const normalized = normalizeMatchedText(text);
@@ -83,6 +87,7 @@ const SOURCE_FILES = [
 ] as const;
 
 const URGENCY_SOURCE_FILES = [
+  "src/app/[locale]/destinations/page.tsx",
   "src/app/[locale]/hot-deals/page.tsx",
   "src/components/ArticleAffiliateCTA.tsx",
   "src/components/AffiliateInlineCTA.tsx",
@@ -275,7 +280,11 @@ function collectJsonStrings(value: unknown): string[] {
   return Object.values(value as Record<string, unknown>).flatMap(collectJsonStrings);
 }
 
-function collectI18nNamespaceViolations(namespace: string, patterns: RegExp[]): Violation[] {
+function collectI18nNamespaceViolations(
+  namespace: string,
+  patterns: RegExp[],
+  approvedCopy: ReadonlySet<string> = APPROVED_PARTNER_PROGRAM_CLAIMS,
+): Violation[] {
   const violations: Violation[] = [];
 
   for (const locale of LOCALES) {
@@ -284,7 +293,7 @@ function collectI18nNamespaceViolations(namespace: string, patterns: RegExp[]): 
     const json = JSON.parse(raw) as Record<string, unknown>;
     for (const text of collectJsonStrings(json[namespace])) {
       const normalized = normalizeMatchedText(text);
-      if (isApprovedPartnerProgramClaim(normalized)) continue;
+      if (approvedCopy.has(normalized)) continue;
       if (patterns.some((pattern) => pattern.test(normalized))) {
         const offset = raw.indexOf(JSON.stringify(text));
         const line = offset === -1 ? 1 : raw.slice(0, offset).split("\n").length;
@@ -315,6 +324,21 @@ function affiliateRecommendationsLuxuryHotelsDesc(locale: (typeof LOCALES)[numbe
   const luxuryHotelsDesc = json.affiliateRecommendations?.luxuryHotelsDesc;
   return typeof luxuryHotelsDesc === "string" ? luxuryHotelsDesc : undefined;
 }
+
+function destinationsSubheading(locale: (typeof LOCALES)[number]): string | undefined {
+  const json = JSON.parse(readRepoFile(`messages/${locale}/common.json`)) as {
+    destinations?: { subheading?: unknown };
+  };
+  const subheading = json.destinations?.subheading;
+  return typeof subheading === "string" ? subheading : undefined;
+}
+
+// Byte-exact normalized whole-string exemption computed from the live pt
+// destinations.subheading. "garantir" here is the ordinary Portuguese verb
+// "to ensure", not a guarantee claim; near-misses must still be flagged.
+const APPROVED_INNOCENT_VERB_COPY = new Set([
+  normalizeMatchedText(destinationsSubheading("pt") ?? ""),
+]);
 
 function formatViolations(title: string, violations: Violation[]): string {
   const lines = violations.map(({ file, line, text }) => `${file}:${line}: "${text}"`);
@@ -359,6 +383,19 @@ describe("no fabricated claims guard", () => {
     expectNoViolations("Arm E affiliateRecommendations i18n guard", violations);
   });
 
+  it("Arm F: destinations i18n namespace does not contain fabricated prices, discounts, or guarantees", () => {
+    const violations = collectI18nNamespaceViolations(
+      "destinations",
+      DESTINATIONS_I18N_PATTERNS,
+      APPROVED_INNOCENT_VERB_COPY,
+    );
+    expectNoViolations("Arm F destinations i18n guard", violations);
+  });
+
+  it("Arm F: destinations source page is included in urgency source scanning", () => {
+    expect(URGENCY_SOURCE_FILES).toContain("src/app/[locale]/destinations/page.tsx");
+  });
+
   it("negative guard samples: hotDeals i18n detects the verifier's Spanish discount sneak string", () => {
     expect(matchesAny("75% de descuento", I18N_PATTERNS)).toBe(true);
   });
@@ -367,12 +404,33 @@ describe("no fabricated claims guard", () => {
     expect(matchesAny("Lowest fares guaranteed.", URGENCY_PATTERNS)).toBe(true);
   });
 
+  it("negative guard samples: source urgency detects the verifier's urgency discount sneak string", () => {
+    expect(matchesAny("Book tonight — 50% off", URGENCY_PATTERNS)).toBe(true);
+  });
+
+  it("negative guard samples: destinations i18n detects the verifier's Spanish discount sneak string", () => {
+    expect(matchesAny("50% de descuento", DESTINATIONS_I18N_PATTERNS)).toBe(true);
+  });
+
   it("negative guard samples: guarantee pattern catches Italian garanzia", () => {
     expect(matchesAny("Garanzia di prezzo più basso", URGENCY_PATTERNS)).toBe(true);
   });
 
+  it("negative guard samples: destinations i18n guarantee pattern catches Italian garanzia", () => {
+    expect(matchesAny("Garanzia di prezzo più basso", DESTINATIONS_I18N_PATTERNS)).toBe(true);
+    expect(matchesAny("Melhor preço garantido.", DESTINATIONS_I18N_PATTERNS)).toBe(true);
+    expect(APPROVED_INNOCENT_VERB_COPY.has(normalizeMatchedText("Melhor preco garantido."))).toBe(false);
+  });
+
   it("approved partner-program claim exemptions are exact whole-string matches", () => {
     expect(isApprovedPartnerProgramClaim("Best price guarantee. Always.")).toBe(false);
+  });
+
+  it("Arm F: destinations exemptions do not inherit partner-program guarantee strings", () => {
+    const partnerGuarantee = "Top-rated hotels with free cancellation. Best price guaranteed.";
+
+    expect(APPROVED_INNOCENT_VERB_COPY.has(normalizeMatchedText(partnerGuarantee))).toBe(false);
+    expect(matchesAny(partnerGuarantee, DESTINATIONS_I18N_PATTERNS)).toBe(true);
   });
 
   it("approved partner-program claim exemption manifest stays in sync with the 8 reviewed strings", () => {
@@ -387,6 +445,51 @@ describe("no fabricated claims guard", () => {
       expect(claim).toBeDefined();
       expect(isApprovedPartnerProgramClaim(claim as string), `${claim} must stay approved byte-exact`).toBe(true);
     }
+  });
+
+  it("Arm F: destinations innocent-verb exemption manifest stays in sync with the live PT string", () => {
+    const ptSubheading = destinationsSubheading("pt");
+
+    expect(APPROVED_INNOCENT_VERB_COPY.size).toBe(1);
+    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
+    expect(
+      APPROVED_INNOCENT_VERB_COPY.has(normalizeMatchedText(ptSubheading as string)),
+      "messages/pt/common.json destinations.subheading must stay approved byte-exact",
+    ).toBe(true);
+  });
+
+  it("Arm F: destinations innocent-verb exemption is byte-exact and does not hide appended fabrications", () => {
+    const ptSubheading = destinationsSubheading("pt");
+
+    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
+    const nearMiss = `${ptSubheading as string} Melhor preco garantido.`;
+    expect(
+      APPROVED_INNOCENT_VERB_COPY.has(normalizeMatchedText(nearMiss)),
+    ).toBe(false);
+    expect(matchesAny(nearMiss, DESTINATIONS_I18N_PATTERNS)).toBe(true);
+  });
+
+  it("Arm F: destinations namespace is traversed and only the approved-copy exemption suppresses the PT string", () => {
+    const ptSubheading = destinationsSubheading("pt");
+    const unexempted = collectI18nNamespaceViolations("destinations", DESTINATIONS_I18N_PATTERNS, new Set());
+
+    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
+    expect(unexempted.length).toBeGreaterThanOrEqual(1);
+    expect(unexempted).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "messages/pt/common.json",
+          text: normalizeMatchedText(ptSubheading as string),
+        }),
+      ]),
+    );
+    expect(
+      collectI18nNamespaceViolations(
+        "destinations",
+        DESTINATIONS_I18N_PATTERNS,
+        APPROVED_INNOCENT_VERB_COPY,
+      ),
+    ).toHaveLength(0);
   });
 
   it("Arm E: cruisesDesc exists in every locale and non-English locales are translated", () => {
