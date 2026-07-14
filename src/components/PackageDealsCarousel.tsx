@@ -112,18 +112,14 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
                 rel="noopener noreferrer sponsored"
                 className="flex-none rounded-xl border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all p-4 space-y-2 bg-white"
                 style={{ width: cardWidthCalc }}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${programColors[deal.program] || ''}`}>
-                    {programLabels[deal.program]}
-                  </span>
-                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${programColors[deal.program] || ''}`}>
+                  {programLabels[deal.program]}
+                </span>
                 <h4 className="text-sm font-semibold text-gray-900 leading-tight">{deal.title}</h4>
                 <p className="text-xs text-gray-500 line-clamp-2">{deal.subtitle}</p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
-                    {deal.cta} →
-                  </span>
-                </div>
+                <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
+                  {deal.cta} →
+                </span>
               </a>
             ))}
           </div>

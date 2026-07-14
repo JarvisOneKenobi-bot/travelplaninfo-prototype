@@ -46,7 +46,7 @@ export default function HotDeals() {
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-t border-gray-300 pt-5 mt-8">
+            <div className="grid grid-cols-2 gap-4 border-t border-gray-300 pt-5 mt-8">
               {[
                 { label: "HOTELS", value: "Hotels.com", icon: "🏨" },
                 { label: "RENTALS", value: "Vrbo", icon: "🏡" },

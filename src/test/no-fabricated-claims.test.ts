@@ -249,9 +249,38 @@ describe("no fabricated claims guard", () => {
   });
 
   it("Arm D: affiliate monetization links stay intact", () => {
+    const expectedDealIds = [
+      "cars-cancun",
+      "cars-miami",
+      "cruisedirect-bahamas",
+      "cruisedirect-caribbean",
+      "hotels-cancun",
+      "hotels-miami-beach",
+      "vrbo-miami-condo",
+      "vrbo-nyc-apartment",
+    ];
+    const expectedDealOverrides = new Map([
+      ["cruisedirect-caribbean", "https://www.kqzyfj.com/click-101692716-13096782"],
+      ["cruisedirect-bahamas", "https://www.anrdoezrs.net/click-101692716-13096743"],
+    ]);
+    const expectedBannerUrls = new Map([
+      ["cars-compare", "https://www.anrdoezrs.net/click-101692716-15736982?sid=travelplaninfo"],
+      ["cruisedirect-deals", "https://www.dpbolvw.net/click-101692716-15734200?sid=travelplaninfo"],
+      ["hotels-member-prices", "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo"],
+      ["vrbo-vacation-rentals", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
+    ]);
+
+    // This manifest is intentionally hardcoded: deleting a revenue link must fail the build.
+    expect(DEALS).toHaveLength(8);
+    expect(DEALS.map((deal) => deal.id).sort()).toEqual(expectedDealIds);
+
     for (const deal of DEALS) {
       expect(deal.id).toBeTruthy();
+      expect(deal.program).toBeTruthy();
       expect(deal.cta).toBeTruthy();
+      if (expectedDealOverrides.has(deal.id)) {
+        expect(deal.url).toBe(expectedDealOverrides.get(deal.id));
+      }
       expectCjUrl(getAffiliateUrl(deal));
     }
 
@@ -261,7 +290,11 @@ describe("no fabricated claims guard", () => {
       expectCjUrl(url);
     }
 
+    expect(CJ_BANNERS).toHaveLength(4);
+    expect(CJ_BANNERS.map((banner) => banner.id).sort()).toEqual([...expectedBannerUrls.keys()].sort());
+
     for (const banner of CJ_BANNERS) {
+      expect(banner.url).toBe(expectedBannerUrls.get(banner.id));
       expectCjUrl(banner.url);
     }
 
