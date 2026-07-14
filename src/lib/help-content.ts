@@ -74,11 +74,10 @@ export const HELP_CONTENT: Record<string, HelpPageContent> = {
   },
   "hot-deals": {
     title: "Hot Deals",
-    intro: "Curated travel deals matched to your profile.",
+    intro: "Our travel booking partners for hotels, vacation rentals, car rentals, and cruises.",
     sections: [
-      { heading: "How deals work", text: "We scan flights, hotels, and vacation packages across our affiliate partners to find the best prices. Deals are filtered by your home airport, budget tier, and interests." },
-      { heading: "Personalized results", text: "Update your preferences (home airport, budget, interests) to get deals that match your travel style. The more Atlas knows about you, the better the deals." },
-      { heading: "Deal alerts", text: "Enable Deal Alerts in your preferences to get notified when prices drop below your threshold on routes you've searched." },
+      { heading: "How this page works", text: "This page is a directory of our affiliate partners: Hotels.com, Vrbo, EconomyBookings, and CruiseDirect. Each card links straight to that partner's own search." },
+      { heading: "Why we don't show prices", text: "TravelPlanInfo has no hotel or flight price feed, so we don't publish prices we cannot verify. You see the partner's real, current price when you click through to their site." },
       { heading: "Booking", text: "Click any deal to compare prices on our partner sites. You pay the same price — we earn a small commission that supports TPI." },
     ]
   },
