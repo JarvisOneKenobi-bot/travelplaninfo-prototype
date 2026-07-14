@@ -19,20 +19,44 @@ const URGENCY_PATTERNS = [
   /save\s+(up\s+to\s+)?\d+\s*%/i,
   /weekly discounts/i,
   /\b\d+[-\s]nights?\b/i,
+  /gu?aran/i,
 ];
-const I18N_PATTERNS = [...PRICE_PATTERNS, /\blive\b/i, /\bfeed\b/i, /\bflux\b/i];
+const MULTILINGUAL_FABRICATED_CLAIM_PATTERNS = [
+  /\d+\s*%/,
+  /descuento|desconto|sconto|rabatt|réduction|ermäßigung/i,
+  /last[-\s]?minute/i,
+  /último minuto/i,
+  /última hora/i,
+  /dernière minute/i,
+  /ultimo minuto/i,
+  /tonight/i,
+  /esta noche/i,
+  /hoje à noite/i,
+  /ce soir/i,
+  /heute abend/i,
+  /stasera/i,
+  /limited (?:inventory|time)/i,
+  /disponibilidad limitada/i,
+  /plazas limitadas/i,
+  /disponibilidade limitada/i,
+  /places limitées/i,
+  /begrenzte verfügbarkeit/i,
+  /disponibilit[àa] limitad[ao]/i,
+  /gu?aran/i,
+];
+const I18N_PATTERNS = [
+  ...PRICE_PATTERNS,
+  /\blive\b/i,
+  /\bfeed\b/i,
+  /\bflux\b/i,
+  ...MULTILINGUAL_FABRICATED_CLAIM_PATTERNS,
+];
 // Keep price-shaped i18n checks dollar/night/day/person scoped. affiliateRecommendations.airAdvisorDesc
 // includes EU261's real, regulation-backed €600 compensation cap, so euro/pound literals are not
 // fabricated-price signals in this namespace.
 const AFFILIATE_RECOMMENDATIONS_PATTERNS = [
   ...PRICE_PATTERNS,
-  /\d+\s*%/,
-  /last[-\s]?minute/i,
-  /último minuto/i,
-  /última hora/i,
-  /dernière minute/i,
-  /tonight/i,
-  /limited (?:inventory|time)/i,
+  ...MULTILINGUAL_FABRICATED_CLAIM_PATTERNS,
   /hurry/i,
   /\bdeals?\b/i,
   /\bofertas?\b/i,
@@ -40,6 +64,15 @@ const AFFILIATE_RECOMMENDATIONS_PATTERNS = [
   /\bangebote?\b/i,
   /\bofferte?\b/i,
 ];
+
+function matchesAny(text: string, patterns: RegExp[]): boolean {
+  const normalized = normalizeMatchedText(text);
+  return patterns.some((pattern) => pattern.test(normalized));
+}
+
+function isApprovedPartnerProgramClaim(text: string): boolean {
+  return APPROVED_PARTNER_PROGRAM_CLAIMS.has(normalizeMatchedText(text));
+}
 
 const SOURCE_FILES = [
   "src/app/[locale]/destinations/page.tsx",
@@ -68,6 +101,21 @@ const APPROVED_CRUISES_DESC: Record<(typeof LOCALES)[number], string> = {
   de: "Suchen und vergleichen Sie auf CruiseDirect Kreuzfahrten großer Reedereien.",
   it: "Cerca e confronta su CruiseDirect le partenze delle principali compagnie di crociera.",
 };
+
+// These are byte-exact normalized whole-string exemptions for pre-existing, reviewed
+// partner-program claims. Hotels.com Price Match Guarantee and EconomyBookings' best-price
+// guarantee are the partners' own advertised programs, deferred to a future copy sweep.
+// Any new guarantee claim is a violation; near-misses must not be substring-exempted.
+const APPROVED_PARTNER_PROGRAM_CLAIMS = new Set([
+  "500+ suppliers. Best price guarantee. Free cancellation.",
+  "Top-rated hotels with free cancellation. Best price guaranteed.",
+  "Hand-picked 4★ & 5★ hotels. Hotels.com Price Match Guarantee.",
+  "Hoteles 4★ y 5★ seleccionados. Garantía de igualación de precios.",
+  "Hotéis 4★ e 5★ selecionados. Garantia de igualdade de preços.",
+  "Hôtels 4★ et 5★ sélectionnés. Garantie d alignement des prix.",
+  "Ausgewählte 4★ & 5★ Hotels. Preisgarantie.",
+  "Hotel 4★ e 5★ selezionati. Garanzia di corrispondenza prezzi.",
+]);
 
 type Violation = {
   file: string;
@@ -104,6 +152,7 @@ function addTextViolation(
 ): void {
   const normalized = normalizeMatchedText(text);
   if (!normalized) return;
+  if (isApprovedPartnerProgramClaim(normalized)) return;
   if (patterns.some((pattern) => pattern.test(normalized))) {
     violations.push({ file, line: lineFor(sourceFile, node), text: normalized });
   }
@@ -235,6 +284,7 @@ function collectI18nNamespaceViolations(namespace: string, patterns: RegExp[]): 
     const json = JSON.parse(raw) as Record<string, unknown>;
     for (const text of collectJsonStrings(json[namespace])) {
       const normalized = normalizeMatchedText(text);
+      if (isApprovedPartnerProgramClaim(normalized)) continue;
       if (patterns.some((pattern) => pattern.test(normalized))) {
         const offset = raw.indexOf(JSON.stringify(text));
         const line = offset === -1 ? 1 : raw.slice(0, offset).split("\n").length;
@@ -256,6 +306,14 @@ function affiliateRecommendationsCruisesDesc(locale: (typeof LOCALES)[number]): 
   };
   const cruisesDesc = json.affiliateRecommendations?.cruisesDesc;
   return typeof cruisesDesc === "string" ? cruisesDesc : undefined;
+}
+
+function affiliateRecommendationsLuxuryHotelsDesc(locale: (typeof LOCALES)[number]): string | undefined {
+  const json = JSON.parse(readRepoFile(`messages/${locale}/common.json`)) as {
+    affiliateRecommendations?: { luxuryHotelsDesc?: unknown };
+  };
+  const luxuryHotelsDesc = json.affiliateRecommendations?.luxuryHotelsDesc;
+  return typeof luxuryHotelsDesc === "string" ? luxuryHotelsDesc : undefined;
 }
 
 function formatViolations(title: string, violations: Violation[]): string {
@@ -299,6 +357,36 @@ describe("no fabricated claims guard", () => {
       AFFILIATE_RECOMMENDATIONS_PATTERNS,
     );
     expectNoViolations("Arm E affiliateRecommendations i18n guard", violations);
+  });
+
+  it("negative guard samples: hotDeals i18n detects the verifier's Spanish discount sneak string", () => {
+    expect(matchesAny("75% de descuento", I18N_PATTERNS)).toBe(true);
+  });
+
+  it("negative guard samples: source urgency detects the verifier's guarantee sneak string", () => {
+    expect(matchesAny("Lowest fares guaranteed.", URGENCY_PATTERNS)).toBe(true);
+  });
+
+  it("negative guard samples: guarantee pattern catches Italian garanzia", () => {
+    expect(matchesAny("Garanzia di prezzo più basso", URGENCY_PATTERNS)).toBe(true);
+  });
+
+  it("approved partner-program claim exemptions are exact whole-string matches", () => {
+    expect(isApprovedPartnerProgramClaim("Best price guarantee. Always.")).toBe(false);
+  });
+
+  it("approved partner-program claim exemption manifest stays in sync with the 8 reviewed strings", () => {
+    const reviewedClaims = [
+      "500+ suppliers. Best price guarantee. Free cancellation.",
+      "Top-rated hotels with free cancellation. Best price guaranteed.",
+      ...LOCALES.map((locale) => affiliateRecommendationsLuxuryHotelsDesc(locale)),
+    ];
+
+    expect(reviewedClaims).toHaveLength(APPROVED_PARTNER_PROGRAM_CLAIMS.size);
+    for (const claim of reviewedClaims) {
+      expect(claim).toBeDefined();
+      expect(isApprovedPartnerProgramClaim(claim as string), `${claim} must stay approved byte-exact`).toBe(true);
+    }
   });
 
   it("Arm E: cruisesDesc exists in every locale and non-English locales are translated", () => {

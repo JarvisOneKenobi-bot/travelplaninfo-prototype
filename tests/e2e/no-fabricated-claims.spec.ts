@@ -8,14 +8,29 @@ const fabricatedClaimPatterns = [
   { label: 'price shape', regex: /\$\s?\d/g },
   { label: 'unit pricing', regex: /\/night|\/day|\/person/gi },
   { label: 'live deal feed', regex: /live\s*deal\s*feed/gi },
+  { label: 'percent claim', regex: /\d+\s*%/g },
+  { label: 'discount vocabulary', regex: /descuento|desconto|sconto|rabatt|réduction|ermäßigung/gi },
   { label: 'tonight', regex: /tonight/gi },
+  { label: 'tonight vocabulary', regex: /esta noche|hoje à noite|ce soir|heute abend|stasera/gi },
   { label: 'late-night', regex: /late[-\s]?night/gi },
   { label: 'last-minute', regex: /last[-\s]?minute/gi },
+  { label: 'last-minute vocabulary', regex: /último minuto|última hora|dernière minute|ultimo minuto/gi },
   { label: 'limited inventory', regex: /limited inventory/gi },
+  {
+    label: 'limited-inventory vocabulary',
+    regex:
+      /limited time|disponibilidad limitada|plazas limitadas|disponibilidade limitada|places limitées|begrenzte verfügbarkeit|disponibilit[àa] limitad[ao]/gi,
+  },
   { label: 'percent off', regex: /\d+\s*%\s*off/gi },
   { label: 'percent savings', regex: /save\s+(up\s+to\s+)?\d+\s*%/gi },
   { label: 'fabricated duration', regex: /\b\d+[-\s]nights?\b/gi },
 ];
+
+// Do not add a guarantee-shaped body-text pattern here. The Portuguese destinations page
+// legitimately renders messages/pt/common.json destinations.subheading with "garantir" as
+// the innocent verb "to ensure", so /gu?aran/i in this broad rendered-body scan is unsatisfiable.
+// Guarantee claims stay covered by the unit guard, where the scanned source/i18n scope is precise.
+const locales = ['en', 'es', 'pt', 'fr', 'de', 'it'] as const;
 
 const priceShapePatterns = fabricatedClaimPatterns.slice(0, 2);
 
@@ -70,14 +85,16 @@ const destinations = [
 ];
 
 test.describe('no fabricated claims in rendered travel commerce pages', () => {
-  for (const route of ['/en/hot-deals', '/en/destinations']) {
-    test(`${route} renders no fabricated price, urgency, discount, or duration claims`, async ({ page }) => {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+  for (const locale of locales) {
+    for (const route of [`/${locale}/hot-deals`, `/${locale}/destinations`]) {
+      test(`${route} renders no fabricated price, urgency, discount, or duration claims`, async ({ page }) => {
+        await page.goto(route, { waitUntil: 'domcontentloaded' });
 
-      const bodyText = await page.locator('body').innerText();
+        const bodyText = await page.locator('body').innerText();
 
-      expectNoFabricatedClaims(route, bodyText);
-    });
+        expectNoFabricatedClaims(route, bodyText);
+      });
+    }
   }
 });
 
