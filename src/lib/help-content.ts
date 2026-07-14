@@ -77,7 +77,7 @@ export const HELP_CONTENT: Record<string, HelpPageContent> = {
     intro: "Our travel booking partners for hotels, vacation rentals, car rentals, and cruises.",
     sections: [
       { heading: "How this page works", text: "This page is a directory of our affiliate partners: Hotels.com, Vrbo, EconomyBookings, and CruiseDirect. Each card links straight to that partner's own search." },
-      { heading: "Why we don't show prices", text: "TravelPlanInfo has no hotel or flight price feed, so we don't publish prices we cannot verify. You see the partner's real, current price when you click through to their site." },
+      { heading: "Why we don't show prices", text: "A flight price needs a departure airport and travel dates; a hotel rate needs dates and a city. This page has neither, so any number here would be invented. The Planner and Atlas search live flight prices once they know your origin and dates, and partner sites show real current prices when you click through." },
       { heading: "Booking", text: "Click any deal to compare prices on our partner sites. You pay the same price — we earn a small commission that supports TPI." },
     ]
   },

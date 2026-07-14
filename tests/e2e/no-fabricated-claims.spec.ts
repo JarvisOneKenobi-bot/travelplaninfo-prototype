@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CJ_LINKS, DEALS, TP_CONFIG, getAffiliateUrl } from '../../src/config/affiliates';
+import { CJ_BANNERS, CJ_LINKS, DEALS, TP_CONFIG, getAffiliateUrl } from '../../src/config/affiliates';
 
 const cjDomain = /^(https:\/\/)?(www\.)?(dpbolvw\.net|jdoqocy\.com|tkqlhce\.com|anrdoezrs\.net|kqzyfj\.com)\//i;
 const cjOrTpTrackingDomain = /^(https:\/\/)?(www\.)?(dpbolvw\.net|jdoqocy\.com|tkqlhce\.com|anrdoezrs\.net|kqzyfj\.com|aviasales\.com)\//i;
@@ -17,8 +17,17 @@ const fabricatedClaimPatterns = [
   { label: 'fabricated duration', regex: /\b\d+[-\s]nights?\b/gi },
 ];
 
+const priceShapePatterns = fabricatedClaimPatterns.slice(0, 2);
+
 function collectFabricatedClaimMatches(text: string): string[] {
   return fabricatedClaimPatterns.flatMap(({ label, regex }) => {
+    regex.lastIndex = 0;
+    return Array.from(text.matchAll(regex), (match) => `${label}: "${match[0]}"`);
+  });
+}
+
+function collectPriceShapeMatches(text: string): string[] {
+  return priceShapePatterns.flatMap(({ label, regex }) => {
     regex.lastIndex = 0;
     return Array.from(text.matchAll(regex), (match) => `${label}: "${match[0]}"`);
   });
@@ -33,6 +42,12 @@ async function pageHrefs(page: Page): Promise<string[]> {
 function expectNoFabricatedClaims(route: string, bodyText: string) {
   const matches = collectFabricatedClaimMatches(bodyText);
   expect(matches, `Fabricated claims rendered on ${route}:\n${matches.join('\n')}`).toEqual([]);
+}
+
+async function expectNoPriceShapes(locator: ReturnType<Page['locator']>, label: string) {
+  const text = await locator.innerText();
+  const matches = collectPriceShapeMatches(text);
+  expect(matches, `Price-shaped claims rendered in ${label}:\n${matches.join('\n')}`).toEqual([]);
 }
 
 function escapeRegex(text: string): string {
@@ -135,5 +150,42 @@ test.describe('affiliate monetization survives fabricated-claim removal', () => 
     // Current /en/destinations renders 38 CJ/TravelPayouts tracking anchors:
     // 12 cards × 3 CTAs plus the 2 bottom "search all" CTAs.
     expect(trackingAnchorCount).toBeGreaterThanOrEqual(38);
+  });
+
+  test('/en/travel-planning-guide keeps article affiliate widgets monetized without component prices', async ({ page }) => {
+    await page.goto('/en/travel-planning-guide', { waitUntil: 'domcontentloaded' });
+
+    const inlineCta = page.locator('div.my-8').filter({ hasText: 'Ready to book your trip?' });
+    await expect(inlineCta).toHaveCount(1);
+
+    const inlineLinks = [
+      { href: CJ_LINKS.hotels(), text: /Find Hotels/ },
+      { href: CJ_LINKS.vrbo(), text: /Vacation Rentals/ },
+      { href: CJ_LINKS.cruises(), text: /Cruise Deals/ },
+    ];
+    for (const { href, text } of inlineLinks) {
+      expect(href, `article inline CTA should use a CJ tracking domain: ${href}`).toMatch(cjDomain);
+      await expect(inlineCta.locator(`a[href="${href}"]`).filter({ hasText: text })).toHaveCount(1);
+    }
+    await expect(inlineCta.locator('a[href]')).toHaveCount(3);
+
+    const sidebar = page.locator('aside').filter({ hasText: 'Travel Deals' });
+    await expect(sidebar).toHaveCount(1);
+
+    for (const deal of DEALS.slice(0, 3)) {
+      const href = getAffiliateUrl(deal);
+      expect(href, `${deal.id} article sidebar deal should resolve to a CJ tracking domain`).toMatch(cjDomain);
+      await expect(sidebar.locator(`a[href="${href}"]`).filter({ hasText: new RegExp(`${escapeRegex(deal.cta)}\\s*→`) })).toHaveCount(1);
+    }
+
+    for (const banner of CJ_BANNERS) {
+      expect(banner.url, `${banner.id} article sidebar banner should use a CJ tracking domain`).toMatch(cjDomain);
+      await expect(sidebar.locator(`a[aria-label="${banner.advertiser} — ${banner.headline}"][href="${banner.url}"]`)).toHaveCount(1);
+    }
+
+    await expect(sidebar.locator('a[href]')).toHaveCount(DEALS.slice(0, 3).length + CJ_BANNERS.length);
+
+    await expectNoPriceShapes(inlineCta, 'article AffiliateInlineCTA');
+    await expectNoPriceShapes(sidebar, 'article AffiliateSidebar');
   });
 });

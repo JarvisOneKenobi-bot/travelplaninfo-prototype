@@ -259,8 +259,16 @@ describe("no fabricated claims guard", () => {
       "vrbo-miami-condo",
       "vrbo-nyc-apartment",
     ];
-    const expectedDealOverrides = new Map([
+    // This manifest is intentionally hardcoded instead of derived from CJ_LINKS:
+    // a revenue link silently re-pointed at the wrong advertiser must fail the build.
+    const expectedDealUrls = new Map([
+      ["hotels-miami-beach", "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo"],
+      ["vrbo-miami-condo", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
+      ["cars-miami", "https://www.jdoqocy.com/click-101692716-15586457"],
       ["cruisedirect-caribbean", "https://www.kqzyfj.com/click-101692716-13096782"],
+      ["hotels-cancun", "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo"],
+      ["cars-cancun", "https://www.jdoqocy.com/click-101692716-15586457"],
+      ["vrbo-nyc-apartment", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
       ["cruisedirect-bahamas", "https://www.anrdoezrs.net/click-101692716-13096743"],
     ]);
     const expectedBannerUrls = new Map([
@@ -270,18 +278,18 @@ describe("no fabricated claims guard", () => {
       ["vrbo-vacation-rentals", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
     ]);
 
-    // This manifest is intentionally hardcoded: deleting a revenue link must fail the build.
     expect(DEALS).toHaveLength(8);
     expect(DEALS.map((deal) => deal.id).sort()).toEqual(expectedDealIds);
+    expect([...expectedDealUrls.keys()].sort()).toEqual(expectedDealIds);
 
     for (const deal of DEALS) {
       expect(deal.id).toBeTruthy();
       expect(deal.program).toBeTruthy();
       expect(deal.cta).toBeTruthy();
-      if (expectedDealOverrides.has(deal.id)) {
-        expect(deal.url).toBe(expectedDealOverrides.get(deal.id));
-      }
-      expectCjUrl(getAffiliateUrl(deal));
+      const expectedUrl = expectedDealUrls.get(deal.id);
+      expect(expectedUrl, `${deal.id} missing from hardcoded affiliate URL manifest`).toBeTruthy();
+      expect(getAffiliateUrl(deal)).toBe(expectedUrl);
+      expectCjUrl(expectedUrl as string);
     }
 
     for (const [name, makeUrl] of Object.entries(CJ_LINKS)) {
@@ -302,7 +310,7 @@ describe("no fabricated claims guard", () => {
 
     for (const deal of DEALS.slice(0, 3)) {
       const link = screen.getByRole("link", { name: new RegExp(deal.cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) });
-      expect(link.getAttribute("href")).toBe(getAffiliateUrl(deal));
+      expect(link.getAttribute("href")).toBe(expectedDealUrls.get(deal.id));
     }
 
     for (const banner of CJ_BANNERS) {
