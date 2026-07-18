@@ -144,7 +144,7 @@ Examples: `NYC → city, culture, food, nightlife, romantic` · `CHI → city, c
 New pure module `src/lib/atlas/vibe-preflight.ts`:
 
 ```ts
-preflightVibes(vibes: string[]): 
+preflightVibes(vibes: string[]):
   | { status: "ok" }
   | { status: "unknown_vibes";  unknown: string[]; suggestions: string[] }   // incl. custom free-text
   | { status: "no_match_possible"; wouldMatchIfAny: number }                 // known vibes, but min_overlap=2 can never be met

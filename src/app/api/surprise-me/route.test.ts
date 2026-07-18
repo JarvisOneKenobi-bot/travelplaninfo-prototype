@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "./route";
-import { getSurpriseDestinations } from "@/lib/atlas/surprise";
+import { getSurpriseDestinations, type SurpriseResult } from "@/lib/atlas/surprise";
 
 vi.mock("@/lib/atlas/surprise", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/atlas/surprise")>();
@@ -106,7 +106,7 @@ describe("surprise-me API route", () => {
   });
 
   it("DEGRADED IS NOT CACHED: identical degraded requests call the engine every time", async () => {
-    const engineResult = { origin: "ORD", destinations: [], degraded: { code: "no_routes", reason: "x" } };
+    const engineResult: SurpriseResult = { origin: "ORD", destinations: [], degraded: { code: "no_routes", reason: "x" } };
     mockedGetSurpriseDestinations.mockResolvedValue(engineResult);
 
     await GET(request("origin=ORD&vibes=degraded-not-cached&depart_month=2026-10&trip_length=week"));
@@ -143,7 +143,7 @@ describe("surprise-me API route", () => {
   });
 
   it("NOTICE IS NOT CACHED: measured cards with a live-pricing notice call the engine every time", async () => {
-    const engineResult = {
+    const engineResult: SurpriseResult = {
       origin: "JFK",
       destinations: [
         { name: "Cancún, Mexico", flightPrice: "$220", airline: "jetBlue", nonstop: true, link: "https://example.com/jfk-cun" },

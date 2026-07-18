@@ -3051,4 +3051,3 @@ Every scan/gate in this plan was checked against what it would actually match in
 - **Month-boundary drift (review N5):** `deriveDepartMonth` uses local `new Date(...)` → `toISOString()`, which can drift one month near month-end in western timezones. Pre-existing pattern; the new `upcomingMonths` in the card already uses `Date.UTC`. Noted, not fixed here — flag if Jose wants a sweep.
 - **Match-any copy vs. card count (review N6):** `clarifyMatchAny` reports the honest any-match destination count (e.g. 40) while the re-run renders at most 3 cards. The count states how many places QUALIFY, not how many cards we show — kept as-is; flag the wording to Jose at copy review.
 - **Editorial flag for Jose (review N1):** MOW's bookability for US origins — flagged inline in the Editorial Tag Changes section. Jose decides; do not decide silently. (**N2 — YVR's `beach` tag — is RESOLVED: Jose removed it**, see "Resolved at plan review".)
-
