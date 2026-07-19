@@ -17,7 +17,7 @@ function buildCTAs(opportunities: string[], destination?: string): CTAConfig[] {
   const hotelsCityCTA: CTAConfig = {
     label: "🏨 Hotels",
     title: destination ? `Hotels in ${destination}` : "Find Your Hotel",
-    description: "Top-rated hotels with free cancellation. Best price guaranteed.",
+    description: "Top-rated hotels with free cancellation.",
     cta: "Search Hotels",
     url: destination ? CJ_LINKS.hotelsCity(destination) : CJ_LINKS.hotels(),
   };
@@ -36,7 +36,7 @@ function buildCTAs(opportunities: string[], destination?: string): CTAConfig[] {
     cars: {
       label: "🚗 Car Rental",
       title: "Compare Car Rentals",
-      description: "Compare 500+ suppliers — Hertz, Enterprise, Sixt & more.",
+      description: "Compare suppliers — Hertz, Enterprise, Sixt & more.",
       cta: "Find Cars",
       url: CJ_LINKS.carsCompare(),
     },

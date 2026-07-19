@@ -147,7 +147,7 @@ export const CJ_BANNERS: CJBanner[] = [
   {
     id: "hotels-member-prices",
     advertiser: "Hotels.com",
-    headline: "Save 10%+ with Member Prices",
+    headline: "Hotels.com Member Prices",
     cta: "Book",
     url: "https://www.dpbolvw.net/click-101692716-15612526?sid=travelplaninfo",
     bgFrom: "#D93025",
@@ -171,7 +171,7 @@ export const CJ_BANNERS: CJBanner[] = [
   {
     id: "cruisedirect-deals",
     advertiser: "CruiseDirect",
-    headline: "Cruises Up to 75% Off",
+    headline: "Cruise deals on CruiseDirect",
     cta: "Deals",
     url: "https://www.dpbolvw.net/click-101692716-15734200?sid=travelplaninfo",
     bgFrom: "#00695C",
@@ -183,7 +183,7 @@ export const CJ_BANNERS: CJBanner[] = [
   {
     id: "cars-compare",
     advertiser: "EconomyBookings",
-    headline: "Compare 500+ Car Rentals",
+    headline: "Compare Car Rentals",
     cta: "Compare",
     url: "https://www.anrdoezrs.net/click-101692716-15736982?sid=travelplaninfo",
     bgFrom: "#E65100",

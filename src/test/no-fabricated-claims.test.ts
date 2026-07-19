@@ -107,20 +107,12 @@ const APPROVED_CRUISES_DESC: Record<(typeof LOCALES)[number], string> = {
   it: "Cerca e confronta su CruiseDirect le partenze delle principali compagnie di crociera.",
 };
 
-// These are byte-exact normalized whole-string exemptions for pre-existing, reviewed
-// partner-program claims. Hotels.com Price Match Guarantee and EconomyBookings' best-price
-// guarantee are the partners' own advertised programs, deferred to a future copy sweep.
-// Any new guarantee claim is a violation; near-misses must not be substring-exempted.
-const APPROVED_PARTNER_PROGRAM_CLAIMS = new Set([
-  "500+ suppliers. Best price guarantee. Free cancellation.",
-  "Top-rated hotels with free cancellation. Best price guaranteed.",
-  "Hand-picked 4★ & 5★ hotels. Hotels.com Price Match Guarantee.",
-  "Hoteles 4★ y 5★ seleccionados. Garantía de igualación de precios.",
-  "Hotéis 4★ e 5★ selecionados. Garantia de igualdade de preços.",
-  "Hôtels 4★ et 5★ sélectionnés. Garantie d alignement des prix.",
-  "Ausgewählte 4★ & 5★ Hotels. Preisgarantie.",
-  "Hotel 4★ e 5★ selezionati. Garanzia di corrispondenza prezzi.",
-]);
+// 2026-07-19: every previously-exempted partner-program claim (Hotels.com Price Match
+// Guarantee, EconomyBookings "best price guarantee", "500+ suppliers", etc.) was STRIPPED from
+// live copy in the truthful-copy sweep (Jose: "strip all claims"). The allowlist is now empty
+// on purpose — any guarantee/discount/count claim is a violation with no exemption. Re-adding a
+// string here must be a deliberate, reviewed decision.
+const APPROVED_PARTNER_PROGRAM_CLAIMS = new Set<string>([]);
 
 type Violation = {
   file: string;
@@ -333,14 +325,11 @@ function destinationsSubheading(locale: (typeof LOCALES)[number]): string | unde
   return typeof subheading === "string" ? subheading : undefined;
 }
 
-// Byte-exact normalized whole-string exemption. "garantir" here is the ordinary Portuguese
-// verb "to ensure", not a guarantee claim; /gu?aran/i cannot tell them apart. The copy is a
-// pending product decision and is not ours to change, so it is exempted explicitly and
-// auditably rather than by weakening the pattern. HARDCODED ON PURPOSE: deriving this from the
-// live file would auto-approve any future edit and silently disable the guard.
-const APPROVED_INNOCENT_VERB_COPY = new Set([
-  "Encontre os melhores voos e hotéis nos principais destinos. Comparamos preços nos principais sites de reservas para garantir a melhor oferta.",
-]);
+// 2026-07-19: the PT subheading that used the innocent verb "garantir" (to ensure) was
+// rewritten in the truthful-copy sweep and no longer contains it, so no exemption is needed.
+// The allowlist is empty on purpose — a future guarantee-shaped string in destinations copy is
+// a violation with no exemption. Re-adding here must be a deliberate, reviewed decision.
+const APPROVED_INNOCENT_VERB_COPY = new Set<string>([]);
 
 function formatViolations(title: string, violations: Violation[]): string {
   const lines = violations.map(({ file, line, text }) => `${file}:${line}: "${text}"`);
@@ -435,28 +424,27 @@ describe("no fabricated claims guard", () => {
     expect(matchesAny(partnerGuarantee, DESTINATIONS_I18N_PATTERNS)).toBe(true);
   });
 
-  it("approved partner-program claim exemption manifest stays in sync with the 8 reviewed strings", () => {
-    const reviewedClaims = [
-      "500+ suppliers. Best price guarantee. Free cancellation.",
-      "Top-rated hotels with free cancellation. Best price guaranteed.",
-      ...LOCALES.map((locale) => affiliateRecommendationsLuxuryHotelsDesc(locale)),
-    ];
-
-    expect(reviewedClaims).toHaveLength(APPROVED_PARTNER_PROGRAM_CLAIMS.size);
-    for (const claim of reviewedClaims) {
-      expect(claim).toBeDefined();
-      expect(isApprovedPartnerProgramClaim(claim as string), `${claim} must stay approved byte-exact`).toBe(true);
+  it("partner-program claim allowlist is empty after the 2026-07-19 truthful-copy strip", () => {
+    // All partner-program claims were removed from live copy; nothing is exempted anymore.
+    expect(APPROVED_PARTNER_PROGRAM_CLAIMS.size).toBe(0);
+    // The formerly-claim-bearing luxury-hotel copy is now guarantee-free in every locale.
+    for (const locale of LOCALES) {
+      const desc = affiliateRecommendationsLuxuryHotelsDesc(locale);
+      expect(desc, `messages/${locale}/common.json missing affiliateRecommendations.luxuryHotelsDesc`).toBeTruthy();
+      expect(
+        (desc as string).toLowerCase(),
+        `${locale} luxuryHotelsDesc must no longer contain a guarantee claim`,
+      ).not.toMatch(/guarant|garant|preisgarantie/i);
     }
   });
 
-  it("Arm F: the approved innocent-verb exemption still matches the live PT copy", () => {
+  it("Arm F: the PT subheading no longer needs an innocent-verb exemption", () => {
     const ptSubheading = destinationsSubheading("pt");
 
-    expect(ptSubheading).toBeDefined();
-    expect(APPROVED_INNOCENT_VERB_COPY.size).toBe(1);
-    expect(normalizeMatchedText(ptSubheading as string)).toBe(
-      "Encontre os melhores voos e hotéis nos principais destinos. Comparamos preços nos principais sites de reservas para garantir a melhor oferta.",
-    );
+    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
+    expect(APPROVED_INNOCENT_VERB_COPY.size).toBe(0);
+    // The rewritten copy no longer uses the "garantir" verb, so there is nothing to exempt.
+    expect((ptSubheading as string).toLowerCase()).not.toMatch(/garant/i);
   });
 
   it("Arm F: destinations innocent-verb exemption is byte-exact and does not hide appended fabrications", () => {
@@ -470,26 +458,12 @@ describe("no fabricated claims guard", () => {
     expect(matchesAny(nearMiss, DESTINATIONS_I18N_PATTERNS)).toBe(true);
   });
 
-  it("Arm F: destinations namespace is traversed and only the approved-copy exemption suppresses the PT string", () => {
-    const ptSubheading = destinationsSubheading("pt");
+  it("Arm F: destinations namespace has zero violations after the truthful-copy strip", () => {
+    // With every claim removed and no exemptions, the whole destinations namespace is clean.
     const unexempted = collectI18nNamespaceViolations("destinations", DESTINATIONS_I18N_PATTERNS, new Set());
-
-    expect(ptSubheading, "messages/pt/common.json missing destinations.subheading").toBeDefined();
-    expect(unexempted.length).toBeGreaterThanOrEqual(1);
-    expect(unexempted).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: "messages/pt/common.json",
-          text: normalizeMatchedText(ptSubheading as string),
-        }),
-      ]),
-    );
     expect(
-      collectI18nNamespaceViolations(
-        "destinations",
-        DESTINATIONS_I18N_PATTERNS,
-        APPROVED_INNOCENT_VERB_COPY,
-      ),
+      unexempted,
+      formatViolations("destinations i18n after strip", unexempted),
     ).toHaveLength(0);
   });
 
