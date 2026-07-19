@@ -14,8 +14,6 @@ const destinations = [
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=800&q=80",
-    flightsFrom: "From $99",
-    hotelsFrom: "From $79/night",
     description: "Beaches, nightlife, and world-class dining"
   },
   {
@@ -25,8 +23,6 @@ const destinations = [
     country: "USA",
     region: "Northeast",
     image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80",
-    flightsFrom: "From $129",
-    hotelsFrom: "From $149/night",
     description: "The city that never sleeps"
   },
   {
@@ -36,8 +32,6 @@ const destinations = [
     country: "USA",
     region: "California",
     image: "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=800&q=80",
-    flightsFrom: "From $119",
-    hotelsFrom: "From $99/night",
     description: "Hollywood, beaches, and endless sunshine"
   },
   {
@@ -47,8 +41,6 @@ const destinations = [
     country: "USA",
     region: "Midwest",
     image: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=800&q=80",
-    flightsFrom: "From $89",
-    hotelsFrom: "From $89/night",
     description: "Architecture, deep-dish pizza, and Lake Michigan"
   },
   {
@@ -58,8 +50,6 @@ const destinations = [
     country: "USA",
     region: "Nevada",
     image: "https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=800&q=80",
-    flightsFrom: "From $79",
-    hotelsFrom: "From $49/night",
     description: "Entertainment capital of the world"
   },
   {
@@ -69,8 +59,6 @@ const destinations = [
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1596386461350-326ea777d85f?w=800&q=80",
-    flightsFrom: "From $99",
-    hotelsFrom: "From $85/night",
     description: "Theme parks and family fun"
   },
   {
@@ -80,8 +68,6 @@ const destinations = [
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1560269983-3c767e1a4a5b?w=800&q=80",
-    flightsFrom: "From $89",
-    hotelsFrom: "From $75/night",
     description: "Beaches and boating paradise"
   },
   {
@@ -91,8 +77,6 @@ const destinations = [
     country: "USA",
     region: "Florida",
     image: "https://images.unsplash.com/photo-1580978955498-a1c5aa72b9b0?w=800&q=80",
-    flightsFrom: "From $129",
-    hotelsFrom: "From $119/night",
     description: "Tropical paradise at the end of the road"
   },
   {
@@ -102,8 +86,6 @@ const destinations = [
     country: "Caribbean",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1552353617-3bfd679b3bdd?w=800&q=80",
-    flightsFrom: "From $249",
-    hotelsFrom: "From $150/night",
     description: "Reggae, rum, and beaches"
   },
   {
@@ -113,8 +95,6 @@ const destinations = [
     country: "Caribbean",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1597423244039-d4f591d7b6a9?w=800&q=80",
-    flightsFrom: "From $199",
-    hotelsFrom: "From $130/night",
     description: "Crystal clear waters and private islands"
   },
   {
@@ -124,8 +104,6 @@ const destinations = [
     country: "Dominican Republic",
     region: "Caribbean",
     image: "https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?w=800&q=80",
-    flightsFrom: "From $229",
-    hotelsFrom: "From $110/night",
     description: "All-inclusive resorts and pristine beaches"
   },
   {
@@ -135,8 +113,6 @@ const destinations = [
     country: "Mexico",
     region: "Mexico",
     image: "https://images.unsplash.com/photo-1552074291-ad4dfd8b11c0?w=800&q=80",
-    flightsFrom: "From $179",
-    hotelsFrom: "From $90/night",
     description: "Mayan ruins and Caribbean waters"
   }
 ];
@@ -269,15 +245,6 @@ export default function Destinations() {
                 <div className="p-5">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">{dest.name}</h3>
                   <p className="text-sm text-gray-500 mb-4">{dest.description}</p>
-
-                  <div className="flex gap-3 mb-4">
-                    <div className="bg-orange-50 px-3 py-1.5 rounded-lg">
-                      <p className="text-xs text-orange-600 font-medium">✈️ {dest.flightsFrom}</p>
-                    </div>
-                    <div className="bg-teal-50 px-3 py-1.5 rounded-lg">
-                      <p className="text-xs text-teal-700 font-medium">🏨 {dest.hotelsFrom}</p>
-                    </div>
-                  </div>
 
                   <div className="flex gap-2 mb-2">
                     <a

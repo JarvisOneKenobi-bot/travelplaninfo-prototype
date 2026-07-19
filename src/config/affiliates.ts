@@ -53,8 +53,6 @@ export interface AffiliateDeal {
   id: string;
   title: string;
   subtitle: string;
-  price: string;
-  savings: string;
   program: "hotels" | "vrbo" | "cruises" | "cars";
   cta: string;
   url?: string;  // override getAffiliateUrl() for contextual deep links
@@ -63,10 +61,8 @@ export interface AffiliateDeal {
 export const DEALS: AffiliateDeal[] = [
   {
     id: "hotels-miami-beach",
-    title: "Miami Beach Hotels — Tonight's Deals",
-    subtitle: "Hotels.com · Beachfront from $79/night",
-    price: "$79",
-    savings: "Save up to 40%",
+    title: "Miami Beach Hotels",
+    subtitle: "Hotels.com · Miami Beach stays",
     program: "hotels",
     cta: "Search Hotels",
   },
@@ -74,26 +70,20 @@ export const DEALS: AffiliateDeal[] = [
     id: "vrbo-miami-condo",
     title: "Miami Vacation Rentals",
     subtitle: "Vrbo · Entire homes & condos",
-    price: "$129",
-    savings: "Free cancellation",
     program: "vrbo",
     cta: "Browse Rentals",
   },
   {
     id: "cars-miami",
-    title: "Miami Car Rentals — All Brands Compared",
-    subtitle: "EconomyBookings · Compare 500+ suppliers",
-    price: "From $19",
-    savings: "Best price guarantee",
+    title: "Miami Car Rentals",
+    subtitle: "EconomyBookings · Compare car-rental suppliers",
     program: "cars",
     cta: "Compare Cars",
   },
   {
     id: "cruisedirect-caribbean",
-    title: "Caribbean Cruise from Miami",
-    subtitle: "CruiseDirect · 5-night all-inclusive",
-    price: "$349",
-    savings: "Up to 75% off",
+    title: "Caribbean Cruises from Miami",
+    subtitle: "CruiseDirect · Caribbean sailings",
     program: "cruises",
     cta: "View Cruises",
     url: "https://www.kqzyfj.com/click-101692716-13096782",  // Carnival — most affordable Caribbean
@@ -101,18 +91,14 @@ export const DEALS: AffiliateDeal[] = [
   {
     id: "hotels-cancun",
     title: "Cancún All-Inclusive Resorts",
-    subtitle: "Hotels.com · 7 nights from $899",
-    price: "$899",
-    savings: "Save 35%",
+    subtitle: "Hotels.com · Cancún resorts",
     program: "hotels",
     cta: "Book Resort",
   },
   {
     id: "cars-cancun",
     title: "Cancún Car Rentals",
-    subtitle: "EconomyBookings · Free cancellation options",
-    price: "From $25",
-    savings: "Free cancellation",
+    subtitle: "EconomyBookings · Cancún car rentals",
     program: "cars",
     cta: "Find Cars",
   },
@@ -120,17 +106,13 @@ export const DEALS: AffiliateDeal[] = [
     id: "vrbo-nyc-apartment",
     title: "NYC Vacation Apartments",
     subtitle: "Vrbo · Manhattan & Brooklyn stays",
-    price: "$159",
-    savings: "Weekly discounts",
     program: "vrbo",
     cta: "Find Apartments",
   },
   {
     id: "cruisedirect-bahamas",
-    title: "Bahamas Cruise — 3 Nights",
-    subtitle: "CruiseDirect · Up to $500 onboard credit",
-    price: "$199",
-    savings: "Up to $500 onboard",
+    title: "Bahamas Cruises",
+    subtitle: "CruiseDirect · Bahamas sailings",
     program: "cruises",
     cta: "Escape to Bahamas",
     url: "https://www.anrdoezrs.net/click-101692716-13096743",  // Bahamas deep link

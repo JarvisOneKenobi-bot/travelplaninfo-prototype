@@ -46,12 +46,12 @@ export default function HotDeals() {
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-t border-gray-300 pt-5 mt-8">
+            <div className="grid grid-cols-2 gap-4 border-t border-gray-300 pt-5 mt-8">
               {[
-                { label: "HOTELS", value: "From $79/night", icon: "🏨" },
-                { label: "RENTALS", value: "From $129/night", icon: "🏡" },
-                { label: "CAR RENTALS", value: "From $19/day", icon: "🚗" },
-                { label: "CRUISES", value: "From $199/person", icon: "🚢" },
+                { label: "HOTELS", value: "Hotels.com", icon: "🏨" },
+                { label: "RENTALS", value: "Vrbo", icon: "🏡" },
+                { label: "CAR RENTALS", value: "EconomyBookings", icon: "🚗" },
+                { label: "CRUISES", value: "CruiseDirect", icon: "🚢" },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{s.icon} {s.label}</p>
@@ -68,11 +68,9 @@ export default function HotDeals() {
                 🔥 {t("featuredDeal")}
               </p>
               <h2 className="text-xl font-bold text-gray-900">
-                Caribbean Cruise from Miami
+                Caribbean Cruises from Miami
               </h2>
-              <p className="text-sm text-gray-500 mt-1">CruiseDirect · 5-night all-inclusive from Port Everglades</p>
-              <p className="text-3xl font-bold text-orange-600 mt-3">$349</p>
-              <p className="text-sm text-gray-500 mt-1">Includes meals, entertainment &amp; port stops at Nassau + Cozumel</p>
+              <p className="text-sm text-gray-500 mt-1">Compare Caribbean sailings on CruiseDirect.</p>
               <div className="flex gap-3 mt-5">
                 <span className="flex-1 bg-orange-600 text-white text-sm font-medium py-3 rounded-lg text-center">
                   View on CruiseDirect →
@@ -93,7 +91,6 @@ export default function HotDeals() {
                     {d.program === "hotels" ? "🏨" : d.program === "vrbo" ? "🏡" : "🚢"}
                   </span>{" "}
                   <span className="font-medium">{d.title}</span>
-                  <span className="text-gray-400 ml-2">— {d.price}</span>
                 </a>
               ))}
             </div>
@@ -103,8 +100,8 @@ export default function HotDeals() {
           <div className="lg:col-span-3 space-y-4">
             <a href={CJ_LINKS.hotels()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
               <p className="text-xs uppercase tracking-widest text-teal-600 mb-2">🏨 Hotels.com</p>
-              <h3 className="text-lg font-bold text-gray-900 leading-snug">Late-night hotel deals</h3>
-              <p className="text-sm text-gray-600 mt-1">Up to 45% off Miami Beach stays tonight.</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">Miami Beach hotels</h3>
+              <p className="text-sm text-gray-600 mt-1">Compare Miami Beach stays on Hotels.com.</p>
               <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-teal-700 inline-block">View rates</span>
             </a>
             <a href={CJ_LINKS.vrbo()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -115,8 +112,8 @@ export default function HotDeals() {
             </a>
             <a href={CJ_LINKS.cruisesLastMinute()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
               <p className="text-xs uppercase tracking-widest text-orange-500 mb-2">🚢 CruiseDirect</p>
-              <h3 className="text-lg font-bold text-gray-900 leading-snug">Last minute cruise deals</h3>
-              <p className="text-sm text-gray-600 mt-1">Best price guarantee. No booking fees. Limited inventory.</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">Cruise deals</h3>
+              <p className="text-sm text-gray-600 mt-1">Compare cruise fares on CruiseDirect.</p>
               <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-orange-600 inline-block">Grab a deal</span>
             </a>
             <a href={CJ_LINKS.cars()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -143,10 +140,6 @@ export default function HotDeals() {
                   rel="noopener noreferrer sponsored"
                   className="block p-5 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{deal.savings}</span>
-                    <span className="text-lg font-bold text-gray-900">{deal.price}</span>
-                  </div>
                   <p className="font-medium text-gray-900 text-sm">{deal.title}</p>
                   <p className="text-xs text-gray-500 mt-1">{deal.subtitle}</p>
                   <span className="text-xs font-medium text-orange-600 mt-2 inline-block">{deal.cta} →</span>

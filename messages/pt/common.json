@@ -331,7 +331,7 @@
     "noSpam": "Sem spam. Cancele a qualquer momento."
   },
   "hotDeals": {
-    "tagline": "Feed de Ofertas · Hotéis · Aluguéis · Carros · Cruzeiros",
+    "tagline": "Hotéis · Aluguéis · Carros · Cruzeiros",
     "heading": "Ofertas de viagem selecionadas de parceiros confiáveis — reserve e economize.",
     "subheading": "Compare hotéis no Hotels.com, aluguéis no Vrbo, carros no EconomyBookings e cruzeiros no CruiseDirect.",
     "hotels": "Ofertas Hotels.com",
@@ -345,7 +345,7 @@
     "browseAllGuides": "Ver Todos os Guias →",
     "dealAlerts": "Alertas de Ofertas",
     "dealAlertsDesc": "Pacotes semanais de voos + hotéis com alertas de queda de preço.",
-    "affiliateDisclosure": "TravelPlanInfo ganha uma comissão quando você reserva através dos nossos links parceiros. Os preços mostrados são estimativas e podem variar."
+    "affiliateDisclosure": "TravelPlanInfo ganha uma comissão quando você reserva através dos nossos links parceiros."
   },
   "assistant": {
     "title": "Atlas",
@@ -490,7 +490,7 @@
     "findCars": "Encontrar carros",
     "labelCruises": "Cruzeiros",
     "cruisesTitle": "Cruzeiros pelo Caribe e Bahamas",
-    "cruisesDesc": "Até 75% de desconto. Ofertas de última hora disponíveis.",
+    "cruisesDesc": "Pesquise e compare cruzeiros das principais companhias de cruzeiro no CruiseDirect.",
     "viewCruises": "Ver cruzeiros",
     "labelFlightCompensation": "Compensação de voo",
     "airAdvisorTitle": "Voo atrasado ou cancelado?",

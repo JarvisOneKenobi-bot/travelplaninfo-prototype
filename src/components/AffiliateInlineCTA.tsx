@@ -17,7 +17,7 @@ export default function AffiliateInlineCTA() {
           rel="noopener noreferrer sponsored"
           className="inline-flex items-center gap-2 bg-teal-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-teal-800 transition-colors"
         >
-          🏨 Hotels from $79
+          🏨 Find Hotels
         </a>
         <a
           href={CJ_LINKS.vrbo()}

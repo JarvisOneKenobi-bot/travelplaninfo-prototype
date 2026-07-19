@@ -331,7 +331,7 @@
     "noSpam": "Kein Spam. Jederzeit abmelden."
   },
   "hotDeals": {
-    "tagline": "Live-Angebote · Hotels · Ferienhäuser · Mietwagen · Kreuzfahrten",
+    "tagline": "Hotels · Ferienhäuser · Mietwagen · Kreuzfahrten",
     "heading": "Ausgewählte Reiseangebote von vertrauenswürdigen Partnern — buchen und sparen.",
     "subheading": "Hotels auf Hotels.com, Ferienhäuser auf Vrbo, Mietwagen auf EconomyBookings und Kreuzfahrten auf CruiseDirect vergleichen.",
     "hotels": "Hotels.com Angebote",
@@ -345,7 +345,7 @@
     "browseAllGuides": "Alle Führungen Ansehen →",
     "dealAlerts": "Angebots-Benachrichtigungen",
     "dealAlertsDesc": "Wöchentliche Flug + Hotel-Pakete mit Preissenkungsbenachrichtigungen.",
-    "affiliateDisclosure": "TravelPlanInfo erhält eine Provision, wenn Sie über unsere Partnerlinks buchen. Die angezeigten Preise sind Schätzungen und können variieren."
+    "affiliateDisclosure": "TravelPlanInfo erhält eine Provision, wenn Sie über unsere Partnerlinks buchen."
   },
   "assistant": {
     "title": "Atlas",
@@ -535,7 +535,7 @@
     "findCars": "Autos finden",
     "labelCruises": "Kreuzfahrten",
     "cruisesTitle": "Karibik & Bahamas Kreuzfahrten",
-    "cruisesDesc": "Bis zu 75% Rabatt. Last-Minute-Angebote verfügbar.",
+    "cruisesDesc": "Suchen und vergleichen Sie auf CruiseDirect Kreuzfahrten großer Reedereien.",
     "viewCruises": "Kreuzfahrten ansehen",
     "labelFlightCompensation": "Flugentschädigung",
     "airAdvisorTitle": "Flug verspätet oder gestrichen?",

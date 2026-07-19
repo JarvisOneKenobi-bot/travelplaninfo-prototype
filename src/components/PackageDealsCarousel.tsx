@@ -87,7 +87,7 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
   const shiftCalc = `calc(${offset} * ((100% - ${(VISIBLE - 1) * GAP_PX}px) / ${VISIBLE} + ${GAP_PX}px))`;
 
   return (
-    <div className="space-y-2">
+    <div data-testid="package-deals-carousel" className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("packageDeals")}</h3>
 
       <div className="relative"
@@ -107,25 +107,20 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
             style={{ gap: `${GAP_PX}px`, transform: `translateX(-${shiftCalc})` }}>
             {sortedDeals.map(deal => (
               <a key={deal.id}
+                data-deal-id={deal.id}
                 href={getAffiliateUrl(deal)}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 className="flex-none rounded-xl border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all p-4 space-y-2 bg-white"
                 style={{ width: cardWidthCalc }}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${programColors[deal.program] || ''}`}>
-                    {programLabels[deal.program]}
-                  </span>
-                  <span className="text-xs text-green-600 font-medium">{deal.savings}</span>
-                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${programColors[deal.program] || ''}`}>
+                  {programLabels[deal.program]}
+                </span>
                 <h4 className="text-sm font-semibold text-gray-900 leading-tight">{deal.title}</h4>
                 <p className="text-xs text-gray-500 line-clamp-2">{deal.subtitle}</p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-lg font-bold text-orange-600">{deal.price}</span>
-                  <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
-                    {deal.cta} →
-                  </span>
-                </div>
+                <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
+                  {deal.cta} →
+                </span>
               </a>
             ))}
           </div>
