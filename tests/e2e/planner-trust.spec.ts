@@ -80,6 +80,38 @@ test('POST /api/trips/[id]/resolve-surprise transitions trip from Surprise Me â†
   expect(fetched.entryMode).toBe('surprise');
 });
 
+test('resolved legacy surprise trip hides parked quiz enums', async ({ page, context }) => {
+  const create = await context.request.post('/api/trips', {
+    data: {
+      name: 'Legacy enum visibility test',
+      destination: 'Surprise Me',
+      budget: 'midrange',
+      entry_mode: 'surprise',
+      quiz_vibes: ['big_city'],
+      quiz_budget: 'low',
+      quiz_who: 'couple',
+    },
+  });
+  expect(create.status()).toBe(201);
+  const trip = await create.json();
+  expect(trip.id).toBeTruthy();
+
+  const resolve = await context.request.post(`/api/trips/${trip.id}/resolve-surprise`, {
+    data: { destination: 'Paris, France' },
+  });
+  expect(resolve.status()).toBe(200);
+  const updated = await resolve.json();
+  expect(updated.destination).toBe('Paris, France');
+  expect(updated.entryMode).toBe('surprise');
+
+  await page.goto(`/planner/${trip.id}`);
+  await expect(page.locator('[data-testid="itinerary-builder"]')).toBeVisible();
+  await expect(page.getByText(/^Based on:$/)).toHaveCount(0);
+  await expect(page.getByText(/^(?:big_city|Big_city)$/)).toHaveCount(0);
+  await expect(page.getByText(/^low$/)).toHaveCount(0);
+  await expect(page.getByText(/^couple$/)).toHaveCount(0);
+});
+
 test('resolve-surprise refuses when trip is not Surprise Me', async ({ context }) => {
   const post = await context.request.post('/api/trips', {
     data: { name: 'Already real', destination: 'Miami', budget: 'midrange' },

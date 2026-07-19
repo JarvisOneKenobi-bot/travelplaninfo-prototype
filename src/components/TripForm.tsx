@@ -31,7 +31,45 @@ const BUDGET_VALUES = [
   { value: "luxury", icon: "💎" },
 ];
 
-const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
+const NEARBY_AIRPORT_DISPLAY_NAMES = {
+  MIA: "Miami, Florida",
+  FLL: "Fort Lauderdale, Florida",
+  PBI: "West Palm Beach, Florida",
+  JFK: "New York, New York",
+  EWR: "Newark, New Jersey",
+  LGA: "New York, New York",
+  LAX: "Los Angeles, California",
+  SNA: "Santa Ana, California",
+  BUR: "Burbank, California",
+  LGB: "Long Beach, California",
+  ONT: "Ontario, California",
+  SFO: "San Francisco, California",
+  OAK: "Oakland, California",
+  SJC: "San Jose, California",
+  ORD: "Chicago, Illinois",
+  MDW: "Chicago, Illinois",
+  DFW: "Dallas–Fort Worth, Texas",
+  DAL: "Dallas, Texas",
+  IAH: "Houston, Texas",
+  HOU: "Houston, Texas",
+  ATL: "Atlanta, Georgia",
+  DCA: "Washington, D.C.",
+  IAD: "Washington, D.C.",
+  BWI: "Baltimore, Maryland",
+  BOS: "Boston, Massachusetts",
+  PVD: "Providence, Rhode Island",
+  MHT: "Manchester, New Hampshire",
+  SEA: "Seattle, Washington",
+  MCO: "Orlando, Florida",
+  SFB: "Sanford, Florida",
+  TPA: "Tampa, Florida",
+  SRQ: "Sarasota, Florida",
+  PIE: "St. Petersburg, Florida",
+} as const;
+
+type NearbyAirportCode = keyof typeof NEARBY_AIRPORT_DISPLAY_NAMES;
+
+const NEARBY_AIRPORTS: Record<string, { label: string; airports: NearbyAirportCode[] }> = {
   MIA: { label: "Miami area", airports: ["MIA", "FLL", "PBI"] },
   FLL: { label: "Fort Lauderdale area", airports: ["FLL", "MIA", "PBI"] },
   PBI: { label: "West Palm Beach area", airports: ["PBI", "FLL", "MIA"] },
@@ -383,7 +421,14 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
       <input type="checkbox" checked={includeNearby} onChange={e => setIncludeNearby(e.target.checked)}
         className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
-      {t("searchNearbyAirports")} {NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports.filter(a => a !== origin.trim().toUpperCase()).join(", ")}
+      {t("searchNearbyAirports")} {NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
+        .filter(code => code !== origin.trim().toUpperCase())
+        .map(code => {
+          const name = NEARBY_AIRPORT_DISPLAY_NAMES[code];
+          return name ? `${name} (${code})` : null;
+        })
+        .filter((label): label is string => label !== null)
+        .join(", ")}
     </label>
   ) : null;
 

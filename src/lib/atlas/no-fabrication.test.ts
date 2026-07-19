@@ -124,6 +124,9 @@ function productSourcePath(file: string): string {
   return relative(process.cwd(), file).split("\\").join("/");
 }
 
+const PLANNER_DETAIL_PAGE = "src/app/[locale]/planner/[tripId]/page.tsx";
+const PARKED_QUIZ_RENDER_FIELDS = ["quiz_budget", "quiz_vibes", "quiz_who"] as const;
+
 // The three-mode entry system was rejected 2026-04-10 and its PRESET_VIBES was
 // a second, dead vibe vocabulary that fooled two analyses. It is deleted, and
 // this guard keeps it deleted. NOTE (anti-self-defeat): scan product source
@@ -131,6 +134,14 @@ function productSourcePath(file: string): string {
 // and the rejected component basenames without matching itself.
 describe("dead entry-system stays dead", () => {
   const srcRoot = resolve(process.cwd(), "src");
+
+  it("keeps parked quiz enums out of the resolved-trip planner render path", () => {
+    const content = readFileSync(resolve(process.cwd(), PLANNER_DETAIL_PAGE), "utf-8");
+
+    for (const field of PARKED_QUIZ_RENDER_FIELDS) {
+      expect(content, `${PLANNER_DETAIL_PAGE} must not render trip.${field}`).not.toContain(`trip.${field}`);
+    }
+  });
 
   it("keeps PRESET_VIBES out of every product source module", () => {
     const offenders = productSourceFiles(srcRoot)

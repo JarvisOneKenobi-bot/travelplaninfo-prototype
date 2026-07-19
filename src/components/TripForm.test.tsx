@@ -18,7 +18,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderExploreForm() {
+function renderForm() {
   // preferences prefetch on mount — keep it inert
   vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false })));
   render(
@@ -26,7 +26,16 @@ function renderExploreForm() {
       <TripForm />
     </NextIntlClientProvider>
   );
+}
+
+function renderExploreForm() {
+  renderForm();
   fireEvent.click(screen.getByText(esMessages.tripForm.pathBTitle));
+}
+
+function renderFlightForm() {
+  renderForm();
+  fireEvent.click(screen.getByText(esMessages.tripForm.pathATitle));
 }
 
 // Labels like "Aventura" also exist in the INTERESTS section — scope every
@@ -35,6 +44,21 @@ function vibesSection() {
   const heading = screen.getByText(esMessages.tripForm.whatVibes);
   return within(heading.closest("div") as HTMLElement);
 }
+
+describe("TripForm nearby-airport prompt", () => {
+  it("renders nearby airport names with their codes instead of a bare code list", () => {
+    renderFlightForm();
+
+    fireEvent.change(screen.getByPlaceholderText(esMessages.tripForm.airportCodePlaceholder), {
+      target: { value: "MIA" },
+    });
+
+    const prompt = screen.getByText(new RegExp(esMessages.tripForm.searchNearbyAirports));
+    expect(prompt.textContent).toContain("Fort Lauderdale, Florida (FLL)");
+    expect(prompt.textContent).toContain("West Palm Beach, Florida (PBI)");
+    expect(prompt.textContent).not.toMatch(/:\s*FLL,\s*PBI\s*$/);
+  });
+});
 
 describe("TripForm vibe picker (canonical, localized)", () => {
   it("renders all 11 canonical vibes as chips with localized labels", () => {

@@ -120,27 +120,6 @@ export default async function TripDetail({ params }: Props) {
             <div>
               {/* Atlas smart search consent chip mounts here */}
               <div id="atlas-smart-search-slot" />
-              {/* Quiz context chips for surprise-mode trips that resolved to a destination */}
-              {trip.entry_mode === 'surprise' && trip.quiz_vibes && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="text-sm text-gray-500">Based on:</span>
-                  {trip.quiz_budget && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {trip.quiz_budget.replace('_', '-')}
-                    </span>
-                  )}
-                  {JSON.parse(trip.quiz_vibes || '[]').map((v: string) => (
-                    <span key={v} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
-                      {v}
-                    </span>
-                  ))}
-                  {trip.quiz_who && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full capitalize">
-                      {trip.quiz_who}
-                    </span>
-                  )}
-                </div>
-              )}
               {items.length === 0 && assistantHealth.healthy && (
                 <div
                   data-testid="atlas-ready-hint"
