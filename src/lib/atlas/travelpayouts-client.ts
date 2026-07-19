@@ -1,10 +1,12 @@
 import { TP_CONFIG } from "@/config/affiliates";
+import { airlineDisplayName } from "./airline-names";
 
 const BASE_URL = "https://api.travelpayouts.com";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const TIMEOUT_MS = 10 * 1000;
 const RATE_LIMIT = 200;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+export const NO_PRICE_LABEL = "—";
 
 export interface FlightOption {
   origin: string;
@@ -14,7 +16,7 @@ export interface FlightOption {
   flight_number?: string;
   departure_at: string;
   return_at?: string | null;
-  transfers: number;
+  transfers: number | null;
   link: string;
 }
 
@@ -63,12 +65,12 @@ export interface DestinationSuggestion {
   estimated_flight: string;
 }
 
-type TpResponse = { success?: boolean; data?: unknown };
+export type TpResponse = { success?: boolean; data?: unknown };
 type CacheEntry = { data: TpResponse; expiresAt: number };
-type TpFailure = "no_token" | "rate_limited" | "http_error" | "timeout";
-type TpResult = { data: TpResponse } | { failure: TpFailure };
+export type TpFailure = "no_token" | "rate_limited" | "http_error" | "timeout";
+export type TpResult = { data: TpResponse } | { failure: TpFailure };
 
-const FAILURE_REASONS: Record<TpFailure, string> = {
+export const FAILURE_REASONS: Record<TpFailure, string> = {
   no_token:
     "Live flight search is not configured (missing Travelpayouts token). The search could not run — this does NOT mean no flights exist.",
   rate_limited:
@@ -81,7 +83,7 @@ const FAILURE_REASONS: Record<TpFailure, string> = {
 
 let warnedNoToken = false;
 
-type TpFlightItem = {
+export type TpFlightItem = {
   origin?: string;
   destination?: string;
   price?: number | null;
@@ -161,6 +163,9 @@ export const IATA_TO_CITY: Record<string, string> = {
   "RSW": "Fort Myers, Florida",
   "PBI": "West Palm Beach, Florida",
   "JAX": "Jacksonville, Florida",
+  "SLC": "Salt Lake City, Utah",
+  // Canada
+  "YVR": "Vancouver, Canada",
   // Europe
   "LHR": "London, England",
   "LGW": "London Gatwick, England",
@@ -170,6 +175,7 @@ export const IATA_TO_CITY: Record<string, string> = {
   "MXP": "Milan, Italy",
   "BCN": "Barcelona, Spain",
   "MAD": "Madrid, Spain",
+  "AGP": "Málaga, Spain",
   "AMS": "Amsterdam, Netherlands",
   "DUB": "Dublin, Ireland",
   "LIS": "Lisbon, Portugal",
@@ -182,6 +188,7 @@ export const IATA_TO_CITY: Record<string, string> = {
   "OSL": "Oslo, Norway",
   "HEL": "Helsinki, Finland",
   "ZRH": "Zurich, Switzerland",
+  "GVA": "Geneva, Switzerland",
   "VIE": "Vienna, Austria",
   "WAW": "Warsaw, Poland",
   "PRG": "Prague, Czech Republic",
@@ -244,7 +251,7 @@ export const IATA_TO_CITY: Record<string, string> = {
 const cache = new Map<string, CacheEntry>();
 const requestTimestamps: number[] = [];
 
-function cleanIata(value: string): string {
+export function cleanIata(value: string): string {
   return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
 }
 
@@ -253,7 +260,7 @@ export function parseIata(value: string): string | null {
   return /^[A-Z]{3}$/.test(cleaned) ? cleaned : null;
 }
 
-const INVALID_IATA_REASON =
+export const INVALID_IATA_REASON =
   "origin and destination must be 3-letter IATA airport codes (e.g. CUN for Cancún, MIA for Miami) — pass the airport code, not a city name.";
 
 function formatDateOffset(days: number): string {
@@ -262,13 +269,13 @@ function formatDateOffset(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function nextMonthUtc(): string {
+export function nextMonthUtc(): string {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return next.toISOString().slice(0, 7);
 }
 
-function addDays(dateString: string, days: number): string | undefined {
+export function addDays(dateString: string, days: number): string | undefined {
   const [year, month, day] = dateString.split("-").map(Number);
   if (!year || !month || !day) return undefined;
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -285,11 +292,11 @@ function datePart(dateString: string | undefined): string {
 }
 
 function formatPrice(price: number | null | undefined, suffix = ""): string {
-  const value = price ?? 0;
-  return value > 0 ? `$${value}${suffix}` : "$0";
+  return price != null && price > 0 ? `$${price}${suffix}` : NO_PRICE_LABEL;
 }
 
-function formatStops(transfers: number): string {
+function formatStops(transfers: number | null): string {
+  if (transfers == null) return "";
   if (transfers === 0) return "Nonstop";
   return `${transfers} ${transfers === 1 ? "stop" : "stops"}`;
 }
@@ -323,7 +330,7 @@ function checkRateLimit(): boolean {
   return requestTimestamps.length < RATE_LIMIT;
 }
 
-async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResult> {
+export async function tpGet(path: string, params: Record<string, string | number>): Promise<TpResult> {
   const key = cacheKey(path, params);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return { data: cached.data };
@@ -362,7 +369,7 @@ async function tpGet(path: string, params: Record<string, string | number>): Pro
   }
 }
 
-function rawItems(data: TpResponse): TpFlightItem[] {
+export function rawItems(data: TpResponse): TpFlightItem[] {
   if (!data?.success || !Array.isArray(data.data)) return [];
   return data.data as TpFlightItem[];
 }
@@ -382,12 +389,12 @@ function normalizeFlights(
     flight_number: item.flight_number ?? "",
     departure_at: item.departure_at ?? departDate,
     return_at: item.return_at ?? returnDate,
-    transfers: item.transfers ?? 0,
+    transfers: item.transfers ?? null,
     link: buildAviasalesLink(origin, destination, departDate, returnDate),
   }));
 }
 
-async function rawSearchFlights(
+export async function rawSearchFlights(
   origin: string,
   destination: string,
   departDate: string,
@@ -479,7 +486,7 @@ export async function searchFlights(
     .sort((a, b) => (a.price ?? 999999) - (b.price ?? 999999))
     .slice(0, 10)
     .map((flight) => ({
-      airline: flight.airline ?? "",
+      airline: airlineDisplayName(flight.airline),
       route: `${flight.origin} → ${flight.destination}`,
       price: formatPrice(flight.price, flight.return_at && (flight.price ?? 0) > 0 ? " round-trip" : ""),
       duration: "",

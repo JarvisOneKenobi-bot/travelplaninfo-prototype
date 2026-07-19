@@ -1,0 +1,151 @@
+
+ RUN  v4.1.7 /home/jarvis/.openclaw/workspace/jarvis-project/travelplaninfo-prototype/.worktrees/surprise-me
+
+ ❯ src/lib/atlas/vibe-vocabulary.guard.test.ts (4 tests | 4 failed) 10ms
+     × every vibe a user can click exists in the taxonomy (no dud chips) 5ms
+     × the taxonomy vocabulary EQUALS the picker vocabulary (no orphan tags) 2ms
+     × every pickable vibe is carried by at least 8 destinations (a chip that exists but matches nothing is the bug we shipped) 0ms
+     × the picker exposes exactly the 11 canonical vibes 1ms
+ ❯ src/lib/atlas/surprise.test.ts (32 tests | 5 failed) 20ms
+     × vibes=mountains,cultural returns at least the matching mocked route 3ms
+     × vibes=winter,cultural returns at least the matching mocked route 0ms
+     × vibes=mountains,winter returns at least the matching mocked route 0ms
+     × single vibe family surfaces the matching mocked route 1ms
+     × single vibe winter surfaces the matching mocked route 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/atlas/surprise.test.ts > LIVE BUG PINS: the dud chips must return destinations (mocked TP) > vibes=mountains,cultural returns at least the matching mocked route
+ FAIL  src/lib/atlas/surprise.test.ts > LIVE BUG PINS: the dud chips must return destinations (mocked TP) > vibes=winter,cultural returns at least the matching mocked route
+ FAIL  src/lib/atlas/surprise.test.ts > LIVE BUG PINS: the dud chips must return destinations (mocked TP) > vibes=mountains,winter returns at least the matching mocked route
+AssertionError: expected 0 to be greater than or equal to 1
+ ❯ src/lib/atlas/surprise.test.ts:381:40
+    379|     const result = await getSurpriseDestinations({ origin: "JFK", vibe…
+    380|
+    381|     expect(result.destinations.length).toBeGreaterThanOrEqual(1);
+       |                                        ^
+    382|     expect(result.destinations.map((d) => d.name)).toContain(cityName);
+    383|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/lib/atlas/surprise.test.ts > ORPHANS UNLOCKED + NEW VIBES: each newly exposed vibe matches real routes > single vibe family surfaces the matching mocked route
+AssertionError: expected [] to include 'Orlando, Florida'
+ ❯ src/lib/atlas/surprise.test.ts:398:52
+    396|     const result = await getSurpriseDestinations({ origin: "JFK", vibe…
+    397|
+    398|     expect(result.destinations.map((d) => d.name)).toContain(cityName);
+       |                                                    ^
+    399|   });
+    400| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  src/lib/atlas/surprise.test.ts > ORPHANS UNLOCKED + NEW VIBES: each newly exposed vibe matches real routes > single vibe winter surfaces the matching mocked route
+AssertionError: expected [] to include 'Denver, Colorado'
+ ❯ src/lib/atlas/surprise.test.ts:398:52
+    396|     const result = await getSurpriseDestinations({ origin: "JFK", vibe…
+    397|
+    398|     expect(result.destinations.map((d) => d.name)).toContain(cityName);
+       |                                                    ^
+    399|   });
+    400| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/lib/atlas/vibe-vocabulary.guard.test.ts > vibe vocabulary regression guard > every vibe a user can click exists in the taxonomy (no dud chips)
+AssertionError: picker vibe "mountains" matches nothing in DESTINATION_VIBES: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/lib/atlas/vibe-vocabulary.guard.test.ts:37:100
+     35|     const vocabulary = taxonomyVocabulary();
+     36|     for (const value of pickerValues()) {
+     37|       expect(vocabulary.has(value), `picker vibe "${value}" matches no…
+       |                                                                                                    ^
+     38|     }
+     39|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  src/lib/atlas/vibe-vocabulary.guard.test.ts > vibe vocabulary regression guard > the taxonomy vocabulary EQUALS the picker vocabulary (no orphan tags)
+AssertionError: expected [ 'adventure', 'beach', …(7) ] to deeply equal [ 'adventure', 'beach', …(5) ]
+
+- Expected
++ Received
+
+  [
+    "adventure",
+    "beach",
+    "big_city",
+    "cultural",
+-   "mountains",
++   "foodie",
++   "mountain",
++   "nightlife",
++   "romantic",
+    "tropical",
+-   "winter",
+  ]
+
+ ❯ src/lib/atlas/vibe-vocabulary.guard.test.ts:42:46
+     40|
+     41|   it("the taxonomy vocabulary EQUALS the picker vocabulary (no orphan …
+     42|     expect([...taxonomyVocabulary()].sort()).toEqual([...pickerValues(…
+       |                                              ^
+     43|   });
+     44|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  src/lib/atlas/vibe-vocabulary.guard.test.ts > vibe vocabulary regression guard > every pickable vibe is carried by at least 8 destinations (a chip that exists but matches nothing is the bug we shipped)
+AssertionError: "mountains" is carried by only 0 destinations: expected 0 to be greater than or equal to 8
+ ❯ src/lib/atlas/vibe-vocabulary.guard.test.ts:50:82
+     48|         (tags as ReadonlySet<string>).has(value)
+     49|       ).length;
+     50|       expect(carriers, `"${value}" is carried by only ${carriers} dest…
+       |                                                                                  ^
+     51|     }
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  src/lib/atlas/vibe-vocabulary.guard.test.ts > vibe vocabulary regression guard > the picker exposes exactly the 11 canonical vibes
+AssertionError: expected [ 'adventure', 'beach', …(5) ] to deeply equal [ 'adventure', 'beach', …(9) ]
+
+- Expected
++ Received
+
+  [
+    "adventure",
+    "beach",
+    "big_city",
+    "cultural",
+-   "family",
+-   "foodie",
+    "mountains",
+-   "nightlife",
+-   "romantic",
+    "tropical",
+    "winter",
+  ]
+
+ ❯ src/lib/atlas/vibe-vocabulary.guard.test.ts:55:40
+     53|
+     54|   it("the picker exposes exactly the 11 canonical vibes", () => {
+     55|     expect([...pickerValues()].sort()).toEqual(CANONICAL_TARGET);
+       |                                        ^
+     56|   });
+     57|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  9 failed | 27 passed (36)
+   Start at  19:37:03
+   Duration  724ms (transform 138ms, setup 0ms, import 195ms, tests 30ms, environment 963ms)

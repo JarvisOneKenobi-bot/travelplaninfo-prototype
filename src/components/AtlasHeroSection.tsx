@@ -7,13 +7,12 @@ interface Destination {
   name: string;
   airline: string;
   flightPrice: string;
-  hotelPrice?: string;
   nonstop: boolean;
 }
 
 interface AtlasHeroSectionProps {
   destinations: Destination[];
-  originCode: string;
+  originName?: string | null;
   vibesSummary: string;
   budgetLabel: string;
   onTellMeMore: (index: number) => void;
@@ -24,7 +23,7 @@ interface AtlasHeroSectionProps {
 
 export default function AtlasHeroSection({
   destinations,
-  originCode,
+  originName,
   vibesSummary,
   budgetLabel,
   onTellMeMore,
@@ -46,11 +45,9 @@ export default function AtlasHeroSection({
             {t("title", { count: destinations.length })}
           </p>
           <p className="text-sm text-orange-800">
-            {t("subtitle", {
-              vibes: vibesSummary,
-              origin: originCode,
-              budget: budgetLabel,
-            })}
+            {originName
+              ? t("subtitle", { vibes: vibesSummary, origin: originName, budget: budgetLabel })
+              : t("subtitleNoOrigin", { vibes: vibesSummary, budget: budgetLabel })}
           </p>
         </div>
       </div>
@@ -63,7 +60,6 @@ export default function AtlasHeroSection({
             destination={dest.name}
             airline={dest.airline}
             flightPrice={dest.flightPrice}
-            hotelPrice={dest.hotelPrice}
             nonstop={dest.nonstop}
             isTopPick={i === 0}
             onTellMeMore={() => onTellMeMore(i)}

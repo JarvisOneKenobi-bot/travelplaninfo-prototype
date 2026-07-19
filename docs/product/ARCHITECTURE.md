@@ -20,9 +20,10 @@ Public HTTPS
 
 Current documented deploy runbook agrees on Nginx -> PM2 -> Next.js -> SQLite (`docs/deployment/local-to-vps.md:20-34`, `:97-115`).
 
-Architecture decision D2 changes Atlas from this current interim shape:
+Architecture decision D2 changed Atlas from this historical pre-D2 shape:
 
 ```text
+HISTORICAL / pre-D2 only:
 Next.js /api/assistant/chat
   -> FastAPI at FASTAPI_URL or localhost:8766
   -> command-post credentials/state/cost tracking
@@ -85,7 +86,7 @@ This table is the source for the env preflight script that Phase 2/5 must add.
 | `GOOGLE_CLIENT_ID` | Google OAuth | Optional if credentials auth remains | Google sign-in disabled if pair incomplete. |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | Optional if credentials auth remains | Google sign-in disabled if pair incomplete. |
 | `NODE_ENV` | Runtime mode | Yes | Must be `production` on VPS. |
-| `FASTAPI_URL` | Legacy FastAPI proxy only | No after D2 | Before D2, absence falls back to `http://localhost:8766` (`server-config.ts:91-95`) and must keep health false if unreachable. After D2, remove from prod contract. |
+| `FASTAPI_URL` | Removed on 2026-07-11 | No | No code path reads this variable anymore; it remains documented only as a removed legacy FastAPI proxy setting. |
 | `BASE_URL` | Playwright target | Verification only | Defaults to `http://localhost:3001`; set explicitly for production smoke. |
 
 Legacy credential files:
@@ -160,4 +161,4 @@ Production gates to wire into runbook:
 - Sitemap/canonical sample matches `SEO_MIGRATION_STRATEGY.md`.
 - For Phase 2+: guest production Atlas chat returns streamed response and at least one real tool card with workstation off.
 
-The existing runbook's `curl -I http://127.0.0.1:8766/ || true` pattern (`docs/deployment/local-to-vps.md:242-246`) must be removed or replaced; assistant dependency checks may not be allowed to pass with `|| true`.
+The obsolete FastAPI sidecar health-check step was removed from the runbook on 2026-07-11; assistant dependency checks now target the app-native health endpoint and may not be allowed to pass with an ignored failure.

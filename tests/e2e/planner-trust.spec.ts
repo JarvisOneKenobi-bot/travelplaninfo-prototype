@@ -2,10 +2,9 @@ import { test, expect } from '@playwright/test';
 
 // These specs assert the Atlas consent chip/nudges appear, which now requires
 // GET /api/assistant/health to report healthy:true. That in turn requires the
-// FastAPI backend to be reachable at FASTAPI_URL (default http://localhost:8766)
-// and ANTHROPIC_API_KEY (or ~/.openclaw/credentials/anthropic.json) to be set —
-// both already expected to be true in local dev; this suite does not run
-// against an environment where the assistant backend is intentionally down.
+// native Next.js assistant to have ANTHROPIC_API_KEY (or
+// ~/.openclaw/credentials/anthropic.json) available; this suite does not run
+// against an environment where the assistant is intentionally down.
 
 test.describe('Planner trust + trigger governance', () => {
   test('Atlas does not auto-send for Surprise Me trip', async ({ page }) => {
@@ -81,6 +80,38 @@ test('POST /api/trips/[id]/resolve-surprise transitions trip from Surprise Me �
   expect(fetched.entryMode).toBe('surprise');
 });
 
+test('resolved legacy surprise trip hides parked quiz enums', async ({ page, context }) => {
+  const create = await context.request.post('/api/trips', {
+    data: {
+      name: 'Legacy enum visibility test',
+      destination: 'Surprise Me',
+      budget: 'midrange',
+      entry_mode: 'surprise',
+      quiz_vibes: ['big_city'],
+      quiz_budget: 'low',
+      quiz_who: 'couple',
+    },
+  });
+  expect(create.status()).toBe(201);
+  const trip = await create.json();
+  expect(trip.id).toBeTruthy();
+
+  const resolve = await context.request.post(`/api/trips/${trip.id}/resolve-surprise`, {
+    data: { destination: 'Paris, France' },
+  });
+  expect(resolve.status()).toBe(200);
+  const updated = await resolve.json();
+  expect(updated.destination).toBe('Paris, France');
+  expect(updated.entryMode).toBe('surprise');
+
+  await page.goto(`/planner/${trip.id}`);
+  await expect(page.locator('[data-testid="itinerary-builder"]')).toBeVisible();
+  await expect(page.getByText(/^Based on:$/)).toHaveCount(0);
+  await expect(page.getByText(/^(?:big_city|Big_city)$/)).toHaveCount(0);
+  await expect(page.getByText(/^low$/)).toHaveCount(0);
+  await expect(page.getByText(/^couple$/)).toHaveCount(0);
+});
+
 test('resolve-surprise refuses when trip is not Surprise Me', async ({ context }) => {
   const post = await context.request.post('/api/trips', {
     data: { name: 'Already real', destination: 'Miami', budget: 'midrange' },
@@ -118,6 +149,18 @@ test('Path B → "Plan a trip to X" CTA resolves trip and renders Path A', async
     data: { name: 'CTA test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA' },
   });
   const trip = await post.json();
+  await context.route('/api/surprise-me*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      origin: 'MIA',
+      destinations: [
+        { name: 'Cancún, Mexico', flightPrice: '$142', airline: 'NK', nonstop: true, link: 'https://www.aviasales.com/search/MIA0108CUN1?marker=164743' },
+        { name: 'San Juan, Puerto Rico', flightPrice: '$168', airline: 'B6', nonstop: true, link: '' },
+        { name: 'Punta Cana, Dominican Republic', flightPrice: '$203', airline: 'NK', nonstop: false, link: '' },
+      ],
+    }),
+  }));
   await page.goto(`/planner/${trip.id}`);
 
   // Wait for SurpriseMeSection to load destinations
@@ -219,4 +262,85 @@ test('Guest user sees bootstrap onboarding once', async ({ page, context }) => {
   await page.reload();
   await page.waitForTimeout(2000);
   await expect(page.locator('[data-testid="onboarding-bootstrap"]')).not.toBeVisible();
+});
+
+test('impossible vibe combo renders the clarification card, and match-any re-runs the search', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: {
+      name: 'Clarify test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA',
+      interests: ['vibe:tropical', 'vibe:winter'],
+    },
+  });
+  const trip = await post.json();
+
+  await context.route('/api/surprise-me*', (route) => {
+    const url = route.request().url();
+    if (url.includes('match=any')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          origin: 'MIA',
+          originName: 'Miami, Florida',
+          destinations: [
+            { name: 'Cancún, Mexico', flightPrice: '$142', airline: 'AA', nonstop: true, link: '' },
+            { name: 'Denver, Colorado', flightPrice: '$98', airline: 'UA', nonstop: true, link: '' },
+          ],
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        origin: 'MIA',
+        originName: 'Miami, Florida',
+        destinations: [],
+        degraded: { code: 'no_match_possible', reason: 'engine prose' },
+        preflight: { status: 'no_match_possible', wouldMatchIfAny: 40 },
+      }),
+    });
+  });
+
+  await page.goto(`/planner/${trip.id}`);
+
+  const card = page.locator('[data-testid="surprise-clarification-card"]');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card).toContainText('40');
+  // it clarifies — it never invents a destination card
+  await expect(page.locator('[data-testid="atlas-destination-card"]')).toHaveCount(0);
+
+  await page.click('[data-testid="clarify-match-any"]');
+  await expect(page.locator('[data-testid="atlas-destination-card"]')).toHaveCount(2, { timeout: 10000 });
+  await expect(page.locator('[data-testid="surprise-clarification-card"]')).toHaveCount(0);
+});
+
+test('unknown free-text vibe renders suggestions instead of a silent dead end', async ({ page, context }) => {
+  const post = await context.request.post('/api/trips', {
+    data: {
+      name: 'Unknown vibe test', destination: 'Surprise Me', budget: 'midrange', origin: 'MIA',
+      interests: ['vibe:custom:wine tasting', 'vibe:beach'],
+    },
+  });
+  const trip = await post.json();
+
+  await context.route('/api/surprise-me*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      origin: 'MIA',
+      originName: 'Miami, Florida',
+      destinations: [],
+      degraded: { code: 'unknown_vibes', reason: 'engine prose' },
+      preflight: { status: 'unknown_vibes', unknown: ['wine tasting'], suggestions: ['foodie'] },
+    }),
+  }));
+
+  await page.goto(`/planner/${trip.id}`);
+
+  const card = page.locator('[data-testid="surprise-clarification-card"]');
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await expect(card).toContainText('wine tasting');
+  await expect(page.locator('[data-testid="clarify-suggestion"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="surprise-fallback-banner"]')).toHaveCount(0);
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { CANONICAL_VIBES, VIBE_ICONS, type CanonicalVibe } from "@/lib/trip-types";
 
 interface TripContextStripProps {
-  origin: string | null;
-  nearbyAirports: string[];
+  originLabel: string | null;
+  extraAirportLabels: string[];
   budget: string | null;
   vibes: string[];
   interests: string[];
@@ -12,15 +13,7 @@ interface TripContextStripProps {
   childrenCount: number;
 }
 
-const VIBE_EMOJIS: Record<string, string> = {
-  tropical: "\u{1F334}",
-  mountains: "\u{1F3D4}\uFE0F",
-  big_city: "\u{1F3D9}\uFE0F",
-  beach: "\u{1F30A}",
-  winter: "\u2744\uFE0F",
-  cultural: "\u{1F3DB}\uFE0F",
-  adventure: "\u{1F3D5}\uFE0F",
-};
+const CANONICAL = new Set<string>(CANONICAL_VIBES);
 
 const INTEREST_EMOJIS: Record<string, string> = {
   beach: "\u{1F3D6}\uFE0F",
@@ -41,8 +34,8 @@ const INTEREST_EMOJIS: Record<string, string> = {
 };
 
 export default function TripContextStrip({
-  origin,
-  nearbyAirports,
+  originLabel,
+  extraAirportLabels,
   budget,
   vibes,
   interests,
@@ -50,10 +43,7 @@ export default function TripContextStrip({
   childrenCount: childCount,
 }: TripContextStripProps) {
   const t = useTranslations("contextStrip");
-
-  const extraAirports = nearbyAirports.filter(
-    (code) => code !== origin
-  );
+  const tVibes = useTranslations("tripForm.vibes");
 
   const budgetLabel =
     budget === "budget"
@@ -67,12 +57,12 @@ export default function TripContextStrip({
   return (
     <div className="flex flex-wrap gap-2">
       {/* Origin pill */}
-      {origin && (
+      {originLabel && (
         <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs">
-          {"\u2708\uFE0F"} {origin}
-          {extraAirports.length > 0 && (
+          {"✈️"} {originLabel}
+          {extraAirportLabels.length > 0 && (
             <span className="ml-1 text-amber-600">
-              (+ {extraAirports.join(", ")})
+              (+ {extraAirportLabels.join(" · ")})
             </span>
           )}
         </span>
@@ -91,8 +81,9 @@ export default function TripContextStrip({
           key={vibe}
           className="inline-flex items-center rounded-full border border-pink-300 bg-pink-50 px-3 py-1 text-xs"
         >
-          {VIBE_EMOJIS[vibe] ? `${VIBE_EMOJIS[vibe]} ` : ""}
-          {vibe}
+          {CANONICAL.has(vibe)
+            ? `${VIBE_ICONS[vibe as CanonicalVibe]} ${tVibes(vibe)}`
+            : vibe}
         </span>
       ))}
 

@@ -4,7 +4,6 @@ import * as os from "os";
 import * as path from "path";
 
 const DEFAULT_APP_BASE_URL = "http://localhost:3000";
-const DEFAULT_FASTAPI_BASE_URL = "http://localhost:8766";
 
 function readTrimmedEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -86,13 +85,6 @@ export function getAuthenticatedAppBaseUrl(): string {
 export function getRequestAwareAppBaseUrl(origin?: string): string {
   const parsedOrigin = parseAbsoluteHttpUrl(origin?.trim() || "");
   return parsedOrigin ? normalizeBaseUrl(parsedOrigin.toString()) : getAppBaseUrl();
-}
-
-export function getFastApiBaseUrl(): string {
-  return getValidatedBaseUrl(
-    [readTrimmedEnv("FASTAPI_URL")],
-    DEFAULT_FASTAPI_BASE_URL
-  );
 }
 
 export function getAnthropicApiKey(): string {

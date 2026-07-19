@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { VIBE_OPTIONS } from "@/lib/trip-types";
 import PackageDealsCarousel from "./PackageDealsCarousel";
 
 const INTERESTS = [
@@ -24,23 +25,51 @@ const INTERESTS = [
   { value: "family_travel", icon: "👨‍👩‍👧‍👦" },
 ];
 
-const VIBES = [
-  { value: "tropical", icon: "🌴", label: "Tropical" },
-  { value: "mountains", icon: "🏔️", label: "Mountains" },
-  { value: "big_city", icon: "🏙️", label: "Big City" },
-  { value: "beach", icon: "🌊", label: "Beach" },
-  { value: "winter", icon: "❄️", label: "Winter Escape" },
-  { value: "cultural", icon: "🏛️", label: "Cultural" },
-  { value: "adventure", icon: "🏕️", label: "Adventure" },
-];
-
 const BUDGET_VALUES = [
   { value: "budget", icon: "💰" },
   { value: "midrange", icon: "💵" },
   { value: "luxury", icon: "💎" },
 ];
 
-const NEARBY_AIRPORTS: Record<string, { label: string; airports: string[] }> = {
+const NEARBY_AIRPORT_DISPLAY_NAMES = {
+  MIA: "Miami, Florida",
+  FLL: "Fort Lauderdale, Florida",
+  PBI: "West Palm Beach, Florida",
+  JFK: "New York, New York",
+  EWR: "Newark, New Jersey",
+  LGA: "New York, New York",
+  LAX: "Los Angeles, California",
+  SNA: "Santa Ana, California",
+  BUR: "Burbank, California",
+  LGB: "Long Beach, California",
+  ONT: "Ontario, California",
+  SFO: "San Francisco, California",
+  OAK: "Oakland, California",
+  SJC: "San Jose, California",
+  ORD: "Chicago, Illinois",
+  MDW: "Chicago, Illinois",
+  DFW: "Dallas–Fort Worth, Texas",
+  DAL: "Dallas, Texas",
+  IAH: "Houston, Texas",
+  HOU: "Houston, Texas",
+  ATL: "Atlanta, Georgia",
+  DCA: "Washington, D.C.",
+  IAD: "Washington, D.C.",
+  BWI: "Baltimore, Maryland",
+  BOS: "Boston, Massachusetts",
+  PVD: "Providence, Rhode Island",
+  MHT: "Manchester, New Hampshire",
+  SEA: "Seattle, Washington",
+  MCO: "Orlando, Florida",
+  SFB: "Sanford, Florida",
+  TPA: "Tampa, Florida",
+  SRQ: "Sarasota, Florida",
+  PIE: "St. Petersburg, Florida",
+} as const;
+
+type NearbyAirportCode = keyof typeof NEARBY_AIRPORT_DISPLAY_NAMES;
+
+const NEARBY_AIRPORTS: Record<string, { label: string; airports: NearbyAirportCode[] }> = {
   MIA: { label: "Miami area", airports: ["MIA", "FLL", "PBI"] },
   FLL: { label: "Fort Lauderdale area", airports: ["FLL", "MIA", "PBI"] },
   PBI: { label: "West Palm Beach area", airports: ["PBI", "FLL", "MIA"] },
@@ -264,7 +293,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
 
   function addCustomVibes(raw: string) {
     const items = raw.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-    const newOnes = items.filter(i => !customVibes.includes(i) && !VIBES.some(v => v.value === i));
+    const newOnes = items.filter(i => !customVibes.includes(i) && !VIBE_OPTIONS.some(v => v.value === i));
     if (newOnes.length > 0) setCustomVibes(prev => [...prev, ...newOnes]);
     setCustomVibeInput("");
   }
@@ -392,7 +421,14 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
     <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
       <input type="checkbox" checked={includeNearby} onChange={e => setIncludeNearby(e.target.checked)}
         className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
-      {t("searchNearbyAirports")} {NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports.filter(a => a !== origin.trim().toUpperCase()).join(", ")}
+      {t("searchNearbyAirports")} {NEARBY_AIRPORTS[origin.trim().toUpperCase()].airports
+        .filter(code => code !== origin.trim().toUpperCase())
+        .map(code => {
+          const name = NEARBY_AIRPORT_DISPLAY_NAMES[code];
+          return name ? `${name} (${code})` : null;
+        })
+        .filter((label): label is string => label !== null)
+        .join(", ")}
     </label>
   ) : null;
 
@@ -748,14 +784,14 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
           <div className={sectionBorder(vibesComplete)}>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("whatVibes")}</h3>
             <div className="flex flex-wrap gap-2">
-              {VIBES.map(v => (
+              {VIBE_OPTIONS.map(v => (
                 <button key={v.value} type="button" onClick={() => toggleVibe(v.value)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     vibes.includes(v.value)
                       ? 'bg-pink-100 border-pink-400 text-pink-800'
                       : 'bg-white border-gray-300 text-gray-600 hover:border-pink-300'
                   }`}>
-                  {v.icon} {v.label}
+                  {v.icon} {t(`vibes.${v.value}`)}
                 </button>
               ))}
               {customVibes.map(c => (

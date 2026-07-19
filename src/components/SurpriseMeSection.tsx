@@ -1,16 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { resolveDegradedBody } from "@/lib/atlas/surprise-degrade";
+import { buildSurpriseQuery, deriveDepartMonth, normalizeVibes } from "@/lib/atlas/surprise-query";
+import { CANONICAL_VIBES, type CanonicalVibe } from "@/lib/trip-types";
+import type { PreflightResult } from "@/lib/atlas/vibe-preflight";
 import AtlasHeroSection from "./AtlasHeroSection";
 import PlannerErrorBanner from "./PlannerErrorBanner";
+import SurpriseClarificationCard from "./SurpriseClarificationCard";
+
+const CANONICAL = new Set<string>(CANONICAL_VIBES);
 
 interface Destination {
   name: string;
   airline: string;
   flightPrice: string;
-  hotelPrice?: string;
   nonstop: boolean;
   link?: string;   // TP API booking URL — preserved so Phase 2 can render a "Book" CTA
 }
@@ -18,6 +24,7 @@ interface Destination {
 interface SurpriseMeSectionProps {
   tripId: number;
   originCode: string;
+  originName?: string | null;
   vibesSummary: string;
   budgetLabel: string;
   flexibleWindow?: string | null;  // "next_2_weeks" | "next_month" | "2_3_months" | etc.
@@ -25,49 +32,10 @@ interface SurpriseMeSectionProps {
   startDate?: string | null;       // ISO date if specific dates were set
 }
 
-const V1_FALLBACK: Destination[] = [
-  { name: "Cancún, Mexico", airline: "Spirit NK", flightPrice: "$127", hotelPrice: "$89/night", nonstop: true },
-  { name: "San Juan, Puerto Rico", airline: "JetBlue", flightPrice: "$159", hotelPrice: "$95/night", nonstop: true },
-  { name: "Punta Cana, DR", airline: "Spirit NK", flightPrice: "$189", hotelPrice: "$75/night", nonstop: true },
-];
-
-// Convert flexible_window value to a YYYY-MM departure month
-function deriveDepartMonth(
-  flexibleWindow?: string | null,
-  startDate?: string | null,
-): string {
-  // Specific start date takes priority
-  if (startDate) return startDate.slice(0, 7); // "2026-05-15" → "2026-05"
-
-  const now = new Date();
-  switch (flexibleWindow) {
-    case "next_2_weeks": {
-      const d = new Date(now); d.setDate(d.getDate() + 14);
-      return d.toISOString().slice(0, 7);
-    }
-    case "next_month": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    case "2_3_months": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    case "6_months": {
-      const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
-      return d.toISOString().slice(0, 7);
-    }
-    default: {
-      // "anytime" or unknown → next month
-      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return d.toISOString().slice(0, 7);
-    }
-  }
-}
-
 export default function SurpriseMeSection({
   tripId,
   originCode,
+  originName: initialOriginName = null,
   vibesSummary,
   budgetLabel,
   flexibleWindow,
@@ -75,47 +43,63 @@ export default function SurpriseMeSection({
   startDate,
 }: SurpriseMeSectionProps) {
   const t = useTranslations("atlasHero");
+  const tVibes = useTranslations("tripForm.vibes");
+  const vibeLabel = (vibe: string) => (CANONICAL.has(vibe) ? tVibes(vibe as CanonicalVibe) : vibe);
   const router = useRouter();
+  type Adjust = { vibes?: string[]; matchAny?: boolean };
+  const [adjust, setAdjust] = useState<Adjust>({});
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [originUnknown, setOriginUnknown] = useState(false);
-  const [fallbackUsed, setFallbackUsed] = useState(false);
+  const [degraded, setDegraded] = useState<{ code?: string; reason?: string } | null>(null);
+  const [notice, setNotice] = useState<{ code?: string; reason?: string } | null>(null);
+  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [originName, setOriginName] = useState<string | null>(initialOriginName);
+  const locale = useLocale();
 
   const fetchSuggestions = useCallback((signal?: AbortSignal) => {
     setLoading(true);
-    setFallbackUsed(false);
+    setDegraded(null);
+    setNotice(null);
+    setPreflight(null);
 
-    const departMonth = deriveDepartMonth(flexibleWindow, startDate);
-    const params = new URLSearchParams({ origin: originCode, depart_month: departMonth });
-    if (tripLength) params.set("trip_length", tripLength);
-    if (vibesSummary) {
-      const vibesParam = vibesSummary
-        .split(/\s*\+\s*/).map((v) => v.trim().toLowerCase()).filter(Boolean).join(",");
-      if (vibesParam) params.set("vibes", vibesParam);
-    }
+    const params = buildSurpriseQuery({
+      originCode,
+      vibesSummary: adjust.vibes ? adjust.vibes.join(",") : vibesSummary,
+      flexibleWindow,
+      tripLength,
+      startDate,
+      matchAny: adjust.matchAny,
+    });
 
     return fetch(`/api/surprise-me?${params.toString()}`, { signal })
       .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => {
+        setOriginName(typeof data?.originName === "string" ? data.originName : initialOriginName);
         if (Array.isArray(data?.destinations) && data.destinations.length > 0) {
           setDestinations(data.destinations);
+          setDegraded(null);
+          setNotice(data?.notice ?? null);
         } else {
-          setDestinations(V1_FALLBACK);
-          setFallbackUsed(true);
+          setDestinations([]);
+          setDegraded(data?.degraded ?? { reason: t("degradedNetworkBody") });
+          setNotice(null);
+          setPreflight((data?.preflight as PreflightResult | undefined) ?? null);
         }
       })
       .catch((e) => {
         if ((e as { name?: string })?.name === "AbortError") return;
         console.warn("[SurpriseMeSection] fetch failed", e);
-        setDestinations(V1_FALLBACK);
-        setFallbackUsed(true);
+        setDestinations([]);
+        setDegraded({ reason: t("degradedNetworkBody") });
+        setNotice(null);
       })
       .finally(() => {
         if (!signal?.aborted) setLoading(false);
       });
-  }, [originCode, vibesSummary, flexibleWindow, startDate, tripLength]);
+  }, [adjust, originCode, initialOriginName, vibesSummary, flexibleWindow, startDate, tripLength, t]);
 
   useEffect(() => {
     if (originCode === "???") {
@@ -150,6 +134,44 @@ export default function SurpriseMeSection({
 
   function handleChatWithAtlas() {
     window.dispatchEvent(new CustomEvent("atlas-open", { detail: {} }));
+  }
+
+  const effectiveVibes = adjust.vibes ?? normalizeVibes(vibesSummary);
+  // The month told to Atlas MUST be the real search month — deriveDepartMonth
+  // handles "2_3_months" (+2), "6_months" (+6) and dated trips. A hardcoded
+  // next-month would misstate the user's intent back to them.
+  const effectiveMonth = deriveDepartMonth(flexibleWindow, startDate);
+
+  // setAdjust alone triggers the refetch: fetchSuggestions depends on `adjust`,
+  // so the [originCode, fetchSuggestions] effect re-runs with abort handling.
+  function handleMatchAny() {
+    setAdjust({ ...adjust, matchAny: true });
+  }
+
+  function handleUseSuggestion(vibe: string) {
+    const unknown = preflight?.status === "unknown_vibes" ? preflight.unknown : [];
+    const known = effectiveVibes.filter((v) => !unknown.includes(v));
+    setAdjust({ ...adjust, vibes: [...new Set([...known, vibe])] });
+  }
+
+  function handleUseKnownOnly() {
+    const unknown = preflight?.status === "unknown_vibes" ? preflight.unknown : [];
+    setAdjust({ ...adjust, vibes: effectiveVibes.filter((v) => !unknown.includes(v)) });
+  }
+
+  function handleAskAtlasWithIntent() {
+    const [year, monthNum] = effectiveMonth.split("-").map(Number);
+    const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(Date.UTC(year, monthNum - 1, 1))
+    );
+    // The seed renders in the visible chat as the user's own message: vibes are
+    // localized labels (never internal values), and when the origin cannot be
+    // named the origin phrase is OMITTED — never a bare code.
+    const seedVibes = effectiveVibes.map(vibeLabel).join(", ");
+    const message = originName
+      ? t("clarifyAtlasSeed", { origin: originName, month: monthLabel, vibes: seedVibes })
+      : t("clarifyAtlasSeedNoOrigin", { month: monthLabel, vibes: seedVibes });
+    window.dispatchEvent(new CustomEvent("atlas-open", { detail: { message } }));
   }
 
   async function handleResolveDestination(index: number) {
@@ -189,6 +211,13 @@ export default function SurpriseMeSection({
     );
   }
 
+  // The subtitle renders localized vibe labels, never internal values like
+  // "big_city". Custom free text (and the "flexible" sentinel) echo as-is.
+  const vibesLabel = vibesSummary
+    .split(" + ")
+    .map((v) => vibeLabel(v.trim()))
+    .join(" + ");
+
   return (
     <div data-testid="surprise-me-section" className="space-y-6">
       {resolveError && (
@@ -196,14 +225,6 @@ export default function SurpriseMeSection({
           {resolveError}
           <button onClick={() => setResolveError(null)} className="ml-2 underline">Dismiss</button>
         </div>
-      )}
-      {fallbackUsed && (
-        <PlannerErrorBanner
-          testId="surprise-fallback-banner"
-          title={t("fallbackTitle")}
-          body={t("fallbackBody")}
-          onRetry={() => fetchSuggestions()}
-        />
       )}
       {loading ? (
         /* Loading skeleton — 3 placeholder cards */
@@ -227,17 +248,54 @@ export default function SurpriseMeSection({
             ))}
           </div>
         </div>
-      ) : (
-        <AtlasHeroSection
-          destinations={destinations}
-          originCode={originCode}
-          vibesSummary={vibesSummary}
-          budgetLabel={budgetLabel}
-          onTellMeMore={handleTellMeMore}
-          onShowDifferent={handleShowDifferent}
-          onChatWithAtlas={handleChatWithAtlas}
-          onResolveDestination={resolving ? undefined : handleResolveDestination}
+      ) : degraded && preflight && preflight.status !== "ok" &&
+        (degraded.code === "unknown_vibes" || degraded.code === "no_match_possible") ? (
+        <SurpriseClarificationCard
+          preflight={preflight}
+          vibes={effectiveVibes}
+          onMatchAny={handleMatchAny}
+          onUseSuggestion={handleUseSuggestion}
+          onUseKnownOnly={handleUseKnownOnly}
+          onAskAtlas={handleAskAtlasWithIntent}
         />
+      ) : degraded ? (
+        <div className="space-y-4">
+          <PlannerErrorBanner
+            testId="surprise-fallback-banner"
+            title={t("degradedTitle")}
+            body={resolveDegradedBody(t, degraded) ?? t("degradedNetworkBody")}
+            onRetry={() => fetchSuggestions()}
+          />
+          <button
+            type="button"
+            onClick={handleChatWithAtlas}
+            className="inline-flex items-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 transition-colors"
+          >
+            {t("chatWithAtlas")}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {notice && (
+            <div
+              data-testid="surprise-live-pricing-notice"
+              className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            >
+              <p className="font-semibold">{t("noticeLivePricingTitle")}</p>
+              <p className="mt-1">{t("noticeLivePricingBody")}</p>
+            </div>
+          )}
+          <AtlasHeroSection
+            destinations={destinations}
+            originName={originName}
+            vibesSummary={vibesLabel}
+            budgetLabel={budgetLabel}
+            onTellMeMore={handleTellMeMore}
+            onShowDifferent={handleShowDifferent}
+            onChatWithAtlas={handleChatWithAtlas}
+            onResolveDestination={resolving ? undefined : handleResolveDestination}
+          />
+        </div>
       )}
 
       {/* Dimmed planner placeholder */}
