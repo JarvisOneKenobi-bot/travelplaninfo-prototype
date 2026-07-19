@@ -119,7 +119,7 @@ export default function HotDeals() {
             <a href={CJ_LINKS.cars()} target="_blank" rel="noopener noreferrer sponsored" className="block bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
               <p className="text-xs uppercase tracking-widest text-emerald-600 mb-2">🚗 EconomyBookings</p>
               <h3 className="text-lg font-bold text-gray-900 leading-snug">Car rentals — all brands compared</h3>
-              <p className="text-sm text-gray-600 mt-1">500+ suppliers. Best price guarantee. Free cancellation.</p>
+              <p className="text-sm text-gray-600 mt-1">Compare car-rental suppliers. Free cancellation.</p>
               <span className="mt-3 px-4 py-2 text-sm text-white rounded-lg bg-emerald-600 inline-block">Compare cars</span>
             </a>
           </div>
