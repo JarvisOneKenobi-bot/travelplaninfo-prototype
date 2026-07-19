@@ -87,7 +87,7 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
   const shiftCalc = `calc(${offset} * ((100% - ${(VISIBLE - 1) * GAP_PX}px) / ${VISIBLE} + ${GAP_PX}px))`;
 
   return (
-    <div className="space-y-2">
+    <div data-testid="package-deals-carousel" className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{t("packageDeals")}</h3>
 
       <div className="relative"
@@ -107,6 +107,7 @@ export default function PackageDealsCarousel({ origin, interests, budget }: Prop
             style={{ gap: `${GAP_PX}px`, transform: `translateX(-${shiftCalc})` }}>
             {sortedDeals.map(deal => (
               <a key={deal.id}
+                data-deal-id={deal.id}
                 href={getAffiliateUrl(deal)}
                 target="_blank"
                 rel="noopener noreferrer sponsored"

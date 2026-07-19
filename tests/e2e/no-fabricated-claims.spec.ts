@@ -4,6 +4,66 @@ import { CJ_BANNERS, CJ_LINKS, DEALS, TP_CONFIG, getAffiliateUrl } from '../../s
 const cjDomain = /^(https:\/\/)?(www\.)?(dpbolvw\.net|jdoqocy\.com|tkqlhce\.com|anrdoezrs\.net|kqzyfj\.com)\//i;
 const cjOrTpTrackingDomain = /^(https:\/\/)?(www\.)?(dpbolvw\.net|jdoqocy\.com|tkqlhce\.com|anrdoezrs\.net|kqzyfj\.com|aviasales\.com)\//i;
 
+const affiliateDealManifest = {
+  'hotels-miami-beach': {
+    program: 'hotels',
+    advertiser: 'Hotels.com',
+    href: 'https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo',
+    cta: 'Search Hotels',
+  },
+  'vrbo-miami-condo': {
+    program: 'vrbo',
+    advertiser: 'Vrbo',
+    href: 'https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo',
+    cta: 'Browse Rentals',
+  },
+  'cars-miami': {
+    program: 'cars',
+    advertiser: 'EconomyBookings',
+    href: 'https://www.jdoqocy.com/click-101692716-15586457',
+    cta: 'Compare Cars',
+  },
+  'cruisedirect-caribbean': {
+    program: 'cruises',
+    advertiser: 'CruiseDirect',
+    href: 'https://www.kqzyfj.com/click-101692716-13096782',
+    cta: 'View Cruises',
+  },
+  'hotels-cancun': {
+    program: 'hotels',
+    advertiser: 'Hotels.com',
+    href: 'https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo',
+    cta: 'Book Resort',
+  },
+  'cars-cancun': {
+    program: 'cars',
+    advertiser: 'EconomyBookings',
+    href: 'https://www.jdoqocy.com/click-101692716-15586457',
+    cta: 'Find Cars',
+  },
+  'vrbo-nyc-apartment': {
+    program: 'vrbo',
+    advertiser: 'Vrbo',
+    href: 'https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo',
+    cta: 'Find Apartments',
+  },
+  'cruisedirect-bahamas': {
+    program: 'cruises',
+    advertiser: 'CruiseDirect',
+    href: 'https://www.anrdoezrs.net/click-101692716-13096743',
+    cta: 'Escape to Bahamas',
+  },
+} as const;
+
+type AffiliateDealId = keyof typeof affiliateDealManifest;
+
+const affiliateDealIds = Object.keys(affiliateDealManifest) as AffiliateDealId[];
+const homepageAffiliateDealIds = [
+  'hotels-miami-beach',
+  'vrbo-miami-condo',
+  'cars-miami',
+] as const satisfies readonly AffiliateDealId[];
+
 const fabricatedClaimPatterns = [
   { label: 'price shape', regex: /\$\s?\d/g },
   { label: 'unit pricing', regex: /\/night|\/day|\/person/gi },
@@ -99,6 +159,65 @@ test.describe('no fabricated claims in rendered travel commerce pages', () => {
 });
 
 test.describe('affiliate monetization survives fabricated-claim removal', () => {
+  test('/en homepage keeps the exact approved affiliate deal cards free of fabricated claims', async ({ page }) => {
+    await page.goto('/en', { waitUntil: 'domcontentloaded' });
+
+    const deals = page.getByTestId('homepage-affiliate-deals');
+    await expect(deals).toBeVisible();
+    expectNoFabricatedClaims('/en homepage affiliate deals', await deals.innerText());
+
+    const dealAnchors = deals.locator('a[data-deal-id]');
+    await expect(dealAnchors).toHaveCount(3);
+
+    const renderedDealIds = await dealAnchors.evaluateAll((anchors) =>
+      anchors.map((anchor) => anchor.getAttribute('data-deal-id')),
+    );
+    expect([...renderedDealIds].sort()).toEqual([...homepageAffiliateDealIds].sort());
+
+    for (const dealId of homepageAffiliateDealIds) {
+      const expected = affiliateDealManifest[dealId];
+      const anchor = deals.locator(`a[data-deal-id="${dealId}"]`);
+
+      await expect(anchor).toHaveCount(1);
+      await expect(anchor).toBeVisible();
+      await expect(anchor).toHaveAttribute('href', expected.href);
+      await expect(anchor.getByText(expected.cta, { exact: true })).toBeVisible();
+    }
+  });
+
+  test('/en/planner Explore path keeps the exact approved affiliate carousel free of fabricated claims', async ({ page, context }) => {
+    await context.clearCookies();
+    // Wait for client hydration before clicking the SSR-rendered mode button; a click
+    // fired at domcontentloaded can be lost on a cold Next.js compilation.
+    await page.goto('/en/planner', { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: /surprise me/i }).click();
+
+    const carousel = page.getByTestId('package-deals-carousel');
+    await expect(carousel).toBeVisible();
+    expectNoFabricatedClaims('/en/planner package deals carousel', await carousel.innerText());
+
+    const dealAnchors = carousel.locator('a[data-deal-id]');
+    await expect(dealAnchors).toHaveCount(8);
+
+    const renderedDealIds = await dealAnchors.evaluateAll((anchors) =>
+      anchors.map((anchor) => anchor.getAttribute('data-deal-id')),
+    );
+    expect([...renderedDealIds].sort()).toEqual([...affiliateDealIds].sort());
+
+    for (const dealId of affiliateDealIds) {
+      const expected = affiliateDealManifest[dealId];
+      const anchor = carousel.locator(`a[data-deal-id="${dealId}"]`);
+
+      await expect(anchor).toHaveCount(1);
+      await expect(anchor).toBeVisible();
+      await expect(anchor).toHaveAttribute('href', expected.href);
+      await expect(anchor.getByText(expected.advertiser, { exact: true })).toBeVisible();
+      await expect(
+        anchor.locator('span').filter({ hasText: new RegExp(`^${escapeRegex(expected.cta)}\\s*→$`) }),
+      ).toBeVisible();
+    }
+  });
+
   test('/en/hot-deals keeps specific CJ affiliate CTAs and deal links', async ({ page }) => {
     await page.goto('/en/hot-deals', { waitUntil: 'domcontentloaded' });
 

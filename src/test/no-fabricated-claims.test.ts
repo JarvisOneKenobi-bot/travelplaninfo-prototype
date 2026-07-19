@@ -537,16 +537,23 @@ describe("no fabricated claims guard", () => {
       "vrbo-nyc-apartment",
     ];
     // This manifest is intentionally hardcoded instead of derived from CJ_LINKS:
-    // a revenue link silently re-pointed at the wrong advertiser must fail the build.
-    const expectedDealUrls = new Map([
-      ["hotels-miami-beach", "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo"],
-      ["vrbo-miami-condo", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
-      ["cars-miami", "https://www.jdoqocy.com/click-101692716-15586457"],
-      ["cruisedirect-caribbean", "https://www.kqzyfj.com/click-101692716-13096782"],
-      ["hotels-cancun", "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo"],
-      ["cars-cancun", "https://www.jdoqocy.com/click-101692716-15586457"],
-      ["vrbo-nyc-apartment", "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo"],
-      ["cruisedirect-bahamas", "https://www.anrdoezrs.net/click-101692716-13096743"],
+    // a deal silently re-pointed at the wrong program, CTA, or advertiser URL must fail the build.
+    const expectedDealContracts = new Map<
+      string,
+      {
+        program: "hotels" | "vrbo" | "cars" | "cruises";
+        cta: string;
+        href: string;
+      }
+    >([
+      ["hotels-miami-beach", { program: "hotels", cta: "Search Hotels", href: "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo" }],
+      ["vrbo-miami-condo", { program: "vrbo", cta: "Browse Rentals", href: "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo" }],
+      ["cars-miami", { program: "cars", cta: "Compare Cars", href: "https://www.jdoqocy.com/click-101692716-15586457" }],
+      ["cruisedirect-caribbean", { program: "cruises", cta: "View Cruises", href: "https://www.kqzyfj.com/click-101692716-13096782" }],
+      ["hotels-cancun", { program: "hotels", cta: "Book Resort", href: "https://www.dpbolvw.net/click-101692716-15734399?sid=travelplaninfo" }],
+      ["cars-cancun", { program: "cars", cta: "Find Cars", href: "https://www.jdoqocy.com/click-101692716-15586457" }],
+      ["vrbo-nyc-apartment", { program: "vrbo", cta: "Find Apartments", href: "https://www.jdoqocy.com/click-101692716-10784831?sid=travelplaninfo" }],
+      ["cruisedirect-bahamas", { program: "cruises", cta: "Escape to Bahamas", href: "https://www.anrdoezrs.net/click-101692716-13096743" }],
     ]);
     const expectedBannerUrls = new Map([
       ["cars-compare", "https://www.anrdoezrs.net/click-101692716-15736982?sid=travelplaninfo"],
@@ -557,16 +564,17 @@ describe("no fabricated claims guard", () => {
 
     expect(DEALS).toHaveLength(8);
     expect(DEALS.map((deal) => deal.id).sort()).toEqual(expectedDealIds);
-    expect([...expectedDealUrls.keys()].sort()).toEqual(expectedDealIds);
+    expect([...expectedDealContracts.keys()].sort()).toEqual(expectedDealIds);
 
     for (const deal of DEALS) {
       expect(deal.id).toBeTruthy();
-      expect(deal.program).toBeTruthy();
-      expect(deal.cta).toBeTruthy();
-      const expectedUrl = expectedDealUrls.get(deal.id);
-      expect(expectedUrl, `${deal.id} missing from hardcoded affiliate URL manifest`).toBeTruthy();
-      expect(getAffiliateUrl(deal)).toBe(expectedUrl);
-      expectCjUrl(expectedUrl as string);
+      const expectedDeal = expectedDealContracts.get(deal.id);
+      expect(expectedDeal, `${deal.id} missing from hardcoded affiliate contract manifest`).toBeDefined();
+      if (!expectedDeal) continue;
+      expect(deal.program, `${deal.id} affiliate program must match the approved contract`).toBe(expectedDeal.program);
+      expect(deal.cta, `${deal.id} CTA must match the approved contract`).toBe(expectedDeal.cta);
+      expect(getAffiliateUrl(deal), `${deal.id} href must match the approved contract`).toBe(expectedDeal.href);
+      expectCjUrl(expectedDeal.href);
     }
 
     for (const [name, makeUrl] of Object.entries(CJ_LINKS)) {
@@ -586,8 +594,11 @@ describe("no fabricated claims guard", () => {
     const { container } = render(React.createElement(AffiliateSidebar));
 
     for (const deal of DEALS.slice(0, 3)) {
+      const expectedDeal = expectedDealContracts.get(deal.id);
+      expect(expectedDeal, `${deal.id} missing from hardcoded affiliate contract manifest`).toBeDefined();
+      if (!expectedDeal) continue;
       const link = screen.getByRole("link", { name: new RegExp(deal.cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) });
-      expect(link.getAttribute("href")).toBe(expectedDealUrls.get(deal.id));
+      expect(link.getAttribute("href")).toBe(expectedDeal.href);
     }
 
     for (const banner of CJ_BANNERS) {

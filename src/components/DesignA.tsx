@@ -45,7 +45,7 @@ export default function DesignA() {
       </div>
 
       {/* Hot Deals */}
-      <div>
+      <div data-testid="homepage-affiliate-deals">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-2xl font-bold text-gray-900">🔥 Hot Deals</h2>
           <Link href="/hot-deals" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
@@ -56,6 +56,7 @@ export default function DesignA() {
           {DEALS.slice(0, 3).map((deal) => (
             <a
               key={deal.id}
+              data-deal-id={deal.id}
               href={getAffiliateUrl(deal)}
               target="_blank"
               rel="noopener noreferrer sponsored"
