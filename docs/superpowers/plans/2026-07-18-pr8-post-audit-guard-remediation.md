@@ -4,7 +4,7 @@
 
 **Goal:** Make PR #8’s claimed rendered-DOM guard actually cover `DesignA` and `PackageDealsCarousel`, and permanently stop generated Playwright HTML from entering Git.
 
-**Architecture:** Preserve the original unit guard’s deliberately narrow source scope. Add stable component/deal boundaries for the two omitted affiliate consumers, exercise them through real branch-local Playwright pages, assert exact deal cardinality/identity/CTA/href contracts, and untrack/ignore the generated report while leaving the HTML reporter enabled.
+**Architecture:** Preserve the original unit guard’s deliberately narrow source scope. Add stable component/deal boundaries for the two omitted affiliate consumers, exercise them through real branch-local Playwright pages, assert exact deal cardinality/identity/program/advertiser/CTA/href contracts, and untrack/ignore the generated report while leaving the HTML reporter enabled.
 
 **Tech Stack:** Next.js App Router, TypeScript, Playwright, Vitest.
 
@@ -48,7 +48,7 @@ Expected: 0 errors and no warning increase above branch baseline.
 **Files:**
 - Modify: `tests/e2e/no-fabricated-claims.spec.ts`
 
-**Test-owned manifest:** Extend the existing expected deal-href data into a literal manifest keyed by all eight stable deal IDs. For each deal, pin the approved literal `href` and CTA text. Do not derive expected hrefs from production code under test.
+**Test-owned manifest:** Extend the existing expected deal-href data into a literal manifest keyed by all eight stable deal IDs. For each deal, pin the approved literal `program`, rendered `advertiser`, `href`, and CTA text. Do not derive expected values from production code under test.
 
 **Homepage test:**
 1. Open `/en`.
@@ -61,9 +61,9 @@ Expected: 0 errors and no warning increase above branch baseline.
 1. In a fresh unauthenticated context, open `/en/planner` and select the Explore/Surprise path so `PackageDealsCarousel` renders.
 2. Scope to `[data-testid="package-deals-carousel"]` and apply the same fabricated-claim patterns.
 3. Require exactly **8** visible `[data-deal-id]` anchors and the exact eight-ID set.
-4. For every ID, assert its exact manifest CTA text is visible and its `href` equals the exact approved manifest href.
+4. For every ID, assert its exact manifest CTA text and advertiser badge are visible and its `href` equals the exact approved manifest href.
 
-These cardinality, ID, CTA, visibility, and href assertions prevent a passing test when cards disappear or every card is remapped to one valid CJ URL. Keep all existing hot-deals, destinations, locale, and article assertions unchanged.
+These cardinality, ID, program/advertiser, CTA, visibility, and href assertions prevent a passing test when cards disappear, change advertiser/scoring identity, or are remapped to one valid CJ URL. Keep all existing hot-deals, destinations, locale, and article assertions unchanged.
 
 **Start and prove the branch-local server:**
 
@@ -95,6 +95,33 @@ Expected: existing focused tests plus exactly two new consumer tests pass.
 
 ---
 
+### Task 2b: Pin the exact per-ID affiliate program contract
+
+**Objective:** Close the post-review gap where a deal with a URL override can change `program`, keep the same approved href, and silently change its rendered advertiser badge and carousel scoring.
+
+**Files:**
+- Modify: `src/test/no-fabricated-claims.test.ts`
+- Modify: `tests/e2e/no-fabricated-claims.spec.ts`
+
+**Steps:**
+1. Replace Arm D's loose `program`/`cta` truthiness checks with one literal per-ID contract that pins exact `program`, CTA, and href values for all eight deals.
+2. Extend the E2E manifest with the same literal program values plus the rendered advertiser labels: `Hotels.com`, `Vrbo`, `EconomyBookings`, or `CruiseDirect`.
+3. In the planner-carousel loop, require each deal anchor to show its exact manifest advertiser badge in addition to the existing ID, CTA, visibility, and href assertions.
+4. Do not change production affiliate data, display copy, scoring, ordering, controls, or URLs.
+
+**Focused baseline:**
+```bash
+npx vitest run src/test/no-fabricated-claims.test.ts
+BASE_URL=http://localhost:3018 npx playwright test tests/e2e/no-fabricated-claims.spec.ts --grep '/en/planner Explore'
+```
+Expected: both pass on the authoritative worktree.
+
+**Mandatory mutation check in a disposable snapshot only:** change `cruisedirect-caribbean` from `program: "cruises"` to `program: "hotels"` while retaining its URL override. Require both the focused Arm D unit guard and the focused planner-carousel E2E to fail on exact program/advertiser mismatch. Restore and mechanically compare the snapshot's three affected source/test files with the authoritative worktree.
+
+The independently adjudicated multi-currency and clickability proposals remain nonblocking hardening because the binding Arm A/E contract is dollar/unit-pattern + present/visible/exact-href coverage. Do not broaden this remediation into currency grammar or external-click testing.
+
+---
+
 ### Task 3: Permanently untrack generated Playwright HTML
 
 **Objective:** Preserve useful local HTML reports while preventing them from dirtying or entering Git again.
@@ -121,6 +148,7 @@ Expected: `.gitignore` identifies `/playwright-report/`; the local report remain
 - `playwright-report/index.html` (staged deletion)
 - `src/components/DesignA.tsx`
 - `src/components/PackageDealsCarousel.tsx`
+- `src/test/no-fabricated-claims.test.ts`
 - `tests/e2e/no-fabricated-claims.spec.ts`
 
 Run with the cwd-verified server on port 3018:
@@ -144,6 +172,7 @@ git add -- \
   '.gitignore' \
   'src/components/DesignA.tsx' \
   'src/components/PackageDealsCarousel.tsx' \
+  'src/test/no-fabricated-claims.test.ts' \
   'tests/e2e/no-fabricated-claims.spec.ts'
 
 printf '%s\n' \
@@ -151,6 +180,7 @@ printf '%s\n' \
   'playwright-report/index.html' \
   'src/components/DesignA.tsx' \
   'src/components/PackageDealsCarousel.tsx' \
+  'src/test/no-fabricated-claims.test.ts' \
   'tests/e2e/no-fabricated-claims.spec.ts' \
   | sort > /tmp/pr8-allowed-paths.txt
 git diff --cached --name-only | sort > /tmp/pr8-staged-paths.txt
@@ -174,4 +204,4 @@ test -z "$(lsof -t -iTCP:3018 -sTCP:LISTEN || true)"
 
 ---
 
-**Reviewer sign-off:** PASS — independent focused re-review completed 2026-07-18 after fixing every REQUEST_CHANGES blocker (exact cardinality/identity/CTA/href contracts, branch-local server provenance, explicit BASE_URL, and durable report untracking). Signed off by Hermes Agent / gpt-5.6-sol.
+**Reviewer sign-off:** PASS — independent focused re-review completed 2026-07-18 for the post-implementation quality amendment. Exact per-ID program/CTA/href and rendered advertiser contracts, disposable program-remapping mutation evidence, production-behavior prohibition, expanded mechanical allowlist, and existing full gates/report cleanup were accepted. Signed off by Hermes Agent / gpt-5.6-sol.
