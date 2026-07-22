@@ -7,7 +7,7 @@ import { useAtlasBubble } from "@/hooks/useAtlasBubble";
 import { useAssistantHealth } from "@/hooks/useAssistantHealth";
 import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
 import { decodeSseData } from "@/lib/atlas/sse";
-import { buildOnboardingIntro } from "@/lib/guest-prefs";
+import { buildOnboardingIntro, readGuestPrefs } from "@/lib/guest-prefs";
 import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
@@ -732,6 +732,7 @@ export default function AssistantChat() {
           if (formContext.adults) pageContext += `\n  Travelers: ${formContext.adults} adults, ${formContext.children || 0} children`;
         }
 
+        const guestPrefs = readGuestPrefs();
         const res = await fetch("/api/assistant/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -739,6 +740,7 @@ export default function AssistantChat() {
             message: text.trim(),
             session_id: sid,
             page_context: pageContext,
+            ...(guestPrefs ? { guest_prefs: guestPrefs } : {}),
           }),
         });
 
