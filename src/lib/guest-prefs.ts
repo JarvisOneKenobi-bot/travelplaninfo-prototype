@@ -63,6 +63,29 @@ export function dispatchOnboardingComplete(detail: OnboardingCompleteDetail): vo
   window.dispatchEvent(new CustomEvent("atlas-onboarding-complete", { detail }));
 }
 
+/** Server-side: build a preferencesJson (snake_case) from untrusted guest_prefs, field-independent. */
+export function buildGuestPreferencesJson(raw: unknown): string {
+  const out: { home_airport?: string; interests?: GuestInterest[] } = {};
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    const airport = typeof obj.homeAirport === "string" ? parseIata(obj.homeAirport) : null;
+    if (airport) out.home_airport = airport;
+    const interests = sanitizeGuestInterests(obj.interests);
+    if (interests.length) out.interests = interests;
+  }
+  return JSON.stringify(out);
+}
+
+/** The chat route's preferencesJson decision, extracted pure so it needs no DB mocks to test. */
+export function resolvePreferencesJson(opts: { isGuest: boolean; dbPrefs?: string; guestPrefs?: unknown }): string {
+  if (opts.dbPrefs) return opts.dbPrefs; // authed, or a guest with a stored row → DB wins (matches the old `prefRow?.prefs || "{}"`)
+  if (opts.isGuest && opts.guestPrefs !== undefined) {
+    const built = buildGuestPreferencesJson(opts.guestPrefs);
+    if (built !== "{}") return built;
+  }
+  return "{}";
+}
+
 export function buildOnboardingIntro(detail: unknown): string {
   const d = (detail ?? {}) as Record<string, unknown>;
   const aiAssisted = d.aiAssisted === true;
