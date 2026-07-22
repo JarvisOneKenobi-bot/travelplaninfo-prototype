@@ -6,7 +6,9 @@
 
 **Architecture:** Approach ① (localStorage-threaded). One canonical IATA validator (`src/lib/iata.ts`), one guest-prefs contract + event helpers (`src/lib/guest-prefs.ts`), a pure `buildOnboardingIntro` total over untrusted input, and a server-side field-independent guest `preferencesJson` in the chat route. Guests stay localStorage-only (the existing deliberate design). The greeting is a client-rendered **user** message, so the text-fix is client-side and forward-only.
 
-**Tech Stack:** Next.js 15 App Router, TypeScript, React, next-auth, better-sqlite3, vitest (unit/component via @testing-library/react), Playwright (e2e).
+**Tech Stack:** Next.js 16 App Router, TypeScript, React, next-auth v5-beta, better-sqlite3, vitest (jsdom + @testing-library/react), Playwright (e2e).
+
+> **Rev2 — Fable 5 plan-review fixes applied (2026-07-21).** Review verdict was REVISE (4 Critical + 2 Important); every state-claim was re-verified against the tree by the orchestrator. Fixes: Task 7 route decision extracted to a pure `resolvePreferencesJson` (unit-testable, no DB mocks); Task 8 TripForm test now mocks router/places/carousel/next-auth, enters flight mode, and adds `data-testid` to both origin inputs, and patches the existing `TripForm.test.tsx` with a next-auth mock (C2/C3); Task 9 uses a separate `[status]` effect to avoid a stale-closure dead feature (C1) with its guard test relabelled honestly (C4); Task 10 adds a CI-safe route-interception body assert (I1) and an explicit dev-server precondition (I2). The `no-price-confirm` Fable clause is correct — Jose authorized unmetered Fable @50% on 2026-07-21 (recorded in CLAUDE.md); the reviewer flagged it only because it couldn't see that message (I3).
 
 ## Global Constraints
 
@@ -299,7 +301,7 @@ Replace the listener body (the `handleOnboardingComplete` `if (event instanceof 
       }
     };
 ```
-(Behavior is byte-identical to before — still buggy for guests — this is a pure refactor.)
+(Behavior-preserving refactor — still buggy for guests, since the TEMP builder still reads `airport`. The only difference from the current inline code is the `(interests ?? [])` guard against a `.join` on `undefined`, which no real producer triggers.)
 
 - [ ] **Step 2: Write the failing test**
 
@@ -434,7 +436,7 @@ describe("BootstrapModal", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/components/BootstrapModal.test.tsx`
-Expected: FAIL — the disabled-until-valid-IATA assertion fails (current gate only checks non-empty), and the dispatched detail assertion may differ.
+Expected: FAIL on **test 1 only** (the IATA gate — current `canSave` checks only non-empty, so Save is enabled at "MI"). **Test 2 already PASSES on current code** — `save()` already writes `{homeAirport, interests}` and dispatches that exact shape — so it is a non-regression guard, not a red.
 
 - [ ] **Step 3: Rewire BootstrapModal to the contract**
 
@@ -531,7 +533,7 @@ In `src/components/OnboardingModal.tsx`:
 ```ts
 import { dispatchOnboardingComplete, readGuestPrefs } from "@/lib/guest-prefs";
 ```
-- In `finish()`, replace the raw `window.dispatchEvent(new CustomEvent("atlas-onboarding-complete", { detail: { interests, airport, budget, aiAssisted } }))` with:
+- In `finish()`, replace the **entire existing** `setTimeout(() => { window.dispatchEvent(new CustomEvent("atlas-onboarding-complete", { detail: { interests, airport, budget, aiAssisted } })); }, 500);` block (`OnboardingModal.tsx:118-122`) — do **not** nest a new timer inside the old one — with:
 ```ts
         setTimeout(() => {
           dispatchOnboardingComplete({ homeAirport: airport, budget, interests, aiAssisted });
@@ -604,6 +606,8 @@ describe("chat POST body includes guest_prefs when present", () => {
 Run: `npx vitest run src/components/AssistantChat.guest.test.tsx`
 Expected: PASS (guards the body shape Step 3 must produce).
 
+> Honest scope: this guards a local mirror of the body assembly, not the component render. The real end-to-end proof that `guest_prefs` ships in the POST is Task 10's route interception.
+
 - [ ] **Step 3: Add `guest_prefs` to the real POST body**
 
 In `src/components/AssistantChat.tsx`, ensure the import from Task 3 also pulls `readGuestPrefs`:
@@ -641,20 +645,22 @@ git commit -m "feat(atlas): send guest_prefs in chat POST body"
 ### Task 7: Chat route builds a guest `preferencesJson` (field-independent, server-revalidated)
 
 **Files:**
-- Modify: `src/lib/guest-prefs.ts` (add `buildGuestPreferencesJson`)
+- Modify: `src/lib/guest-prefs.ts` (add `buildGuestPreferencesJson` + `resolvePreferencesJson`)
 - Modify: `src/app/api/assistant/chat/route.ts` (body parse ~46-53; preferencesJson ~79-83)
 - Create: `src/lib/guest-preferences-json.test.ts`
 
 **Interfaces:**
 - Consumes: `parseIata` from `@/lib/iata`, `sanitizeGuestInterests` from `@/lib/guest-prefs`.
-- Produces: `export function buildGuestPreferencesJson(raw: unknown): string` — JSON string carrying only the fields that independently validate (`home_airport` and/or `interests`), or `"{}"`.
+- Produces:
+  - `export function buildGuestPreferencesJson(raw: unknown): string` — JSON carrying only the independently-valid fields (`home_airport` and/or `interests`), or `"{}"`.
+  - `export function resolvePreferencesJson(opts: { isGuest: boolean; dbPrefs?: string; guestPrefs?: unknown }): string` — the route's whole decision, extracted **pure** so it is unit-testable without DB mocks (addresses the functional-coverage gap the reviewer flagged).
 
 - [ ] **Step 1: Write the failing test**
 
 Create `src/lib/guest-preferences-json.test.ts`:
 ```ts
 import { describe, it, expect } from "vitest";
-import { buildGuestPreferencesJson } from "./guest-prefs";
+import { buildGuestPreferencesJson, resolvePreferencesJson } from "./guest-prefs";
 
 describe("buildGuestPreferencesJson", () => {
   it("includes both fields when valid", () => {
@@ -672,6 +678,21 @@ describe("buildGuestPreferencesJson", () => {
   it("returns '{}' for garbage", () => {
     expect(buildGuestPreferencesJson(null)).toBe("{}");
     expect(buildGuestPreferencesJson({ homeAirport: "KMIA", interests: ["hacking"] })).toBe("{}");
+  });
+});
+
+describe("resolvePreferencesJson", () => {
+  it("authed or guest-with-row: DB prefs win", () => {
+    expect(resolvePreferencesJson({ isGuest: false, dbPrefs: '{"home_airport":"LAX"}' })).toBe('{"home_airport":"LAX"}');
+    expect(resolvePreferencesJson({ isGuest: true, dbPrefs: '{"home_airport":"LAX"}', guestPrefs: { homeAirport: "MIA", interests: ["beach"] } })).toBe('{"home_airport":"LAX"}');
+  });
+  it("guest + no row + valid guest_prefs → built profile", () => {
+    expect(JSON.parse(resolvePreferencesJson({ isGuest: true, guestPrefs: { homeAirport: "MIA", interests: ["beach"] } })))
+      .toEqual({ home_airport: "MIA", interests: ["beach"] });
+  });
+  it("returns '{}' when nothing usable", () => {
+    expect(resolvePreferencesJson({ isGuest: true, guestPrefs: { homeAirport: "KMIA" } })).toBe("{}");
+    expect(resolvePreferencesJson({ isGuest: false })).toBe("{}");
   });
 });
 ```
@@ -697,6 +718,16 @@ export function buildGuestPreferencesJson(raw: unknown): string {
   }
   return JSON.stringify(out);
 }
+
+/** The chat route's preferencesJson decision, extracted pure so it needs no DB mocks to test. */
+export function resolvePreferencesJson(opts: { isGuest: boolean; dbPrefs?: string; guestPrefs?: unknown }): string {
+  if (opts.dbPrefs) return opts.dbPrefs; // authed, or a guest with a stored row → DB wins (matches the old `prefRow?.prefs || "{}"`)
+  if (opts.isGuest && opts.guestPrefs !== undefined) {
+    const built = buildGuestPreferencesJson(opts.guestPrefs);
+    if (built !== "{}") return built;
+  }
+  return "{}";
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -709,7 +740,7 @@ Expected: PASS.
 In `src/app/api/assistant/chat/route.ts`:
 - Add the import:
 ```ts
-import { buildGuestPreferencesJson } from "@/lib/guest-prefs";
+import { resolvePreferencesJson } from "@/lib/guest-prefs";
 ```
 - Widen the body type + destructure `guest_prefs` (~46-53):
 ```ts
@@ -717,15 +748,15 @@ import { buildGuestPreferencesJson } from "@/lib/guest-prefs";
   …
   const { message, session_id, page_context, guest_prefs } = body;
 ```
-- Replace the `preferencesJson` assignment (~83) so guests with no DB row get a built profile:
+- Replace the `preferencesJson` assignment (~83, currently `const preferencesJson = prefRow?.prefs || "{}";`) with the extracted pure decision:
 ```ts
-  let preferencesJson = prefRow?.prefs || "{}";
-  if (ctx.isGuest && !prefRow && guest_prefs !== undefined) {
-    const built = buildGuestPreferencesJson(guest_prefs);
-    if (built !== "{}") preferencesJson = built;
-  }
+  const preferencesJson = resolvePreferencesJson({
+    isGuest: ctx.isGuest,
+    dbPrefs: prefRow?.prefs,
+    guestPrefs: guest_prefs,
+  });
 ```
-(Authenticated path unchanged: `prefRow` present → DB wins. Server re-validates via `buildGuestPreferencesJson` — the client value is never trusted.)
+(Authenticated path unchanged: a present `prefRow` → DB wins. The client value is never trusted — `resolvePreferencesJson` re-validates via `buildGuestPreferencesJson`, which enforces the 3-letter airport + 4-literal interest allowlist. This is the single wiring point, now covered by the `resolvePreferencesJson` unit tests above.)
 
 - [ ] **Step 6: Typecheck + full unit suite**
 
@@ -744,49 +775,63 @@ git commit -m "feat(atlas): guest home airport reaches the LLM via server-built 
 ### Task 8: TripForm origin pre-fill from guest prefs (M1)
 
 **Files:**
-- Modify: `src/components/TripForm.tsx` (the prefs `useEffect`, ~145-153)
-- Create/Modify: `src/components/TripForm.guest.test.tsx`
+- Modify: `src/components/TripForm.tsx` (add `data-testid="trip-origin"` to both origin inputs ~636 and ~974; add `useSession` + a guest-fallback effect after the prefs effect ~145-153)
+- Modify: `src/components/TripForm.test.tsx` (add a `next-auth/react` mock — required once TripForm calls `useSession`, or the 3 existing tests throw "must be wrapped in `<SessionProvider>`")
+- Create: `src/components/TripForm.guest.test.tsx`
 
 **Interfaces:**
 - Consumes: `readGuestPrefs` from `@/lib/guest-prefs`; `useSession` from `next-auth/react`.
 
-- [ ] **Step 1: Write the failing test**
+> **Reviewer C2/C3:** TripForm mounts in `'chooser'` mode (origin inputs live only in the flight/explore branches, at ~636/~974, neither with a `name`/`testid`) and depends on `useRouter`/`usePlacesAutocomplete`/`PackageDealsCarousel`. The test must mock those (mirroring `TripForm.test.tsx:9-11`), enter flight mode, and target a `data-testid`. Adding `useSession` to TripForm also breaks the existing suite unless it too mocks `next-auth/react`.
 
-Create `src/components/TripForm.guest.test.tsx`:
+- [ ] **Step 1: Add the test hook + write the failing test**
+
+First add `data-testid="trip-origin"` to **both** origin `<input>`s — the flight branch (~636) and the explore branch (~974). Each currently begins `<input ref={originRef} type="text" value={origin}`; change both to:
+```tsx
+                <input ref={originRef} data-testid="trip-origin" type="text" value={origin}
+```
+
+Then create `src/components/TripForm.guest.test.tsx`:
 ```tsx
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import TripForm from "./TripForm";
 import { writeGuestPrefs } from "@/lib/guest-prefs";
 
+// TripForm mounts in 'chooser' mode and depends on router/places/carousel — mirror TripForm.test.tsx's mocks.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/hooks/usePlacesAutocomplete", () => ({ usePlacesAutocomplete: () => {} }));
+vi.mock("./PackageDealsCarousel", () => ({ default: () => null }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "unauthenticated", data: null }) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
-// /api/user/preferences returns defaults for a guest (empty home_airport)
+
 beforeEach(() => {
   localStorage.clear();
+  // /api/user/preferences returns guest defaults (empty home_airport)
   vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ home_airport: "", interests: [] }) })) as unknown as typeof fetch);
 });
 
 describe("TripForm guest origin pre-fill", () => {
-  it("pre-fills origin from guest prefs when unauthenticated and API has none", async () => {
+  it("pre-fills origin from guest prefs when unauthenticated + API has none", async () => {
     writeGuestPrefs({ homeAirport: "MIA", interests: ["beach"] });
-    const { container } = render(<TripForm />);
+    render(<TripForm />);
+    // Enter flight mode so the origin input renders. With the k=>k next-intl mock, the flight card label
+    // is the literal key "pathATitle" (the button's onClick calls selectMode('flight')).
+    fireEvent.click(screen.getByText("pathATitle"));
     await waitFor(() => {
-      const origin = container.querySelector('input[name="origin"], [data-testid="trip-origin"]') as HTMLInputElement | null;
-      expect(origin?.value).toBe("MIA");
+      expect((screen.getByTestId("trip-origin") as HTMLInputElement).value).toBe("MIA");
     });
   });
 });
 ```
-> If TripForm's origin input has no `name`/`data-testid`, add `data-testid="trip-origin"` to it in Step 3 (a stable test hook) and target that.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/components/TripForm.guest.test.tsx`
-Expected: FAIL — origin stays empty (no guest fallback yet).
+Expected: FAIL — the origin input renders (testid present) but its value stays `""` (no guest fallback yet), so `.value` is `""`, not `"MIA"`.
 
-- [ ] **Step 3: Add the guarded guest fallback**
+- [ ] **Step 3: Add the guarded guest fallback + patch the existing suite**
 
 In `src/components/TripForm.tsx`:
 - Add imports:
@@ -794,27 +839,31 @@ In `src/components/TripForm.tsx`:
 import { useSession } from "next-auth/react";
 import { readGuestPrefs } from "@/lib/guest-prefs";
 ```
-- Add `const { status } = useSession();` with the other hooks.
-- After the existing `/api/user/preferences` pre-fill effect, add a guest fallback effect:
+- Add `const { status } = useSession();` alongside the other hooks (near `const router = useRouter();`, ~94).
+- After the existing `/api/user/preferences` pre-fill effect (~145-153), add:
 ```ts
-  // Guest origin pre-fill — only when unauthenticated (never inherit a prior guest's airport for an authed user)
+  // Guest origin pre-fill — only when unauthenticated, so an authed user never inherits a prior guest's airport
   useEffect(() => {
     if (status !== "unauthenticated") return;
     const g = readGuestPrefs();
     if (g) setOrigin((prev) => prev || g.homeAirport);
   }, [status]);
 ```
-- If needed for the test hook, add `data-testid="trip-origin"` to the origin `<input>`.
 
-- [ ] **Step 4: Run test to verify it passes**
+In `src/components/TripForm.test.tsx` — TripForm now calls `useSession`, which throws without a provider. Add this beside the existing `vi.mock` lines (~9-11):
+```ts
+vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "unauthenticated", data: null }) }));
+```
 
-Run: `npx vitest run src/components/TripForm.guest.test.tsx`
-Expected: PASS.
+- [ ] **Step 4: Run BOTH TripForm suites**
+
+Run: `npx vitest run src/components/TripForm.test.tsx src/components/TripForm.guest.test.tsx`
+Expected: PASS — the new guest test is green AND the 3 existing TripForm tests still pass (no `SessionProvider` error).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/components/TripForm.tsx src/components/TripForm.guest.test.tsx
+git add src/components/TripForm.tsx src/components/TripForm.test.tsx src/components/TripForm.guest.test.tsx
 git commit -m "feat(planner): TripForm pre-fills origin from guest prefs (guest-only)"
 ```
 
@@ -823,45 +872,48 @@ git commit -m "feat(planner): TripForm pre-fills origin from guest prefs (guest-
 ### Task 9: ItineraryBuilder interests fallback from guest prefs (M3)
 
 **Files:**
-- Modify: `src/components/ItineraryBuilder.tsx` (the prefs `useEffect`, ~134-147)
+- Modify: `src/components/ItineraryBuilder.tsx` (add `useSession` + a **separate** `[status]` effect; leave the existing `[]`-dep API-merge effect untouched)
 - Create: `src/components/ItineraryBuilder.guest.test.tsx`
 
 **Interfaces:**
 - Consumes: `readGuestPrefs` from `@/lib/guest-prefs`; `useSession` from `next-auth/react`.
 
-- [ ] **Step 1: Write the failing test**
+> **Why a separate effect (reviewer C1 — critical):** `SessionProviderWrapper` passes no `session`, so `useSession().status` is `"loading"` on first render. Reading `status` inside the existing `[]`-dep prefs effect's `.then` would capture `"loading"` forever → the fallback would be dead code for every real guest (a green test over a non-functional feature). A dedicated effect keyed on `[status]` re-runs when auth resolves. Guests always get `interests: []` from the API (`DEFAULT_PREFERENCES`, `preferences.ts:51`), so this effect needs no coordination with the fetch.
+
+- [ ] **Step 1: Write the contract-guard test**
 
 Create `src/components/ItineraryBuilder.guest.test.tsx`:
 ```tsx
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { readGuestPrefs, writeGuestPrefs } from "@/lib/guest-prefs";
 
-// Contract: the merge helper prefers API interests, else falls back to guest prefs.
-function mergeInterests(prev: string[], apiInterests: string[] | undefined, unauthenticated: boolean): string[] {
-  const extra = apiInterests?.length ? apiInterests : unauthenticated ? readGuestPrefs()?.interests ?? [] : [];
-  return extra.length ? Array.from(new Set([...prev, ...extra])) : prev;
+// Mirror of the effect's merge logic (the effect body is a copy of Task 8's verified [status] pattern).
+function guestInterestMerge(prev: string[], unauthenticated: boolean): string[] {
+  if (!unauthenticated) return prev;
+  const g = readGuestPrefs();
+  return g?.interests.length ? Array.from(new Set([...prev, ...g.interests])) : prev;
 }
 
-describe("ItineraryBuilder guest interests fallback", () => {
-  it("falls back to guest prefs interests when API returns none and unauthenticated", () => {
-    localStorage.clear();
+describe("ItineraryBuilder guest interests fallback (contract)", () => {
+  beforeEach(() => localStorage.clear());
+  it("merges guest interests when unauthenticated", () => {
     writeGuestPrefs({ homeAirport: "MIA", interests: ["beach", "food"] });
-    expect(mergeInterests(["culture"], [], true).sort()).toEqual(["beach", "culture", "food"]);
+    expect(guestInterestMerge(["culture"], true).sort()).toEqual(["beach", "culture", "food"]);
   });
-  it("does not use guest prefs for an authenticated user", () => {
+  it("ignores guest prefs for an authenticated user", () => {
     writeGuestPrefs({ homeAirport: "MIA", interests: ["beach"] });
-    expect(mergeInterests(["culture"], [], false)).toEqual(["culture"]);
+    expect(guestInterestMerge(["culture"], false)).toEqual(["culture"]);
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run the guard**
 
 Run: `npx vitest run src/components/ItineraryBuilder.guest.test.tsx`
-Expected: FAIL — import resolves but the file/helper contract isn't reflected in the component yet (this test pins the merge contract Step 3 must implement inline).
+Expected: **PASS** — this is a non-regression contract guard over a local mirror (`readGuestPrefs`/`writeGuestPrefs` exist after Task 2), **not** a red for the component. The component behavior is a byte-copy of Task 8's `[status]` effect, which IS behaviorally tested by `TripForm.guest.test.tsx`; here we lean on `tsc` + the guard (a full ItineraryBuilder render needs `initialItems` + Map/Budget mocks — disproportionate for this minor parity feature). Labelled honestly per the reviewer (C4/I1).
 
-- [ ] **Step 3: Add the fallback to the prefs effect**
+- [ ] **Step 3: Add the separate guest-interests effect**
 
 In `src/components/ItineraryBuilder.tsx`:
 - Add imports:
@@ -869,26 +921,23 @@ In `src/components/ItineraryBuilder.tsx`:
 import { useSession } from "next-auth/react";
 import { readGuestPrefs } from "@/lib/guest-prefs";
 ```
-- Add `const { status } = useSession();` with the other hooks.
-- Replace the prefs `.then(...)` body (~137-145) so it falls back to guest interests when the API returns none and the user is unauthenticated:
+- Add `const { status } = useSession();` alongside the other hooks.
+- **Leave the existing `[]`-dep `/api/user/preferences` effect (~135-147) unchanged.** Add a new effect immediately after it:
 ```ts
-      .then(prefs => {
-        const apiInterests: string[] = Array.isArray(prefs?.interests) ? prefs.interests : [];
-        const extra = apiInterests.length
-          ? apiInterests
-          : status === "unauthenticated"
-            ? readGuestPrefs()?.interests ?? []
-            : [];
-        if (extra.length) {
-          setUserInterests(prev => Array.from(new Set([...prev, ...extra])));
-        }
-      })
+  // Guest interests fallback — a SEPARATE [status] effect so it re-runs when auth resolves (not captured as "loading")
+  useEffect(() => {
+    if (status !== "unauthenticated") return;
+    const g = readGuestPrefs();
+    if (g?.interests.length) {
+      setUserInterests(prev => Array.from(new Set([...prev, ...g.interests])));
+    }
+  }, [status]);
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Guard + typecheck**
 
-Run: `npx vitest run src/components/ItineraryBuilder.guest.test.tsx`
-Expected: PASS.
+Run: `npx vitest run src/components/ItineraryBuilder.guest.test.tsx && npx tsc --noEmit`
+Expected: PASS + no type errors.
 
 - [ ] **Step 5: Commit**
 
@@ -899,57 +948,79 @@ git commit -m "feat(planner): ItineraryBuilder falls back to guest interests (gu
 
 ---
 
-### Task 10: E2e — guest greeting shows the airport, never "undefined"
+### Task 10: E2e — guest greeting shows the airport + POST carries `guest_prefs`, never "undefined"
 
-Extend the existing bootstrap test rather than duplicate the flow. Assert the optimistic **user bubble** (renders before the chat POST, so it's robust in CI where the SSE fetch degrades to "Connection lost").
+Extend the existing bootstrap test. Assert (a) the optimistic **user bubble** (renders before the chat POST → robust in CI where the SSE fetch degrades to "Connection lost") and (b) the POST body carries `guest_prefs` — CI-safe because it inspects the request, not the reply. Assertion (b) is the end-to-end proof of the functional half (defect #2).
+
+> **Precondition (reviewer I2 — false-fail hazard):** `playwright.config.ts` sets `baseURL: 'http://localhost:3001'` and has **no `webServer`**; `npm run dev` serves port **3000**. Before running any step below, start the app on 3001 and wait until it responds:
+> ```bash
+> npx next dev -p 3001 &     # then wait for a 200 on http://localhost:3001
+> ```
+> (Or export `BASE_URL` to point at an already-running instance.) Without this, Playwright fails with connection-refused on a perfectly correct tree.
 
 **Files:**
 - Modify: `tests/e2e/planner-trust.spec.ts` (the `'Guest user sees bootstrap onboarding once'` test, ~246-265)
 
-- [ ] **Step 1: Extend the test with greeting assertions**
+- [ ] **Step 1: Add POST capture + greeting/body assertions**
 
-In `tests/e2e/planner-trust.spec.ts`, inside `test('Guest user sees bootstrap onboarding once', …)`, immediately after the `await page.click('[data-testid="bootstrap-save"]');` line and BEFORE the reload, insert:
+In `tests/e2e/planner-trust.spec.ts`, in `test('Guest user sees bootstrap onboarding once', …)`:
+
+(a) Immediately after `await page.goto('/');`, register a capture of the Atlas chat POST (before the greeting can fire):
 ```ts
-  // The onboarding greeting is sent as an optimistic USER message — it must name the airport and never say "undefined".
-  await expect(page.getByText(/flying from MIA/i)).toBeVisible({ timeout: 8000 });
-  await expect(page.getByText(/interested in\b.*\bbeach\b/i)).toBeVisible();
+  let chatBody: any = null;
+  await page.route('**/api/assistant/chat', (route) => {
+    chatBody = route.request().postDataJSON();
+    route.continue();
+  });
+```
+(b) Immediately after `await page.click('[data-testid="bootstrap-save"]');` and BEFORE the reload, insert:
+```ts
+  // Optimistic USER-bubble greeting — must name the airport, never say "undefined". `.first()` avoids a
+  // strict-mode double match if a local run WITH an Anthropic key has Atlas echo the airport in its reply.
+  await expect(page.getByText(/flying from MIA/i).first()).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText(/interested in\b.*\bbeach\b/i).first()).toBeVisible();
   await expect(page.getByText("undefined")).toHaveCount(0);
+  // Functional wiring: the POST carries the guest prefs (CI-safe — inspects the request, not the SSE reply).
+  await expect.poll(() => chatBody?.guest_prefs).toEqual({ homeAirport: 'MIA', interests: ['beach', 'food'] });
 ```
 
-- [ ] **Step 2: Run the test to verify it passes on the fixed build**
+- [ ] **Step 2: Run the test on the fixed build**
 
 Run: `npx playwright test tests/e2e/planner-trust.spec.ts -g "bootstrap onboarding once"`
-Expected: PASS (the user bubble renders "…interested in beach, food and flying from MIA…"; nothing says "undefined").
+Expected: PASS — the user bubble reads "…interested in beach, food and flying from MIA…"; nothing says "undefined"; the captured POST body carries `guest_prefs`.
 
 - [ ] **Step 3: Mutation-proof the guard**
 
-Temporarily revert the `buildOnboardingIntro` fix in `src/lib/guest-prefs.ts` to the TEMP verbatim version (reads `airport`, emits "undefined"); re-run:
-Run: `npx playwright test tests/e2e/planner-trust.spec.ts -g "bootstrap onboarding once"`
-Expected: FAIL on `getByText("undefined")` / `flying from MIA`. Then restore the fix and confirm PASS again.
+Temporarily revert `buildOnboardingIntro` in `src/lib/guest-prefs.ts` to the TEMP verbatim version (reads `airport`, emits "undefined"); re-run the command above.
+Expected: FAIL on `flying from MIA` / `getByText("undefined")`. Restore the fix and confirm PASS again.
 
-- [ ] **Step 4: Full suite**
+- [ ] **Step 4: Full suite (with the dev server running on 3001)**
 
-Run: `npx vitest run && npx playwright test tests/e2e/planner-trust.spec.ts && npx tsc --noEmit`
-Expected: all green, no type errors.
+Run: `npx vitest run && npx tsc --noEmit && npx playwright test tests/e2e/planner-trust.spec.ts`
+Expected: all green — unit/component suite (baseline 323 + the new tests), no type errors, e2e passing.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add tests/e2e/planner-trust.spec.ts
-git commit -m "test(e2e): guest greeting shows airport, never 'undefined'"
+git commit -m "test(e2e): guest greeting shows airport + POST carries guest_prefs, never 'undefined'"
 ```
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** §5.1 guest-prefs contract → T2; §5.2 canonical event + `buildOnboardingIntro` → T3; §5.3 functional context (POST body + route) → T6/T7; §5.4 TripForm → T8; §5.5 OnboardingModal prefill (M2) → T5; §5.6 ItineraryBuilder (M3, corrected to *interests*) → T9; §6 single validator → T1 (+ enforced T2/T4/T7); §6 interests allowlist → T2/T7; §7 TDD order + user-bubble e2e → T3/T10; §8 blast radius → all tasks (plus the new `src/lib/iata.ts`, a refinement of the spec's "reuse/re-export parseIata"). No gaps.
+**Spec coverage:** §5.1 guest-prefs contract → T2; §5.2 canonical event + `buildOnboardingIntro` → T3; §5.3 functional context (POST body + route) → T6/T7; §5.4 TripForm → T8; §5.5 OnboardingModal prefill (M2) → T5; §5.6 ItineraryBuilder (M3, *interests*) → T9; §6 single validator → T1 (+ enforced T2/T4/T7); §6 interests allowlist → T2/T7; §7 TDD order + user-bubble e2e → T3/T10; §8 blast radius → all tasks (plus the new `src/lib/iata.ts`, a refinement of the spec's "reuse/re-export parseIata"). No gaps.
+
+**Functional-half coverage (reviewer I1, now closed):** the airport-reaches-the-LLM path is proven by (a) `buildGuestPreferencesJson` + `resolvePreferencesJson` unit tests (T7 — the server transform + the exact route decision, extracted pure), and (b) the T10 e2e route-interception asserting the POST body carries `guest_prefs`. The greeting-honesty half is proven by the `buildOnboardingIntro` units (T3) + the T10 user-bubble assertions. The T5/T6/T9 "contract guard" tests are labelled honestly as non-regression guards over local mirrors, not component behavior.
 
 **Placeholder scan:** every code step carries complete code; no TBD/TODO/"add validation"/"similar to Task N".
 
-**Type consistency:** `GuestPrefs { homeAirport; interests }`, `parseGuestPrefs`, `readGuestPrefs`, `writeGuestPrefs`, `sanitizeGuestInterests`, `buildGuestPreferencesJson`, `buildOnboardingIntro`, `dispatchOnboardingComplete`, `OnboardingCompleteDetail` are named identically wherever consumed. `parseIata` signature is stable across T1 consumers.
+**Type consistency:** `GuestPrefs { homeAirport; interests }`, `parseGuestPrefs`, `readGuestPrefs`, `writeGuestPrefs`, `sanitizeGuestInterests`, `buildGuestPreferencesJson`, `resolvePreferencesJson`, `buildOnboardingIntro`, `dispatchOnboardingComplete`, `OnboardingCompleteDetail` are named identically wherever consumed. `parseIata` signature is stable across T1 consumers.
 
-**Deviations from spec to note at handoff:** (1) new `src/lib/iata.ts` (bundle-safety realization of "single validator"); (2) M3 implemented as guest *interests* parity, not "airport" (the spec label is being corrected).
+**Deviations from spec to note at handoff:** (1) new `src/lib/iata.ts` (bundle-safety realization of "single validator"); (2) new pure `resolvePreferencesJson` wrapping the route decision (testability); (3) TripForm/ItineraryBuilder guest gate uses `useSession().status === "unauthenticated"`, not the spec's `tpi_guest_hint` cookie (equivalent guard, avoids the httpOnly-readability question — arguably better). M3 label corrected in the spec (interests, not airport).
+
+**Standing rule ([[feedback_update_help_with_features]]):** the guest airport prefill/greeting is internal wiring, not a new user-facing feature surface, so `help-content.ts` likely needs no line — but confirm during implementation and record the decision.
 
 ---
 
