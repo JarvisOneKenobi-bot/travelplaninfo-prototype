@@ -246,6 +246,14 @@ test('PlannerDashboard shows error banner + Retry when /api/trips fails', async 
 test('Guest user sees bootstrap onboarding once', async ({ page, context }) => {
   // Fresh browser context — no cookies, no localStorage
   await page.goto('/');
+
+  // Capture the Atlas chat POST body — registered before the greeting can fire.
+  let chatBody: any = null;
+  await page.route('**/api/assistant/chat', (route) => {
+    chatBody = route.request().postDataJSON();
+    route.continue();
+  });
+
   await page.waitForTimeout(2000);
 
   // Onboarding bootstrap modal must be visible for guest
@@ -257,6 +265,14 @@ test('Guest user sees bootstrap onboarding once', async ({ page, context }) => {
   await page.click('button[aria-pressed="false"]:has-text("Beach")');
   await page.click('button[aria-pressed="false"]:has-text("Food")');
   await page.click('[data-testid="bootstrap-save"]');
+
+  // Optimistic USER-bubble greeting — must name the airport, never say "undefined". `.first()` avoids a
+  // strict-mode double match if a local run WITH an Anthropic key has Atlas echo the airport in its reply.
+  await expect(page.getByText(/flying from MIA/i).first()).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText(/interested in\b.*\bbeach\b/i).first()).toBeVisible();
+  await expect(page.getByText("undefined")).toHaveCount(0);
+  // Functional wiring: the POST carries the guest prefs (CI-safe — inspects the request, not the SSE reply).
+  await expect.poll(() => chatBody?.guest_prefs).toEqual({ homeAirport: 'MIA', interests: ['beach', 'food'] });
 
   // Reload — bootstrap should NOT appear again
   await page.reload();
