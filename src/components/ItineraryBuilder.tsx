@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { PREF_ENUMS } from "@/lib/preferences";
+import { readGuestPrefs } from "@/lib/guest-prefs";
 import MapDrawer from "@/components/MapDrawer";
 import BudgetBar from "@/components/BudgetBar";
 import { useTranslations } from "next-intl";
@@ -83,6 +85,7 @@ export default function ItineraryBuilder({
   initialBudgetOverride = null,
 }: Props) {
   const t = useTranslations("itineraryBuilder");
+  const { status } = useSession();
   const [items, setItems] = useState<Item[]>(initialItems);
   const [addingDay, setAddingDay] = useState<number | null>(null);
   const [form, setForm] = useState<AddItemFormState>({ day: 1, category: "hotel", title: "", description: "", price_estimate: "" });
@@ -145,6 +148,15 @@ export default function ItineraryBuilder({
       })
       .catch(() => {});
   }, []);
+
+  // Guest interests fallback — a SEPARATE [status] effect so it re-runs when auth resolves (not captured as "loading")
+  useEffect(() => {
+    if (status !== "unauthenticated") return;
+    const g = readGuestPrefs();
+    if (g?.interests.length) {
+      setUserInterests(prev => Array.from(new Set([...prev, ...g.interests])));
+    }
+  }, [status]);
 
   /* ── Auto-populate on first load ── */
   const [autoPopulated, setAutoPopulated] = useState(false);
