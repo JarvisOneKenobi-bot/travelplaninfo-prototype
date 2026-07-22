@@ -7,6 +7,7 @@ import { useAtlasBubble } from "@/hooks/useAtlasBubble";
 import { useAssistantHealth } from "@/hooks/useAssistantHealth";
 import { useAtlasTrigger } from "@/hooks/useAtlasTrigger";
 import { decodeSseData } from "@/lib/atlas/sse";
+import { buildOnboardingIntro } from "@/lib/guest-prefs";
 import AtlasSmartSearchChip from "./AtlasSmartSearchChip";
 import VoiceInput from "./VoiceInput";
 import FlightCard from "./atlas/FlightCard";
@@ -611,14 +612,9 @@ export default function AssistantChat() {
   useEffect(() => {
     const handleOnboardingComplete = (event: Event) => {
       if (event instanceof CustomEvent) {
-        const { interests, airport, budget, aiAssisted } = event.detail;
-        // Open chat and send intro message
         setIsOpen(true);
         setTimeout(() => {
-          const intro = aiAssisted
-            ? `Great! I'm Atlas, your AI travel companion. I'll pick the best interests and vibes for you based on your preferences. Let's find your next perfect trip! 🌍 I see you're flying from ${airport} with a ${budget} budget. What destination are you dreaming about?`
-            : `Great! I'm Atlas, your AI travel companion. I see you're interested in ${interests.join(", ")} and flying from ${airport} with a ${budget} budget. Let's find your next perfect trip! 🌍 What destination are you thinking about?`;
-          sendMessageRef.current(intro);
+          sendMessageRef.current(buildOnboardingIntro(event.detail));
         }, 300);
       }
     };
