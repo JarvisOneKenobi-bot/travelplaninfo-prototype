@@ -76,7 +76,7 @@ export function parseIata(value: string): string | null {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/iata.test.ts`
-Expected: PASS (5 assertions).
+Expected: PASS (2 tests).
 
 - [ ] **Step 5: Re-point `travelpayouts-client.ts` at the new module**
 
@@ -495,6 +495,8 @@ git commit -m "feat(onboarding): BootstrapModal uses guest-prefs contract + stri
 
 ### Task 5: OnboardingModal — canonical `homeAirport` key + guest-prefs prefill (M2)
 
+> **Intermediate-commit note:** between the Task 3 and Task 5 commits, the *authed* greeting silently omits the airport/budget clause (OnboardingModal still dispatches the legacy `{airport}` key until this task renames it, and the fixed builder omits unknown fields — it never emits "undefined" or fabricates). All tasks ship on one branch, so this is not a shippable regression; the note just prevents a mid-branch bisect from mistaking it for one.
+
 **Files:**
 - Modify: `src/components/OnboardingModal.tsx`
 - Create: `src/components/OnboardingModal.dispatch.test.tsx`
@@ -572,7 +574,7 @@ git commit -m "feat(onboarding): OnboardingModal canonical homeAirport key + gue
 
 **Interfaces:**
 - Consumes: `readGuestPrefs` from `@/lib/guest-prefs`.
-- Produces: POST body gains optional `guest_prefs: { homeAirport, interests }`.
+- Produces: POST body gains optional `guest_prefs: { homeAirport, interests }`. Note: this is sent whenever local guest prefs exist (including for an authed user on a shared browser) — harmless, because the **server** gate (`resolvePreferencesJson` + `ctx.isGuest` in Task 7) is the trust boundary and discards it for authed requests.
 
 - [ ] **Step 1: Write the failing test**
 
