@@ -9,6 +9,7 @@ import TripForm from "./TripForm";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/hooks/usePlacesAutocomplete", () => ({ usePlacesAutocomplete: () => {} }));
 vi.mock("./PackageDealsCarousel", () => ({ default: () => null }));
+vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "unauthenticated", data: null }) }));
 
 const vibeLabels = esMessages.tripForm.vibes as Record<string, string>;
 
