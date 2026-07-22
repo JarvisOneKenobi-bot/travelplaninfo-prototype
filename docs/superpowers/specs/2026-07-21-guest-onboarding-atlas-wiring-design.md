@@ -119,8 +119,8 @@ After the existing `/api/user/preferences` fetch (returns defaults for guests), 
 ### 5.5 `OnboardingModal` prefill (M2)
 On mount, seed the authed modal's `airport`/`interests` local state from `readGuestPrefs()` (guest→signup continuity), only where the modal state is otherwise empty. Interests seeding maps guest values that exist in `PREF_ENUMS.interests`; `'mountains'` (absent from `PREF_ENUMS`) is carried as a custom interest chip (the modal already supports custom interests). Does not change the PUT body shape.
 
-### 5.6 `ItineraryBuilder` guest-airport fallback (M3)
-Where it merges prefs interests for the activity modal, add the same `readGuestPrefs()` fallback so guests get parity. Client-only, mirrors M1's guard pattern.
+### 5.6 `ItineraryBuilder` guest-interests fallback (M3)
+Where it merges `prefs.interests` for the activity modal (guests get none from the API), fall back to `readGuestPrefs()?.interests` when unauthenticated. Client-only, mirrors M1's guest-only guard.
 
 ---
 
@@ -156,7 +156,7 @@ Order matters (I5): a greeting builder does not exist on current code, so a test
 | `src/components/AssistantChat.tsx` | listener uses `buildOnboardingIntro`; POST body adds `guest_prefs` |
 | `src/app/api/assistant/chat/route.ts` | build guest `preferencesJson` (field-independent, server-revalidated) |
 | `src/components/TripForm.tsx` | M1 origin fallback (no-clobber + `tpi_guest_hint` gate) |
-| `src/components/ItineraryBuilder.tsx` | M3 guest-airport fallback |
+| `src/components/ItineraryBuilder.tsx` | M3 guest-interests fallback (unauthenticated only) |
 | tests | builder unit, guest-prefs unit, chat-route unit/integration, `planner-trust.spec.ts` e2e extension |
 
 ---
