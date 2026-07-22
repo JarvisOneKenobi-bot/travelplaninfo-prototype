@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { PREF_ENUMS } from "@/lib/preferences";
 import type { UserPreferences } from "@/lib/preferences";
+import { dispatchOnboardingComplete, readGuestPrefs } from "@/lib/guest-prefs";
 
 const LS_KEY = "tpi_onboarding_complete";
 
@@ -27,6 +28,13 @@ export default function OnboardingModal() {
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(true);
   const [customInterest, setCustomInterest] = useState("");
+
+  useEffect(() => {
+    const g = readGuestPrefs();
+    if (!g) return;
+    setAirport((a) => a || g.homeAirport);
+    setInterests((i) => (i.length ? i : [...g.interests]));
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) {
@@ -116,9 +124,7 @@ export default function OnboardingModal() {
 
         // Dispatch Atlas intro event after onboarding completes
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("atlas-onboarding-complete", {
-            detail: { interests, airport, budget, aiAssisted }
-          }));
+          dispatchOnboardingComplete({ homeAirport: airport, budget, interests, aiAssisted });
         }, 500);
       }
     } catch {

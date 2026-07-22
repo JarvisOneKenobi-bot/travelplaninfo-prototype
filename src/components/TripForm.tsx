@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { usePlacesAutocomplete } from "@/hooks/usePlacesAutocomplete";
+import { readGuestPrefs } from "@/lib/guest-prefs";
 import { VIBE_OPTIONS } from "@/lib/trip-types";
 import PackageDealsCarousel from "./PackageDealsCarousel";
 
@@ -92,6 +94,7 @@ const NEARBY_AIRPORTS: Record<string, { label: string; airports: NearbyAirportCo
 
 export default function TripForm({ onCancel }: { onCancel?: () => void }) {
   const router = useRouter();
+  const { status } = useSession();
   const t = useTranslations("tripForm");
   const tInterests = useTranslations("tripForm.interests");
 
@@ -151,6 +154,13 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
       })
       .catch(() => {});
   }, []);
+
+  // Guest origin pre-fill — only when unauthenticated, so an authed user never inherits a prior guest's airport
+  useEffect(() => {
+    if (status !== "unauthenticated") return;
+    const g = readGuestPrefs();
+    if (g) setOrigin((prev) => prev || g.homeAirport);
+  }, [status]);
 
   // ── Refs + Places Autocomplete ──
   const destinationRef = useRef<HTMLInputElement>(null);
@@ -633,7 +643,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
             <div className={`grid gap-3 grid-cols-1 ${tripType === 'one_way' ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("departingFrom")}</label>
-                <input ref={originRef} type="text" value={origin}
+                <input ref={originRef} data-testid="trip-origin" type="text" value={origin}
                   onChange={e => setOrigin(e.target.value)}
                   placeholder={t("airportCodePlaceholder")}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
@@ -971,7 +981,7 @@ export default function TripForm({ onCancel }: { onCancel?: () => void }) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("departingFrom")}</label>
-                <input ref={originRef} type="text" value={origin}
+                <input ref={originRef} data-testid="trip-origin" type="text" value={origin}
                   onChange={e => setOrigin(e.target.value)}
                   placeholder={t("airportCodePlaceholder")}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" />

@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { parseIata } from "@/lib/iata";
+import {
+  GUEST_PREFS_LS_KEY,
+  GUEST_INTERESTS,
+  writeGuestPrefs,
+  dispatchOnboardingComplete,
+  type GuestInterest,
+} from "@/lib/guest-prefs";
 
 export const GUEST_BOOTSTRAP_LS_KEY = "tpi_onboarding_bootstrap_complete";
-export const GUEST_PREFS_LS_KEY = "tpi_guest_prefs";
-
-export const GUEST_INTERESTS = ['beach', 'mountains', 'food', 'culture'] as const;
-type GuestInterest = (typeof GUEST_INTERESTS)[number];
+export { GUEST_PREFS_LS_KEY, GUEST_INTERESTS };
 
 interface BootstrapModalProps {
   onClose: () => void;
@@ -27,20 +32,17 @@ export default function BootstrapModal({ onClose }: BootstrapModalProps) {
   }
 
   function save() {
-    if (!homeAirport || interests.length < 2) return;
-
-    const prefs = { homeAirport: homeAirport.toUpperCase(), interests };
-    if (typeof window !== "undefined") {
-      localStorage.setItem(GUEST_BOOTSTRAP_LS_KEY, "1");
-      localStorage.setItem(GUEST_PREFS_LS_KEY, JSON.stringify(prefs));
-      window.dispatchEvent(
-        new CustomEvent("atlas-onboarding-complete", { detail: prefs })
-      );
-    }
+    const airport = parseIata(homeAirport);
+    if (!airport || interests.length < 2) return;
+    const prefs = { homeAirport: airport, interests };
+    localStorage.setItem(GUEST_BOOTSTRAP_LS_KEY, "1");
+    writeGuestPrefs(prefs);
+    dispatchOnboardingComplete(prefs);
     onClose();
   }
 
-  const canSave = Boolean(homeAirport) && interests.length >= 2;
+  const airportValid = parseIata(homeAirport) !== null;
+  const canSave = airportValid && interests.length >= 2;
 
   return (
     <div

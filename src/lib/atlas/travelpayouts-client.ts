@@ -1,5 +1,8 @@
 import { TP_CONFIG } from "@/config/affiliates";
+import { parseIata } from "@/lib/iata";
 import { airlineDisplayName } from "./airline-names";
+
+export { parseIata };
 
 const BASE_URL = "https://api.travelpayouts.com";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -253,11 +256,6 @@ const requestTimestamps: number[] = [];
 
 export function cleanIata(value: string): string {
   return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
-}
-
-export function parseIata(value: string): string | null {
-  const cleaned = value.trim().toUpperCase();
-  return /^[A-Z]{3}$/.test(cleaned) ? cleaned : null;
 }
 
 export const INVALID_IATA_REASON =

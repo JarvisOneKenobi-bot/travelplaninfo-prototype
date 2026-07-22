@@ -5,6 +5,7 @@ import { getAuthenticatedAppBaseUrl } from "@/lib/server-config";
 import { runAtlasTurn } from "@/lib/atlas/tool-loop";
 import { decodeSseData } from "@/lib/atlas/sse";
 import { trimHistoryToUserStart } from "@/lib/atlas/history";
+import { resolvePreferencesJson } from "@/lib/guest-prefs";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 
 // ── Rate limiting (in-memory, per session_id, 10 req/min) ──────────────────
@@ -43,14 +44,14 @@ export async function POST(req: NextRequest) {
   const userId = ctx.userId;
 
   // 2. Parse body
-  let body: { message: string; session_id: string; page_context?: string };
+  let body: { message: string; session_id: string; page_context?: string; guest_prefs?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { message, session_id, page_context } = body;
+  const { message, session_id, page_context, guest_prefs } = body;
   if (!message || !session_id) {
     return NextResponse.json(
       { error: "message and session_id are required" },
@@ -80,7 +81,11 @@ export async function POST(req: NextRequest) {
   const prefRow = db
     .prepare("SELECT prefs FROM user_preferences WHERE user_id = ?")
     .get(userId) as { prefs: string } | undefined;
-  const preferencesJson = prefRow?.prefs || "{}";
+  const preferencesJson = resolvePreferencesJson({
+    isGuest: ctx.isGuest,
+    dbPrefs: prefRow?.prefs,
+    guestPrefs: guest_prefs,
+  });
 
   // 5b. Load user memory (cross-session context)
   const memoryRows = db
