@@ -9,6 +9,9 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { notFound } from "next/navigation";
+import Script from "next/script";
+
+const GA_MEASUREMENT_ID = "G-QXKFJV0NQJ";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -70,6 +73,18 @@ export default async function LocaleLayout({ children, params }: Props) {
         <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
       </head>
       <body className={`${inter.variable} ${playfair.variable} font-sans bg-gray-50 text-gray-900 antialiased`}>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
         <NextIntlClientProvider messages={messages}>
           <SessionProviderWrapper>
             <OnboardingWrapper />
