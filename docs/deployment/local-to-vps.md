@@ -12,26 +12,40 @@ The intended workflow is:
 2. Push / sync the repo to the VPS.
 3. Build on the VPS from the repo root.
 4. Run the Next.js app under PM2 as process `tpi`.
-5. Put Nginx in front of the app and proxy public traffic to `127.0.0.1:3001`.
+5. Apache (Virtualmin-managed) fronts the app and proxies public traffic to `127.0.0.1:3001`.
 6. Run post-deploy verification before considering the deploy complete.
 
 This runbook documents the runtime contract the repo currently expects.
 
 ## 2. Runtime topology
 
-Production target topology:
+Verified against the live host on 2026-08-23. Earlier revisions of this document
+described an Nginx front; that was never what shipped. **The web server is Apache.**
 
-- Nginx terminates TLS and serves the public hostname.
-- Nginx proxies application traffic to `127.0.0.1:3001`.
-- Next.js runs via PM2 with process name `tpi`.
+Production topology (as measured):
+
+- Host: `104.225.221.138` (`vps.mylimoproject.com`, SSDNODES), Virtualmin-managed.
+- **Apache 2.4.68** owns ports 80 and 443 and terminates TLS.
+- vhost: `/etc/apache2/sites-enabled/travelplaninfo.com.conf`
+  - `:80` issues a 301 to `https://travelplaninfo.com`
+  - `:443` has `SSLEngine on`, `ProxyPreserveHost On`,
+    `ProxyPass /.well-known !` (left unproxied for ACME/certbot),
+    `ProxyPass / http://127.0.0.1:3001/` + matching `ProxyPassReverse`
+- Next.js runs via PM2 process `tpi` (`npm start -- -p 3001`), Node 20.20.2,
+  cwd `/home/travelplaninfo/nextjs`.
+- **Cloudflare proxies the zone** in front of Apache. HTML currently returns
+  `cf-cache-status: BYPASS`, so edge caching is not in play; see §11.
 - The app repo is the working directory for runtime file access.
 - SQLite is stored at `data/tpi.db` under the repo current working directory (`process.cwd()`).
 
-Expected process layout:
+Expected request path:
 
-- public HTTPS -> Nginx
-- Nginx -> `http://127.0.0.1:3001`
+- public HTTPS -> Cloudflare -> Apache (TLS) -> `http://127.0.0.1:3001`
 - Next.js server -> local filesystem + SQLite only; no FastAPI sidecar dependency
+
+Note: `nginx` 1.18.0 is installed on the box but the service is **inactive** and owns
+no ports. Do not configure it. The repo file `deploy/nginx/travelplaninfo.com.conf`
+is an unused historical example and does not describe production.
 
 ## 3. Application URL and backend URL behavior
 
@@ -181,8 +195,8 @@ Assumptions:
 - repo is present on the VPS
 - Node.js and npm are installed
 - PM2 is installed
-- Nginx is installed
-- TLS is handled at Nginx
+- Apache is installed and serving (Virtualmin-managed)
+- TLS is handled at Apache
 - the deployment runs from the repo root
 
 Deploy procedure:
@@ -212,25 +226,27 @@ Example intent for PM2 config:
 - command: Next.js production start
 - port: `3001`
 
-7. Confirm the local upstream answers before involving Nginx:
+7. Confirm the local upstream answers before involving Apache:
 
 ```bash
 curl -I http://127.0.0.1:3001/
 ```
 
-8. Reload Nginx after validating config.
+8. Reload Apache after validating config (`apache2ctl configtest && systemctl reload apache2`).
 9. Run the post-deploy verification commands below.
 
-## 9. Nginx contract
+## 9. Web server contract (Apache)
 
-Nginx should proxy the public site to the local Next.js process:
+Apache proxies the public site to the local Next.js process:
 
 - upstream target: `127.0.0.1:3001`
-- preserve forwarded host / proto headers
-- support connection upgrade headers
-- allow direct caching for `/_next/static/`
+- `ProxyPreserveHost On` so Next.js sees the public hostname
+- `ProxyPass /.well-known !` so ACME/certbot challenges are served from disk
+- `ProxyPass /` and `ProxyPassReverse /` to the upstream
 
-Important: this document assumes Nginx fronts port 3001, not port 3000.
+Important: Apache fronts port 3001, not port 3000.
+
+Required modules (all confirmed enabled): `proxy`, `proxy_http`, `rewrite`, `ssl`.
 
 ## 10. Rollback steps
 
@@ -240,7 +256,7 @@ If the new deploy is bad but the previous VPS release is still available:
 2. Restore the previous known-good release on the VPS.
 3. Rebuild only if the rollback artifact requires it.
 4. Restart or reload PM2 for process `tpi`.
-5. Re-check Nginx upstream health.
+5. Re-check Apache upstream health (`curl -I http://127.0.0.1:3001/`).
 6. Verify homepage, a content page, and any critical planner/auth paths.
 
 Suggested rollback verification:
@@ -288,3 +304,34 @@ curl -I http://127.0.0.1:3001/api/assistant/health
 - Active operations runbook: `docs/deployment/local-to-vps.md`
 - Historical Vercel-era archive: `docs/MIGRATION_PLAN.md`
 - Product / launch implementation plan: `docs/plans/2026-03-19-tpi-full-launch.md`
+
+## 11. Edge cache behavior (Cloudflare)
+
+Cloudflare proxies this zone. Two independent cache directives are in play and they
+come from different places:
+
+| Directive | Value | Set by | Governs |
+| --- | --- | --- | --- |
+| `max-age` | 300 (5 min) | Cloudflare **Browser Cache TTL** setting | the visitor's browser |
+| `s-maxage` | 31536000 (1 yr) | **Next.js default** for prerendered routes, from the origin | shared/CDN caches |
+
+The one-year value is not a Cloudflare setting and cannot be found in the dashboard;
+`next.config.ts` sets no cache headers, and prerendered routes emit it by default.
+
+As of 2026-08-23 HTML returns `cf-cache-status: BYPASS`, so nothing honours the
+one-year `s-maxage` and deploys are visible immediately. This changed when the legacy
+WordPress install (and its Cloudflare Super Page Cache worker) was removed from the host.
+
+**If a Cache Rule or "Cache Everything" is ever added for HTML, the one-year `s-maxage`
+takes effect and deploys will silently serve stale pages.** In that case a post-deploy
+purge becomes mandatory:
+
+```bash
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID_TRAVELPLANINFO/purge_cache" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"purge_everything":true}'
+```
+
+The token needs `Zone -> Cache Purge -> Purge`. Credentials live in
+`~/seo-workspace/.env` on the workstation (gitignored, mode 600) — never in this repo.
