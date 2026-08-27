@@ -31,7 +31,7 @@ export default function Home() {
     <div className="page">
       <header className="topbar">
         <div className="brand">
-          <span className="brandMark">TPI</span>
+          <img className="brandLogo" src="/brand/tpi-mark.svg" alt="TravelPlanInfo" width="52" height="52" />
           <div>
             <p className="brandName">TravelPlanInfo</p>
             <p className="brandTag">Miami flight + stay deals, curated daily</p>

@@ -15,6 +15,15 @@ const workSans = Work_Sans({
 export const metadata: Metadata = {
   title: "TravelPlanInfo • Miami Deals & Itineraries",
   description: "Prototype home for TravelPlanInfo: flights, hotels, and Miami trip planning.",
+  themeColor: "#1b6d7a",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

@@ -68,6 +68,12 @@ button {
   letter-spacing: 0.08em;
 }
 
+.brandLogo {
+  width: 52px;
+  height: 52px;
+  display: block;
+}
+
 .brandName {
   font-family: var(--font-display), "Fraunces", serif;
   font-size: 1.2rem;
